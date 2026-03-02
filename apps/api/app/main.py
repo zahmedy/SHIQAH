@@ -8,7 +8,7 @@ from app.api.v1.routes.cars import router as cars_router
 from app.api.v1.routes.admin import router as admin_router
 from app.api.v1.routes.public import router as public_router
 from app.api.v1.routes.dev import router as dev_router
-from app.api.v1.search import router as search_router
+from app.api.v1.routes.search import router as search_router
 
 app = FastAPI(title="GARAJ API", version="0.1.0")
 
