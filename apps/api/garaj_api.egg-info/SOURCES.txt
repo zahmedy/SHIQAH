@@ -9,6 +9,7 @@ app/api/v1/routes/dev.py
 app/api/v1/routes/me.py
 app/api/v1/routes/media.py
 app/api/v1/routes/public.py
+app/api/v1/routes/search.py
 app/core/config.py
 app/core/deps.py
 app/core/security.py
