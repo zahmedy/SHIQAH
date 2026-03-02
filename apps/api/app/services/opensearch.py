@@ -1,23 +1,23 @@
 from opensearchpy import OpenSearch
 from app.core.config import settings
 
-def os_client() -> OpenSearch:
+def client() -> OpenSearch:
     return OpenSearch(hosts=[settings.OPENSEARCH_URL])
 
-def ensure_index():
-    c = os_client()
-    index = settings.OPENSEARCH_INDEX
-    if c.indices.exists(index=index):
+def ensure_index() -> None:
+    c = client()
+    idx = settings.OPENSEARCH_INDEX
+    if c.indices.exists(index=idx):
         return
+
     mapping = {
         "mappings": {
             "properties": {
                 "id": {"type": "keyword"},
-                "status": {"type": "keyword"},
                 "city": {"type": "keyword"},
                 "district": {"type": "keyword"},
-                "make_id": {"type": "integer"},
-                "model_id": {"type": "integer"},
+                "make": {"type": "keyword"},
+                "model": {"type": "keyword"},
                 "year": {"type": "integer"},
                 "price_sar": {"type": "integer"},
                 "mileage_km": {"type": "integer"},
@@ -32,4 +32,17 @@ def ensure_index():
             }
         }
     }
-    c.indices.create(index=index, body=mapping)
+    c.indices.create(index=idx, body=mapping)
+
+def upsert_car(doc_id: str, doc: dict) -> None:
+    ensure_index()
+    c = client()
+    c.index(index=settings.OPENSEARCH_INDEX, id=doc_id, body=doc, refresh=True)
+
+def delete_car(doc_id: str) -> None:
+    ensure_index()
+    c = client()
+    try:
+        c.delete(index=settings.OPENSEARCH_INDEX, id=doc_id, refresh=True)
+    except Exception:
+        pass
