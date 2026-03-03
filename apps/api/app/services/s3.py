@@ -13,8 +13,7 @@ def s3_client():
 
 def make_storage_key(car_id: int, filename: str) -> str:
     ext = filename.split(".")[-1].lower()
-    key = f"cars/{car_id}/{uuid.uuid4().hex}.{ext}"
-    return key
+    return f"cars/{car_id}/{uuid.uuid4().hex}.{ext}"
 
 def presign_put(storage_key: str, content_type: str) -> str:
     c = s3_client()

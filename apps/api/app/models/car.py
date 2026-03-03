@@ -13,6 +13,16 @@ class CarStatus(str, Enum):
     rejected = "rejected"
     expired = "expired"
 
+class CarMedia(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    car_id: int = Field(index=True, foreign_key="carlisting.id")
+
+    storage_key: str = Field(index=True)
+    public_url: str
+    sort_order: int = Field(default=0, index=True)
+    is_cover: bool = Field(default=False, index=True)
+
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
 
 class CarListing(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

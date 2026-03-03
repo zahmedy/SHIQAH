@@ -10,3 +10,4 @@ Requires-Dist: alembic>=1.13.0
 Requires-Dist: pydantic-settings>=2.3.0
 Requires-Dist: python-jose[cryptography]>=3.3.0
 Requires-Dist: opensearch-py>=2.5.0
+Requires-Dist: boto3>=1.34.0
