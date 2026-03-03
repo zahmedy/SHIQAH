@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
 from app.db.session import get_session
-from app.models.car import CarListing, CarStatus
-from app.schemas.car import CarOut
+from app.models.car import CarListing, CarStatus, CarMedia
+from app.schemas.car import CarOut, CarPhoto
 
 router = APIRouter(prefix="/public", tags=["public"])
 
@@ -16,4 +16,12 @@ def public_car_detail(car_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Not found")
     data = car.model_dump()
     data["status"] = car.status.value
+
+    photos = session.exec(
+    select(CarMedia).where(CarMedia.car_id == car.id).order_by(CarMedia.sort_order.asc())
+    ).all()
+
+    out = CarOut(**car.model_dump(), status=car.status.value)
+    out.photos = [CarPhoto(id=p.id, public_url=p.public_url, sort_order=p.sort_order, is_cover=p.is_cover) for p in photos]
+
     return CarOut(**data)

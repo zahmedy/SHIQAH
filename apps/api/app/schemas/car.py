@@ -2,6 +2,11 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel
 
+class CarPhoto(BaseModel):
+    id: int
+    public_url: str
+    sort_order: int
+    is_cover: bool
 
 class CarCreate(BaseModel):
     city: str
@@ -68,6 +73,7 @@ class CarOut(BaseModel):
     drivetrain: Optional[str]
     condition: Optional[str]
     color: Optional[str]
+    photos: list[CarPhoto] = []
 
     title_ar: str
     description_ar: str
