@@ -6,7 +6,7 @@ from sqlmodel import SQLModel, create_engine
 
 # import models so metadata is registered
 from app.models.user import User  # noqa
-from app.models.car import CarListing  # noqa
+from app.models.car import CarListing, CarMedia  # noqa
 
 config = context.config
 fileConfig(config.config_file_name)
