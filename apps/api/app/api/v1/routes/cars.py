@@ -125,9 +125,17 @@ def submit_car(
     if car.price_sar <= 0:
         raise HTTPException(status_code=400, detail="Invalid price")
 
+    # sqlmodel may return a scalar int or a row-like object depending on backend/version.
+    photo_count_result = session.exec(
+        select(func.count()).select_from(CarMedia).where(CarMedia.car_id == car.id)
+    ).one()
+    try:
+        photo_count = int(photo_count_result)
+    except (TypeError, ValueError):
+        photo_count = int(photo_count_result[0])
+
     # ensure min of 4 photos
-    photo_count = session.exec(select(func.count()).select_from(CarMedia).where(CarMedia.car_id == car.id)).one()
-    if int(photo_count) < 4:
+    if photo_count < 4:
         raise HTTPException(status_code=400, detail="At least 4 photos required")
 
     car.status = CarStatus.pending_review

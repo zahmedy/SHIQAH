@@ -44,9 +44,14 @@ def complete_upload(
         raise HTTPException(status_code=404, detail="Not found")
     ensure_owner(car, user)
 
-    # sort_order = count existing + 1
-    count = session.exec(select(func.count()).select_from(CarMedia).where(CarMedia.car_id == car_id)).one()
-    sort_order = int(count)
+    # sqlmodel may return a scalar int or a row-like object depending on backend/version.
+    count_result = session.exec(
+        select(func.count()).select_from(CarMedia).where(CarMedia.car_id == car_id)
+    ).one()
+    try:
+        sort_order = int(count_result)
+    except (TypeError, ValueError):
+        sort_order = int(count_result[0])
 
     media = CarMedia(
         car_id=car_id,
