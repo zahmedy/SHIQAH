@@ -69,14 +69,15 @@ services:
   createbuckets:
     image: minio/mc:latest
     depends_on:
-      - minio
+      minio:
+        condition: service_started
     entrypoint: >
       /bin/sh -c "
-      sleep 2;
-      /usr/bin/mc alias set local http://minio:9000 minioadmin minioadmin;
-      /usr/bin/mc mb -p local/garag-media || true;
-      /usr/bin/mc anonymous set download local/garag-media || true;
-      exit
+      until /usr/bin/mc alias set local http://minio:9000 minioadmin minioadmin; do sleep 1; done;
+      /usr/bin/mc mb -p local/garaj-media || true;
+      /usr/bin/mc anonymous set download local/garaj-media || true;
+      exit 0;
+      "
 
 volumes:
   pgdata:
