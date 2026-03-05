@@ -9,7 +9,7 @@ from app.schemas.media import PresignRequest, PresignResponse, MediaCompleteRequ
 from app.services.s3 import make_storage_key, presign_put
 from app.core.config import settings
 
-router = APIRouter(prefix="/v1", tags=["media"])
+router = APIRouter(tags=["media"])
 
 def ensure_owner(car: CarListing, user: User):
     if car.owner_id != user.id:
