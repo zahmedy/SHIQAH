@@ -10,6 +10,8 @@ from app.api.v1.routes.public import router as public_router
 from app.api.v1.routes.dev import router as dev_router
 from app.api.v1.routes.search import router as search_router
 from app.api.v1.routes.media import router as media_router
+from app.api.v1.leads import router as leads_router
+
 
 app = FastAPI(title="GARAJ API", version="0.1.0")
 
@@ -21,6 +23,7 @@ app.include_router(public_router, prefix="/v1")
 app.include_router(dev_router, prefix="/v1")
 app.include_router(search_router, prefix="/v1")
 app.include_router(media_router, prefix="/v1")
+app.include_router(leads_router, prefix="/v1")
 
 
 ui_dir = Path(__file__).resolve().parent / "ui"

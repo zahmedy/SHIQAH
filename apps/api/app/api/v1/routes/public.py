@@ -4,24 +4,45 @@ from sqlmodel import Session, select
 from app.db.session import get_session
 from app.models.car import CarListing, CarStatus, CarMedia
 from app.schemas.car import CarOut, CarPhoto
+from app.models.user import User
 
 router = APIRouter(prefix="/public", tags=["public"])
 
 @router.get("/cars/{car_id}", response_model=CarOut)
 def public_car_detail(car_id: int, session: Session = Depends(get_session)):
     car = session.exec(select(CarListing).where(CarListing.id == car_id)).first()
+    seller = session.exec(select(User).where(User.id == car.owner_id)).first()
+
     if not car:
         raise HTTPException(status_code=404, detail="Not found")
     if car.status != CarStatus.active:
         raise HTTPException(status_code=404, detail="Not found")
+    
     photos = session.exec(
-        select(CarMedia).where(CarMedia.car_id == car.id).order_by(CarMedia.sort_order.asc(), CarMedia.id.asc())
+    select(CarMedia).where(CarMedia.car_id == car.id).order_by(CarMedia.sort_order.asc())
     ).all()
 
-    data = car.model_dump()
-    data["status"] = car.status.value
-    data["photos"] = [
+    out = CarOut(**car.model_dump(), status=car.status.value)
+    out.photos = [
         CarPhoto(id=p.id, public_url=p.public_url, sort_order=p.sort_order, is_cover=p.is_cover)
         for p in photos
     ]
-    return CarOut(**data)
+
+    seller_phone = seller.phone_e164 if seller else None
+    whatsapp_text = f"السلام عليكم، مهتم بالسيارة رقم {car.id} - {car.make} {car.model} {car.year}"
+    whatsapp_url = None
+    if seller_phone:
+        phone = seller_phone.replace("+", "")
+        whatsapp_url = f"https://wa.me/{phone}?text={whatsapp_text}"
+
+    return {
+        "listing": out.model_dump(),
+        "seller": {
+            "id": seller.id if seller else None,
+            "phone_e164": seller_phone,
+        },
+        "contact": {
+            "whatsapp_url": whatsapp_url,
+            "call_phone_e164": seller_phone,
+        },
+    }
