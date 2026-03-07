@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select, func
@@ -6,7 +7,7 @@ from app.core.deps import get_current_user
 from app.db.session import get_session
 from app.models.user import User
 from app.models.car import CarListing, CarStatus, CarMedia
-from app.schemas.car import CarCreate, CarUpdate, CarOut
+from app.schemas.car import CarCreate, CarUpdate, CarOut, CarPhoto
 
 router = APIRouter(tags=["cars"])
 
@@ -16,13 +17,37 @@ def ensure_owner(car: CarListing, user: User):
         raise HTTPException(status_code=403, detail="Not your listing")
 
 
-def to_car_out(car: CarListing) -> CarOut:
+def _load_photos_map(session: Session, car_ids: list[int]) -> dict[int, list[CarPhoto]]:
+    if not car_ids:
+        return {}
+
+    photos = session.exec(
+        select(CarMedia)
+        .where(CarMedia.car_id.in_(car_ids))
+        .order_by(CarMedia.car_id.asc(), CarMedia.sort_order.asc(), CarMedia.id.asc())
+    ).all()
+
+    photos_map: dict[int, list[CarPhoto]] = defaultdict(list)
+    for photo in photos:
+        photos_map[photo.car_id].append(
+            CarPhoto(
+                id=photo.id,
+                public_url=photo.public_url,
+                sort_order=photo.sort_order,
+                is_cover=photo.is_cover,
+            )
+        )
+    return photos_map
+
+
+def to_car_out(car: CarListing, photos: list[CarPhoto] | None = None) -> CarOut:
     data = car.model_dump()
     status = data.get("status")
     if isinstance(status, CarStatus):
         data["status"] = status.value
     elif status is not None:
         data["status"] = str(status)
+    data["photos"] = photos or []
     return CarOut(**data)
 
 
@@ -45,7 +70,8 @@ def create_car(
     session.add(car)
     session.commit()
     session.refresh(car)
-    return to_car_out(car)
+    photos_map = _load_photos_map(session, [car.id])
+    return to_car_out(car, photos=photos_map.get(car.id, []))
 
 
 @router.get("/cars/{car_id}", response_model=CarOut)
@@ -58,7 +84,8 @@ def get_car(
     if not car:
         raise HTTPException(status_code=404, detail="Not found")
     ensure_owner(car, user)
-    return to_car_out(car)
+    photos_map = _load_photos_map(session, [car.id])
+    return to_car_out(car, photos=photos_map.get(car.id, []))
 
 
 @router.patch("/cars/{car_id}", response_model=CarOut)
@@ -91,7 +118,8 @@ def update_car(
     session.add(car)
     session.commit()
     session.refresh(car)
-    return to_car_out(car)
+    photos_map = _load_photos_map(session, [car.id])
+    return to_car_out(car, photos=photos_map.get(car.id, []))
 
 
 @router.get("/seller/cars", response_model=list[CarOut])
@@ -102,7 +130,9 @@ def my_cars(
     cars = session.exec(
         select(CarListing).where(CarListing.owner_id == user.id).order_by(CarListing.created_at.desc())
     ).all()
-    return [to_car_out(c) for c in cars]
+    car_ids = [car.id for car in cars]
+    photos_map = _load_photos_map(session, car_ids)
+    return [to_car_out(car, photos=photos_map.get(car.id, [])) for car in cars]
 
 
 @router.post("/cars/{car_id}/submit", response_model=CarOut)
@@ -144,4 +174,5 @@ def submit_car(
     session.add(car)
     session.commit()
     session.refresh(car)
-    return to_car_out(car)
+    photos_map = _load_photos_map(session, [car.id])
+    return to_car_out(car, photos=photos_map.get(car.id, []))
