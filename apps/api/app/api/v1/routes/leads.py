@@ -8,7 +8,7 @@ from app.models.lead import Lead
 from app.schemas.lead import LeadCreate, LeadOut
 from app.core.deps import get_current_user
 
-router = APIRouter(prefix="/v1", tags=["leads"])
+router = APIRouter(tags=["leads"])
 
 
 @router.post("/cars/{car_id}/leads", response_model=LeadOut)
