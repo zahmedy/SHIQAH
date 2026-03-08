@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 export default function LeadForm({ carId }: { carId: number }) {
   const [name, setName] = useState("");
@@ -17,6 +17,12 @@ export default function LeadForm({ carId }: { carId: number }) {
     setLoading(true);
     setError("");
     setDone(false);
+
+    if (!API_BASE) {
+      setError("NEXT_PUBLIC_API_BASE is missing.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const res = await fetch(`${API_BASE}/v1/cars/${carId}/leads`, {
@@ -33,8 +39,10 @@ export default function LeadForm({ carId }: { carId: number }) {
       });
 
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Failed");
+        const contentType = res.headers.get("content-type") || "";
+        const payload = contentType.includes("application/json") ? await res.json() : await res.text();
+        const detail = typeof payload === "string" ? payload : payload?.detail;
+        throw new Error(detail || `Failed with status ${res.status}`);
       }
 
       setDone(true);
@@ -49,34 +57,46 @@ export default function LeadForm({ carId }: { carId: number }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-3">
-      <input
-        className="w-full border rounded px-3 py-2"
-        placeholder="Your name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-      <input
-        className="w-full border rounded px-3 py-2"
-        placeholder="+9665..."
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-      />
-      <textarea
-        className="w-full border rounded px-3 py-2"
-        rows={4}
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-      />
-      <button
-        disabled={loading}
-        className="w-full border rounded px-4 py-2"
-      >
-        {loading ? "Sending..." : "Send"}
+    <form onSubmit={onSubmit} className="filters">
+      <div>
+        <label className="label" htmlFor="lead-name">Name</label>
+        <input
+          id="lead-name"
+          className="input"
+          placeholder="Ahmed"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
+
+      <div>
+        <label className="label" htmlFor="lead-phone">Phone</label>
+        <input
+          id="lead-phone"
+          className="input"
+          placeholder="+9665..."
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+        />
+      </div>
+
+      <div>
+        <label className="label" htmlFor="lead-message">Message</label>
+        <textarea
+          id="lead-message"
+          className="textarea"
+          rows={4}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+        />
+      </div>
+
+      <button disabled={loading} className="btn btn-primary" type="submit">
+        {loading ? "Sending..." : "Send Lead"}
       </button>
 
-      {done && <p className="text-sm">Lead sent.</p>}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {done && <p className="notice success">Lead sent successfully.</p>}
+      {error && <p className="notice error">{error}</p>}
     </form>
   );
 }

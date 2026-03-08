@@ -1,19 +1,26 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
+function apiBase(): string {
+  const value = process.env.NEXT_PUBLIC_API_BASE;
+  if (!value) {
+    throw new Error("NEXT_PUBLIC_API_BASE is not set.");
+  }
+  return value.replace(/\/$/, "");
+}
 
 export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${apiBase()}${path}`, {
     cache: "no-store",
   });
 
   if (!res.ok) {
-    throw new Error(`GET ${path} failed: ${res.status}`);
+    const text = await res.text();
+    throw new Error(`GET ${path} failed: ${res.status} ${text}`.trim());
   }
 
   return res.json();
 }
 
 export async function apiPost<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${apiBase()}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -23,7 +30,7 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`POST ${path} failed: ${res.status} ${text}`);
+    throw new Error(`POST ${path} failed: ${res.status} ${text}`.trim());
   }
 
   return res.json();
