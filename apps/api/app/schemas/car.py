@@ -81,3 +81,19 @@ class CarOut(BaseModel):
     published_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime
+
+
+class PublicSellerOut(BaseModel):
+    id: Optional[int]
+    phone_e164: Optional[str]
+
+
+class PublicContactOut(BaseModel):
+    whatsapp_url: Optional[str]
+    call_phone_e164: Optional[str]
+
+
+class PublicCarDetailOut(BaseModel):
+    listing: CarOut
+    seller: PublicSellerOut
+    contact: PublicContactOut
