@@ -68,7 +68,7 @@ export default async function CarDetailPage({
     return (
       <main className="page shell">
         <div className="notice error">{fetchError || "Listing not found."}</div>
-        <div style={{ marginTop: "1rem" }}>
+        <div className="spaced-top">
           <Link href="/search" className="btn btn-secondary">Back to search</Link>
         </div>
       </main>
@@ -80,12 +80,10 @@ export default async function CarDetailPage({
   return (
     <main className="page shell two-col">
       <section className="panel">
-        <h1 style={{ margin: 0, fontFamily: "Avenir Next, Tahoma, Trebuchet MS, sans-serif" }}>
-          {car.title_ar}
-        </h1>
-        <p className="car-price" style={{ marginTop: "0.5rem" }}>
-          {priceFormatter.format(car.price_sar)} SAR
-        </p>
+        <header className="listing-head">
+          <h1 className="listing-title">{car.title_ar}</h1>
+          <p className="car-price">{priceFormatter.format(car.price_sar)} SAR</p>
+        </header>
 
         {car.photos?.length ? (
           <div className="photo-grid">
@@ -94,7 +92,7 @@ export default async function CarDetailPage({
             ))}
           </div>
         ) : (
-          <div className="notice" style={{ marginTop: "0.8rem" }}>No photos yet.</div>
+          <div className="notice spaced-top-sm">No photos yet.</div>
         )}
 
         <div className="specs">
@@ -144,17 +142,15 @@ export default async function CarDetailPage({
           </article>
         </div>
 
-        <div className="panel" style={{ marginTop: "0.8rem", padding: "0.9rem" }}>
-          <h2 style={{ marginTop: 0 }}>Description</h2>
-          <p style={{ marginBottom: 0, fontFamily: "Avenir Next, Tahoma, Trebuchet MS, sans-serif" }}>
-            {car.description_ar}
-          </p>
+        <div className="panel panel-soft">
+          <h2 className="subheading">Description</h2>
+          <p className="body-copy">{car.description_ar}</p>
         </div>
       </section>
 
       <aside className="panel">
-        <h2 style={{ marginTop: 0 }}>Contact Seller</h2>
-        <div style={{ display: "grid", gap: "0.6rem" }}>
+        <h2 className="subheading">Contact Seller</h2>
+        <div className="contact-actions">
           {data.contact.call_phone_e164 && (
             <a href={`tel:${data.contact.call_phone_e164}`} className="btn btn-secondary">
               Call Seller
@@ -168,9 +164,9 @@ export default async function CarDetailPage({
           )}
         </div>
 
-        <hr style={{ border: 0, borderTop: "1px solid var(--line)", margin: "1rem 0" }} />
+        <hr className="separator" />
 
-        <h3 style={{ marginTop: 0 }}>Send a Lead</h3>
+        <h3 className="subheading">Send a Lead</h3>
         <LeadForm carId={car.id} />
       </aside>
     </main>

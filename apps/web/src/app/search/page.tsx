@@ -57,12 +57,12 @@ export default async function SearchPage({
 
   return (
     <main className="page shell">
-      <section className="hero" style={{ padding: "1.4rem" }}>
-        <h1 style={{ fontSize: "clamp(1.6rem, 3vw, 2.4rem)" }}>Search Cars</h1>
+      <section className="hero hero-mini">
+        <h1>Search Cars</h1>
         <p>Filter by city, make, model, or keywords in Arabic title/description.</p>
       </section>
 
-      <section className="search-grid" style={{ marginTop: "1rem" }}>
+      <section className="search-grid">
         <aside className="panel">
           <form className="filters" method="get">
             <div>
@@ -90,7 +90,7 @@ export default async function SearchPage({
         </aside>
 
         <section>
-          <div className="panel" style={{ marginBottom: "0.8rem" }}>
+          <div className="panel panel-compact">
             <strong>{data.total}</strong> listings found
           </div>
 

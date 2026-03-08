@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import LogoMark from "@/components/LogoMark";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,10 +17,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <div className="bg-orb bg-orb-one" aria-hidden="true" />
+        <div className="bg-orb bg-orb-two" aria-hidden="true" />
         <header className="topbar">
           <div className="shell topbar-inner">
             <Link href="/" className="brand" aria-label="GARAJ home">
-              GARAJ
+              <LogoMark className="brand-logo" />
+              <span className="brand-copy">
+                <span className="brand-wordmark">GARAJ</span>
+                <span className="brand-tag">Cars Marketplace</span>
+              </span>
             </Link>
             <nav className="topnav">
               <Link href="/search" className="nav-link">
