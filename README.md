@@ -1,6 +1,18 @@
 # GARAJ
 Market Place for Used Cars
 
+## Run With Docker Compose
+
+```bash
+docker compose -f infra/compose.yaml up --build
+```
+
+- Web UI: `http://localhost:3001`
+- API: `http://localhost:8000`
+- OpenSearch: `http://localhost:9200`
+- MinIO API: `http://localhost:9000`
+- MinIO Console: `http://localhost:9001`
+
 ```
 garaj/
   apps/

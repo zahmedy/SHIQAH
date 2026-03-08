@@ -1,7 +1,7 @@
 function apiBase(): string {
-  const value = process.env.NEXT_PUBLIC_API_BASE;
+  const value = process.env.INTERNAL_API_BASE ?? process.env.NEXT_PUBLIC_API_BASE;
   if (!value) {
-    throw new Error("NEXT_PUBLIC_API_BASE is not set.");
+    throw new Error("INTERNAL_API_BASE or NEXT_PUBLIC_API_BASE is not set.");
   }
   return value.replace(/\/$/, "");
 }

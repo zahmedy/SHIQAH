@@ -59,6 +59,20 @@ services:
         condition: service_healthy
       opensearch:
         condition: service_started
+
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+    environment:
+      INTERNAL_API_BASE: http://api:8000
+      NEXT_PUBLIC_API_BASE: http://localhost:8000
+    ports:
+      - "3001:3001"
+    depends_on:
+      api:
+        condition: service_started
+
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
