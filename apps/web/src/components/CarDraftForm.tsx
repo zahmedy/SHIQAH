@@ -177,6 +177,7 @@ export default function CarDraftForm({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   const activeCarId = useMemo(
     () => (mode === "edit" ? (carId ?? null) : createdId),
@@ -430,6 +431,58 @@ export default function CarDraftForm({
     setUploading(false);
   }
 
+  async function submitForReview() {
+    setError("");
+    setSuccess("");
+
+    if (!API_BASE) {
+      setError("NEXT_PUBLIC_API_BASE is missing.");
+      return;
+    }
+    if (!activeCarId) {
+      setError("Create draft first, then submit for review.");
+      return;
+    }
+    if (status !== "draft") {
+      setError("Only draft listings can be submitted.");
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setNeedsLogin(true);
+      setError("Login required.");
+      return;
+    }
+
+    setSubmittingReview(true);
+    try {
+      const res = await fetch(`${API_BASE}/v1/cars/${activeCarId}/submit`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        setNeedsLogin(true);
+        throw new Error("Session expired. Please login again.");
+      }
+
+      if (!res.ok) {
+        throw new Error(await parseApiError(res));
+      }
+
+      const data = (await res.json()) as CarOut;
+      setStatus(data.status);
+      setSuccess(`Draft #${data.id} submitted for review.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to submit listing.");
+    } finally {
+      setSubmittingReview(false);
+    }
+  }
+
   const title = mode === "create" ? "Create Draft" : `Edit Draft #${carId ?? ""}`;
 
   return (
@@ -666,6 +719,16 @@ export default function CarDraftForm({
               <button className="btn btn-primary" type="submit" disabled={saving || loading}>
                 {saving ? "Saving..." : mode === "create" ? "Create Draft" : "Save Changes"}
               </button>
+              {activeCarId && status === "draft" ? (
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  disabled={saving || loading || uploading || submittingReview}
+                  onClick={() => void submitForReview()}
+                >
+                  {submittingReview ? "Submitting..." : "Submit for Review"}
+                </button>
+              ) : null}
               <Link href="/my-cars" className="btn btn-secondary">Back to My Cars</Link>
               {createdId ? (
                 <Link href={`/my-cars/${createdId}/edit`} className="btn btn-secondary">

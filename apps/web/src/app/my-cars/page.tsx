@@ -30,6 +30,13 @@ type MyCar = {
 
 const priceFormatter = new Intl.NumberFormat("en-US");
 
+async function parseApiError(res: Response): Promise<string> {
+  const contentType = res.headers.get("content-type") || "";
+  const payload = contentType.includes("application/json") ? await res.json() : await res.text();
+  const detail = typeof payload === "string" ? payload : payload?.detail;
+  return detail || `Failed with status ${res.status}`;
+}
+
 function prettifyStatus(value: string): string {
   return value
     .split("_")
@@ -51,13 +58,16 @@ export default function MyCarsPage() {
   const [cars, setCars] = useState<MyCar[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [needsLogin, setNeedsLogin] = useState(false);
+  const [submittingId, setSubmittingId] = useState<number | null>(null);
 
   const canLoad = useMemo(() => Boolean(API_BASE), []);
 
   const loadCars = useCallback(async () => {
     setLoading(true);
     setError("");
+    setSuccess("");
     setNeedsLogin(false);
 
     if (!canLoad || !API_BASE) {
@@ -89,10 +99,7 @@ export default function MyCarsPage() {
       }
 
       if (!res.ok) {
-        const contentType = res.headers.get("content-type") || "";
-        const payload = contentType.includes("application/json") ? await res.json() : await res.text();
-        const detail = typeof payload === "string" ? payload : payload?.detail;
-        throw new Error(detail || `Failed with status ${res.status}`);
+        throw new Error(await parseApiError(res));
       }
 
       const data = (await res.json()) as MyCar[];
@@ -107,6 +114,49 @@ export default function MyCarsPage() {
   useEffect(() => {
     void loadCars();
   }, [loadCars]);
+
+  async function submitForReview(carId: number) {
+    setError("");
+    setSuccess("");
+
+    if (!canLoad || !API_BASE) {
+      setError("NEXT_PUBLIC_API_BASE is missing.");
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setNeedsLogin(true);
+      setError("Login required.");
+      return;
+    }
+
+    setSubmittingId(carId);
+    try {
+      const res = await fetch(`${API_BASE}/v1/cars/${carId}/submit`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        setNeedsLogin(true);
+        throw new Error("Session expired. Please login again.");
+      }
+
+      if (!res.ok) {
+        throw new Error(await parseApiError(res));
+      }
+
+      setCars((prev) => prev.map((car) => (car.id === carId ? { ...car, status: "pending_review" } : car)));
+      setSuccess(`Car #${carId} submitted for review.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to submit listing.");
+    } finally {
+      setSubmittingId(null);
+    }
+  }
 
   return (
     <main className="page shell">
@@ -132,6 +182,7 @@ export default function MyCarsPage() {
       )}
 
       {error && <div className="notice error">{error}</div>}
+      {success && <div className="notice success">{success}</div>}
 
       {!loading && !needsLogin && !error && cars.length === 0 && (
         <div className="notice">You do not have any listings yet.</div>
@@ -167,6 +218,17 @@ export default function MyCarsPage() {
                     <Link href={`/my-cars/${car.id}/edit`} className="btn btn-secondary card-action">
                       Edit Draft
                     </Link>
+                  )}
+
+                  {car.status === "draft" && (
+                    <button
+                      type="button"
+                      className="btn btn-primary card-action"
+                      disabled={submittingId === car.id}
+                      onClick={() => void submitForReview(car.id)}
+                    >
+                      {submittingId === car.id ? "Submitting..." : "Submit for Review"}
+                    </button>
                   )}
 
                   {car.status === "active" ? (
