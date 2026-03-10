@@ -95,6 +95,8 @@ services:
       until /usr/bin/mc alias set local http://minio:9000 minioadmin minioadmin; do sleep 1; done;
       /usr/bin/mc mb -p local/garaj-media || true;
       /usr/bin/mc anonymous set download local/garaj-media || true;
+      echo '[{\"AllowedOrigin\":[\"http://localhost:3001\",\"http://localhost:3000\"],\"AllowedMethod\":[\"GET\",\"PUT\",\"HEAD\"],\"AllowedHeader\":[\"*\"],\"ExposeHeader\":[\"ETag\"],\"MaxAgeSeconds\":3000}]' > /tmp/garaj-cors.json;
+      /usr/bin/mc cors set local/garaj-media /tmp/garaj-cors.json || true;
       exit 0;
       "
 

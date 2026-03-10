@@ -8,6 +8,13 @@ const TOKEN_KEY = "garaj_access_token";
 
 type DraftFormMode = "create" | "edit";
 
+type CarPhoto = {
+  id: number;
+  public_url: string;
+  sort_order: number;
+  is_cover: boolean;
+};
+
 type CarPayload = {
   city: string;
   district?: string;
@@ -29,6 +36,7 @@ type CarPayload = {
 type CarOut = CarPayload & {
   id: number;
   status: string;
+  photos?: CarPhoto[];
 };
 
 type BuildPayloadResult =
@@ -51,6 +59,17 @@ type FormState = {
   color: string;
   title_ar: string;
   description_ar: string;
+};
+
+type PresignResponse = {
+  upload_url: string;
+  storage_key: string;
+  public_url: string;
+};
+
+type CompleteResponse = {
+  media_id: number;
+  public_url: string;
 };
 
 const initialForm: FormState = {
@@ -81,6 +100,13 @@ function parseOptionalNumber(value: string): number | undefined {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return undefined;
   return Math.trunc(parsed);
+}
+
+async function parseApiError(res: Response): Promise<string> {
+  const contentType = res.headers.get("content-type") || "";
+  const payload = contentType.includes("application/json") ? await res.json() : await res.text();
+  const detail = typeof payload === "string" ? payload : payload?.detail;
+  return detail || `Failed with status ${res.status}`;
 }
 
 function buildPayload(form: FormState): BuildPayloadResult {
@@ -146,8 +172,16 @@ export default function CarDraftForm({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [createdId, setCreatedId] = useState<number | null>(null);
+  const [photos, setPhotos] = useState<CarPhoto[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadSuccess, setUploadSuccess] = useState("");
 
-  const canLoad = useMemo(() => Boolean(API_BASE), []);
+  const activeCarId = useMemo(
+    () => (mode === "edit" ? (carId ?? null) : createdId),
+    [mode, carId, createdId],
+  );
 
   useEffect(() => {
     if (mode !== "edit") return;
@@ -156,7 +190,7 @@ export default function CarDraftForm({
       setLoading(false);
       return;
     }
-    if (!canLoad || !API_BASE) {
+    if (!API_BASE) {
       setError("NEXT_PUBLIC_API_BASE is missing.");
       setLoading(false);
       return;
@@ -183,11 +217,11 @@ export default function CarDraftForm({
           return;
         }
         if (!res.ok) {
-          const payload = await res.text();
-          throw new Error(payload || `Failed with status ${res.status}`);
+          throw new Error(await parseApiError(res));
         }
         const car = (await res.json()) as CarOut;
         setStatus(car.status);
+        setPhotos(car.photos || []);
         setForm({
           city: field(car.city),
           district: field(car.district),
@@ -213,14 +247,14 @@ export default function CarDraftForm({
     };
 
     void load();
-  }, [mode, carId, canLoad]);
+  }, [mode, carId]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setSuccess("");
 
-    if (!canLoad || !API_BASE) {
+    if (!API_BASE) {
       setError("NEXT_PUBLIC_API_BASE is missing.");
       return;
     }
@@ -257,14 +291,12 @@ export default function CarDraftForm({
       }
 
       if (!res.ok) {
-        const contentType = res.headers.get("content-type") || "";
-        const payload = contentType.includes("application/json") ? await res.json() : await res.text();
-        const detail = typeof payload === "string" ? payload : payload?.detail;
-        throw new Error(detail || `Failed with status ${res.status}`);
+        throw new Error(await parseApiError(res));
       }
 
       const data = (await res.json()) as CarOut;
       setStatus(data.status);
+      setPhotos(data.photos || photos);
 
       if (mode === "create") {
         setCreatedId(data.id);
@@ -277,6 +309,125 @@ export default function CarDraftForm({
     } finally {
       setSaving(false);
     }
+  }
+
+  async function uploadSelectedPhotos() {
+    setUploadError("");
+    setUploadSuccess("");
+
+    if (!API_BASE) {
+      setUploadError("NEXT_PUBLIC_API_BASE is missing.");
+      return;
+    }
+
+    if (!activeCarId) {
+      setUploadError("Create draft first, then upload photos.");
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setNeedsLogin(true);
+      setUploadError("Login required.");
+      return;
+    }
+
+    if (selectedFiles.length === 0) {
+      setUploadError("Select one or more photos first.");
+      return;
+    }
+
+    const imageFiles = selectedFiles.filter((file) => file.type.startsWith("image/"));
+    if (imageFiles.length === 0) {
+      setUploadError("Only image files are allowed.");
+      return;
+    }
+
+    setUploading(true);
+
+    let uploadedCount = 0;
+    let failedCount = 0;
+    const nextPhotos = [...photos];
+
+    for (const file of imageFiles) {
+      try {
+        const contentType = file.type || "application/octet-stream";
+        const presignRes = await fetch(`${API_BASE}/v1/cars/${activeCarId}/media/presign`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ filename: file.name, content_type: contentType }),
+        });
+
+        if (!presignRes.ok) {
+          throw new Error(await parseApiError(presignRes));
+        }
+
+        const presign = (await presignRes.json()) as PresignResponse;
+
+        const uploadRes = await fetch(presign.upload_url, {
+          method: "PUT",
+          headers: {
+            "Content-Type": contentType,
+          },
+          body: file,
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error(`Failed upload for ${file.name} (${uploadRes.status}).`);
+        }
+
+        const isCover = nextPhotos.length === 0;
+        const completeRes = await fetch(`${API_BASE}/v1/cars/${activeCarId}/media/complete`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            storage_key: presign.storage_key,
+            public_url: presign.public_url,
+            is_cover: isCover,
+          }),
+        });
+
+        if (!completeRes.ok) {
+          throw new Error(await parseApiError(completeRes));
+        }
+
+        const completeData = (await completeRes.json()) as CompleteResponse;
+
+        if (isCover) {
+          for (let i = 0; i < nextPhotos.length; i += 1) {
+            nextPhotos[i] = { ...nextPhotos[i], is_cover: false };
+          }
+        }
+
+        nextPhotos.push({
+          id: completeData.media_id,
+          public_url: completeData.public_url || presign.public_url,
+          sort_order: nextPhotos.length,
+          is_cover: isCover,
+        });
+        uploadedCount += 1;
+      } catch {
+        failedCount += 1;
+      }
+    }
+
+    setPhotos(nextPhotos);
+    setSelectedFiles([]);
+
+    if (uploadedCount > 0) {
+      setUploadSuccess(`Uploaded ${uploadedCount} photo(s).`);
+    }
+    if (failedCount > 0) {
+      setUploadError(`${failedCount} file(s) failed to upload. Check MinIO CORS and retry.`);
+    }
+
+    setUploading(false);
   }
 
   const title = mode === "create" ? "Create Draft" : `Edit Draft #${carId ?? ""}`;
@@ -459,6 +610,57 @@ export default function CarDraftForm({
                 onChange={(e) => setForm((prev) => ({ ...prev, description_ar: e.target.value }))}
               />
             </div>
+
+            <section className="upload-panel">
+              <h2 className="subheading">Photos</h2>
+              <p className="car-meta">Uploaded photos: {photos.length}. At least 4 are needed before submit for review.</p>
+
+              {activeCarId ? (
+                <>
+                  <input
+                    className="upload-file-input"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => setSelectedFiles(Array.from(e.target.files || []))}
+                    disabled={uploading}
+                  />
+
+                  <div className="upload-actions">
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => void uploadSelectedPhotos()}
+                      disabled={uploading || selectedFiles.length === 0}
+                    >
+                      {uploading ? "Uploading..." : "Upload Selected"}
+                    </button>
+                    <span className="car-meta">{selectedFiles.length} file(s) selected</span>
+                  </div>
+                </>
+              ) : (
+                <p className="notice">Save draft first to enable photo uploads.</p>
+              )}
+
+              {uploadError && <p className="notice error">{uploadError}</p>}
+              {uploadSuccess && <p className="notice success">{uploadSuccess}</p>}
+
+              {photos.length > 0 ? (
+                <div className="upload-photo-grid">
+                  {photos.map((photo) => (
+                    <article className="upload-photo-item" key={photo.id}>
+                      <img src={photo.public_url} alt={`Car photo ${photo.sort_order + 1}`} loading="lazy" />
+                      <div className="upload-photo-meta">
+                        <span className="upload-photo-order">#{photo.sort_order + 1}</span>
+                        {photo.is_cover ? <span className="status-pill status-active">Cover</span> : null}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="car-meta">No photos uploaded yet.</p>
+              )}
+            </section>
 
             <div className="auth-actions">
               <button className="btn btn-primary" type="submit" disabled={saving || loading}>
