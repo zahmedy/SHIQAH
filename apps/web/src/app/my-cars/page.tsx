@@ -116,6 +116,9 @@ export default function MyCarsPage() {
       </section>
 
       <section className="mycars-toolbar">
+        <Link href="/my-cars/new" className="btn btn-primary">
+          Create Draft
+        </Link>
         <button type="button" className="btn btn-secondary" onClick={() => void loadCars()} disabled={loading}>
           {loading ? "Loading..." : "Refresh"}
         </button>
@@ -159,6 +162,12 @@ export default function MyCarsPage() {
                   <p className="car-meta">{car.mileage_km ? `${car.mileage_km.toLocaleString()} km` : "Mileage not set"}</p>
                   <p className="car-meta">Created {formatDate(car.created_at)}</p>
                   <p className="car-price">{priceFormatter.format(car.price_sar)} SAR</p>
+
+                  {(car.status === "draft" || car.status === "pending_review") && (
+                    <Link href={`/my-cars/${car.id}/edit`} className="btn btn-secondary card-action">
+                      Edit Draft
+                    </Link>
+                  )}
 
                   {car.status === "active" ? (
                     <Link href={`/cars/${car.id}`} className="btn btn-secondary card-action">

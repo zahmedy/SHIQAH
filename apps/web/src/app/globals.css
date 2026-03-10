@@ -530,6 +530,16 @@ a {
   box-shadow: 0 20px 48px #01091370;
 }
 
+.draft-card {
+  width: min(980px, 100%);
+}
+
+.draft-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.82rem;
+}
+
 .auth-card h1 {
   margin: 0;
   font-family: var(--font-title);
@@ -666,5 +676,9 @@ a {
 
   .car-row {
     flex-direction: column;
+  }
+
+  .draft-grid {
+    grid-template-columns: 1fr;
   }
 }
