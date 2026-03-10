@@ -516,6 +516,41 @@ a {
   margin-top: 0.8rem;
 }
 
+.auth-wrap {
+  display: grid;
+  place-items: start center;
+}
+
+.auth-card {
+  width: min(520px, 100%);
+  padding: 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: linear-gradient(180deg, #071a2b 0%, #081d31 100%);
+  box-shadow: 0 20px 48px #01091370;
+}
+
+.auth-card h1 {
+  margin: 0;
+  font-family: var(--font-title);
+  letter-spacing: 0.04em;
+}
+
+.auth-note {
+  margin: 0.65rem 0 1rem;
+  color: var(--muted);
+}
+
+.auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.auth-next {
+  margin-top: 1rem;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;

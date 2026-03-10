@@ -32,6 +32,9 @@ export default function RootLayout({
               <Link href="/search" className="nav-link">
                 Search
               </Link>
+              <Link href="/login" className="nav-link">
+                Login
+              </Link>
             </nav>
           </div>
         </header>
