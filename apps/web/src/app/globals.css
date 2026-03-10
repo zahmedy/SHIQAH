@@ -551,6 +551,72 @@ a {
   margin-top: 1rem;
 }
 
+.mycars-toolbar {
+  display: flex;
+  gap: 0.6rem;
+  margin: 1rem 0;
+}
+
+.car-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.status-draft {
+  color: #c9d7e4;
+  border-color: #5a748d;
+  background: #1b3147;
+}
+
+.status-pending-review {
+  color: #f2e1b8;
+  border-color: #a68439;
+  background: #3d3214;
+}
+
+.status-active {
+  color: #b8f3cf;
+  border-color: #2a9d58;
+  background: #0f2f1f;
+}
+
+.status-sold {
+  color: #d5d8ff;
+  border-color: #6373d0;
+  background: #1f2857;
+}
+
+.status-rejected,
+.status-expired {
+  color: #ffb8b8;
+  border-color: #b94646;
+  background: #311015;
+}
+
+.card-action {
+  margin-top: 0.7rem;
+}
+
+.card-note {
+  margin-top: 0.7rem;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
@@ -596,5 +662,9 @@ a {
   .photo-grid,
   .specs {
     grid-template-columns: 1fr;
+  }
+
+  .car-row {
+    flex-direction: column;
   }
 }

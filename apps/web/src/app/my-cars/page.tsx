@@ -1,0 +1,178 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
+const TOKEN_KEY = "garaj_access_token";
+
+type CarPhoto = {
+  id: number;
+  public_url: string;
+  sort_order: number;
+  is_cover: boolean;
+};
+
+type MyCar = {
+  id: number;
+  status: string;
+  city: string;
+  district?: string;
+  make: string;
+  model: string;
+  year: number;
+  price_sar: number;
+  mileage_km?: number;
+  title_ar: string;
+  photos: CarPhoto[];
+  created_at: string;
+};
+
+const priceFormatter = new Intl.NumberFormat("en-US");
+
+function prettifyStatus(value: string): string {
+  return value
+    .split("_")
+    .map((chunk) => chunk.charAt(0).toUpperCase() + chunk.slice(1))
+    .join(" ");
+}
+
+function formatDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Unknown date";
+  return date.toLocaleDateString("en-GB", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+export default function MyCarsPage() {
+  const [cars, setCars] = useState<MyCar[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [needsLogin, setNeedsLogin] = useState(false);
+
+  const canLoad = useMemo(() => Boolean(API_BASE), []);
+
+  const loadCars = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    setNeedsLogin(false);
+
+    if (!canLoad || !API_BASE) {
+      setError("NEXT_PUBLIC_API_BASE is missing.");
+      setLoading(false);
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setNeedsLogin(true);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/v1/seller/cars`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        cache: "no-store",
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        setNeedsLogin(true);
+        setError("Your session is missing or expired. Please login again.");
+        setLoading(false);
+        return;
+      }
+
+      if (!res.ok) {
+        const contentType = res.headers.get("content-type") || "";
+        const payload = contentType.includes("application/json") ? await res.json() : await res.text();
+        const detail = typeof payload === "string" ? payload : payload?.detail;
+        throw new Error(detail || `Failed with status ${res.status}`);
+      }
+
+      const data = (await res.json()) as MyCar[];
+      setCars(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load your listings.");
+    } finally {
+      setLoading(false);
+    }
+  }, [canLoad]);
+
+  useEffect(() => {
+    void loadCars();
+  }, [loadCars]);
+
+  return (
+    <main className="page shell">
+      <section className="hero hero-mini">
+        <h1>My Cars</h1>
+        <p>Track your listings and review status in one place.</p>
+      </section>
+
+      <section className="mycars-toolbar">
+        <button type="button" className="btn btn-secondary" onClick={() => void loadCars()} disabled={loading}>
+          {loading ? "Loading..." : "Refresh"}
+        </button>
+        <Link href="/login" className="btn btn-secondary">Login</Link>
+      </section>
+
+      {needsLogin && (
+        <div className="notice">
+          Login is required to view your cars.
+        </div>
+      )}
+
+      {error && <div className="notice error">{error}</div>}
+
+      {!loading && !needsLogin && !error && cars.length === 0 && (
+        <div className="notice">You do not have any listings yet.</div>
+      )}
+
+      {!loading && !needsLogin && cars.length > 0 && (
+        <section className="listing-grid">
+          {cars.map((car) => {
+            const cover = car.photos.find((photo) => photo.is_cover)?.public_url || car.photos[0]?.public_url || "";
+            const statusClass = `status-pill status-${car.status.replace(/_/g, "-")}`;
+
+            return (
+              <article key={car.id} className="car-card">
+                {cover ? (
+                  <img className="car-thumb" src={cover} alt={car.title_ar || `${car.make} ${car.model}`} />
+                ) : (
+                  <div className="car-thumb" aria-hidden="true" />
+                )}
+
+                <div className="car-body">
+                  <div className="car-row">
+                    <h3 className="car-title">{car.title_ar || `${car.make} ${car.model}`}</h3>
+                    <span className={statusClass}>{prettifyStatus(car.status)}</span>
+                  </div>
+
+                  <p className="car-meta">{car.make} {car.model} • {car.year}</p>
+                  <p className="car-meta">{car.city}{car.district ? `, ${car.district}` : ""}</p>
+                  <p className="car-meta">{car.mileage_km ? `${car.mileage_km.toLocaleString()} km` : "Mileage not set"}</p>
+                  <p className="car-meta">Created {formatDate(car.created_at)}</p>
+                  <p className="car-price">{priceFormatter.format(car.price_sar)} SAR</p>
+
+                  {car.status === "active" ? (
+                    <Link href={`/cars/${car.id}`} className="btn btn-secondary card-action">
+                      Open Public Listing
+                    </Link>
+                  ) : (
+                    <p className="car-meta card-note">Public page is available after status becomes Active.</p>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </section>
+      )}
+    </main>
+  );
+}
