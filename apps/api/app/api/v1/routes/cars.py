@@ -61,6 +61,12 @@ def create_car(
         raise HTTPException(status_code=400, detail="Invalid year")
     if payload.price_sar <= 0:
         raise HTTPException(status_code=400, detail="Invalid price")
+    if (payload.latitude is None) != (payload.longitude is None):
+        raise HTTPException(status_code=400, detail="Latitude and longitude must be provided together")
+    if payload.latitude is not None and not (-90 <= payload.latitude <= 90):
+        raise HTTPException(status_code=400, detail="Invalid latitude")
+    if payload.longitude is not None and not (-180 <= payload.longitude <= 180):
+        raise HTTPException(status_code=400, detail="Invalid longitude")
 
     car = CarListing(
         owner_id=user.id,
@@ -110,6 +116,15 @@ def update_car(
             raise HTTPException(status_code=400, detail="Invalid year")
     if "price_sar" in data and data["price_sar"] is not None and data["price_sar"] <= 0:
         raise HTTPException(status_code=400, detail="Invalid price")
+    if "latitude" in data or "longitude" in data:
+        next_lat = data.get("latitude", car.latitude)
+        next_lon = data.get("longitude", car.longitude)
+        if (next_lat is None) != (next_lon is None):
+            raise HTTPException(status_code=400, detail="Latitude and longitude must be provided together")
+        if next_lat is not None and not (-90 <= next_lat <= 90):
+            raise HTTPException(status_code=400, detail="Invalid latitude")
+        if next_lon is not None and not (-180 <= next_lon <= 180):
+            raise HTTPException(status_code=400, detail="Invalid longitude")
 
     for k, v in data.items():
         setattr(car, k, v)

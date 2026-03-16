@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { apiGet } from "@/lib/api";
+import NearbySearch from "@/components/NearbySearch";
 
 type SearchItem = {
   id: number | string;
@@ -27,6 +28,9 @@ type Query = {
   make?: string;
   model?: string;
   q?: string;
+  lat?: string;
+  lon?: string;
+  radius_km?: string;
 };
 
 const priceFormatter = new Intl.NumberFormat("en-US");
@@ -43,6 +47,9 @@ export default async function SearchPage({
   if (params.make) qs.set("make", params.make);
   if (params.model) qs.set("model", params.model);
   if (params.q) qs.set("q", params.q);
+  if (params.lat) qs.set("lat", params.lat);
+  if (params.lon) qs.set("lon", params.lon);
+  if (params.radius_km) qs.set("radius_km", params.radius_km);
 
   const path = qs.toString() ? `/v1/search/cars?${qs.toString()}` : "/v1/search/cars";
 
@@ -65,6 +72,10 @@ export default async function SearchPage({
       <section className="search-grid">
         <aside className="panel">
           <form className="filters" method="get">
+            <NearbySearch radiusKm={50} />
+            {params.lat ? <input type="hidden" name="lat" value={params.lat} /> : null}
+            {params.lon ? <input type="hidden" name="lon" value={params.lon} /> : null}
+            {params.radius_km ? <input type="hidden" name="radius_km" value={params.radius_km} /> : null}
             <div>
               <label className="label" htmlFor="q">Keyword</label>
               <input id="q" name="q" defaultValue={params.q ?? ""} placeholder="كامري" className="input" />

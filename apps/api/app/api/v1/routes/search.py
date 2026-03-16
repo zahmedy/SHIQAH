@@ -22,6 +22,9 @@ def search_cars(
     transmission: str | None = None,
     fuel_type: str | None = None,
     body_type: str | None = None,
+    lat: float | None = Query(default=None, ge=-90, le=90),
+    lon: float | None = Query(default=None, ge=-180, le=180),
+    radius_km: int | None = Query(default=None, ge=1, le=500),
 
     sort: str = Query(default="newest", pattern="^(newest|price_asc|price_desc|mileage_asc)$"),
     page: int = Query(default=1, ge=1),
@@ -58,6 +61,14 @@ def search_cars(
 
     if mileage_max is not None:
         filters.append({"range": {"mileage_km": {"lte": mileage_max}}})
+    if lat is not None and lon is not None:
+        distance = f"{radius_km or 50}km"
+        filters.append({
+            "geo_distance": {
+                "distance": distance,
+                "location": {"lat": lat, "lon": lon},
+            }
+        })
 
     must: list[dict] = []
     if q:

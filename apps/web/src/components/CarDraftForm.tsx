@@ -18,6 +18,8 @@ type CarPhoto = {
 type CarPayload = {
   city: string;
   district?: string;
+  latitude?: number;
+  longitude?: number;
   make: string;
   model: string;
   year: number;
@@ -46,6 +48,8 @@ type BuildPayloadResult =
 type FormState = {
   city: string;
   district: string;
+  latitude: string;
+  longitude: string;
   make: string;
   model: string;
   year: string;
@@ -75,6 +79,8 @@ type CompleteResponse = {
 const initialForm: FormState = {
   city: "",
   district: "",
+  latitude: "",
+  longitude: "",
   make: "",
   model: "",
   year: "",
@@ -100,6 +106,13 @@ function parseOptionalNumber(value: string): number | undefined {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return undefined;
   return Math.trunc(parsed);
+}
+
+function parseOptionalFloat(value: string): number | undefined {
+  if (!value.trim()) return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return undefined;
+  return parsed;
 }
 
 async function parseApiError(res: Response): Promise<string> {
@@ -136,9 +149,26 @@ function buildPayload(form: FormState): BuildPayloadResult {
     return { ok: false, error: "Mileage must be zero or a positive integer." };
   }
 
+  const latitude = parseOptionalFloat(form.latitude);
+  const longitude = parseOptionalFloat(form.longitude);
+  if ((form.latitude.trim() && latitude === undefined) || (form.longitude.trim() && longitude === undefined)) {
+    return { ok: false, error: "Latitude/longitude must be valid numbers." };
+  }
+  if ((latitude !== undefined && longitude === undefined) || (latitude === undefined && longitude !== undefined)) {
+    return { ok: false, error: "Provide both latitude and longitude, or leave both empty." };
+  }
+  if (latitude !== undefined && (latitude < -90 || latitude > 90)) {
+    return { ok: false, error: "Latitude must be between -90 and 90." };
+  }
+  if (longitude !== undefined && (longitude < -180 || longitude > 180)) {
+    return { ok: false, error: "Longitude must be between -180 and 180." };
+  }
+
   const payload: CarPayload = {
     city,
     district: form.district.trim() || undefined,
+    latitude,
+    longitude,
     make,
     model,
     year,
@@ -178,6 +208,7 @@ export default function CarDraftForm({
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [locationStatus, setLocationStatus] = useState("");
 
   const activeCarId = useMemo(
     () => (mode === "edit" ? (carId ?? null) : createdId),
@@ -226,6 +257,8 @@ export default function CarDraftForm({
         setForm({
           city: field(car.city),
           district: field(car.district),
+          latitude: field(car.latitude),
+          longitude: field(car.longitude),
           make: field(car.make),
           model: field(car.model),
           year: field(car.year),
@@ -249,6 +282,26 @@ export default function CarDraftForm({
 
     void load();
   }, [mode, carId]);
+
+  function useMyLocation() {
+    if (!navigator.geolocation) {
+      setLocationStatus("Geolocation not supported in this browser.");
+      return;
+    }
+    setLocationStatus("Requesting location...");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude.toFixed(6);
+        const lon = pos.coords.longitude.toFixed(6);
+        setForm((prev) => ({ ...prev, latitude: lat, longitude: lon }));
+        setLocationStatus("Location captured.");
+      },
+      (err) => {
+        setLocationStatus(err.message || "Unable to retrieve location.");
+      },
+      { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 },
+    );
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -523,6 +576,34 @@ export default function CarDraftForm({
                   value={form.district}
                   onChange={(e) => setForm((prev) => ({ ...prev, district: e.target.value }))}
                 />
+              </div>
+
+              <div>
+                <label className="label" htmlFor="latitude">Listing Location (optional)</label>
+                <div className="inline-actions">
+                  <button type="button" className="btn btn-secondary" onClick={useMyLocation}>
+                    Use my location
+                  </button>
+                  {locationStatus ? <span className="helper-text">{locationStatus}</span> : null}
+                </div>
+                <div className="form-grid form-grid-2">
+                  <input
+                    id="latitude"
+                    className="input"
+                    inputMode="decimal"
+                    placeholder="Latitude"
+                    value={form.latitude}
+                    onChange={(e) => setForm((prev) => ({ ...prev, latitude: e.target.value }))}
+                  />
+                  <input
+                    id="longitude"
+                    className="input"
+                    inputMode="decimal"
+                    placeholder="Longitude"
+                    value={form.longitude}
+                    onChange={(e) => setForm((prev) => ({ ...prev, longitude: e.target.value }))}
+                  />
+                </div>
               </div>
 
               <div>

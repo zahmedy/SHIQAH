@@ -11,6 +11,8 @@ class CarPhoto(BaseModel):
 class CarCreate(BaseModel):
     city: str
     district: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
     make: str
     model: str
@@ -33,6 +35,8 @@ class CarCreate(BaseModel):
 class CarUpdate(BaseModel):
     city: Optional[str] = None
     district: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
     make: Optional[str] = None
     model: Optional[str] = None
@@ -59,6 +63,8 @@ class CarOut(BaseModel):
 
     city: str
     district: Optional[str]
+    latitude: Optional[float]
+    longitude: Optional[float]
 
     make: str
     model: str

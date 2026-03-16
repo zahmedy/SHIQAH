@@ -8,6 +8,10 @@ def ensure_index() -> None:
     c = client()
     idx = settings.OPENSEARCH_INDEX
     if c.indices.exists(index=idx):
+        try:
+            c.indices.put_mapping(index=idx, body={"properties": {"location": {"type": "geo_point"}}})
+        except Exception:
+            pass
         return
 
     mapping = {
@@ -29,6 +33,7 @@ def ensure_index() -> None:
                 "title_ar": {"type": "text"},
                 "description_ar": {"type": "text"},
                 "published_at": {"type": "date"},
+                "location": {"type": "geo_point"},
             }
         }
     }

@@ -33,6 +33,8 @@ class CarListing(SQLModel, table=True):
     # MVP: keep location simple
     city: str = Field(index=True)                 # "Dammam" / "Khobar"
     district: Optional[str] = Field(default=None, index=True)
+    latitude: Optional[float] = Field(default=None, index=True)
+    longitude: Optional[float] = Field(default=None, index=True)
 
     # MVP: use free text for make/model (seed tables later)
     make: str = Field(index=True)                 # "Toyota"

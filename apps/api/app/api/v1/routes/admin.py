@@ -29,23 +29,25 @@ def approve_car(
     session.add(car)
     session.commit()
     doc = {
-    "id": str(car.id),
-    "city": car.city,
-    "district": car.district,
-    "make": car.make,
-    "model": car.model,
-    "year": car.year,
-    "price_sar": car.price_sar,
-    "mileage_km": car.mileage_km,
-    "body_type": car.body_type,
-    "transmission": car.transmission,
-    "fuel_type": car.fuel_type,
-    "drivetrain": car.drivetrain,
-    "condition": car.condition,
-    "title_ar": car.title_ar,
-    "description_ar": car.description_ar,
-    "published_at": car.published_at.isoformat() if car.published_at else None,
+        "id": str(car.id),
+        "city": car.city,
+        "district": car.district,
+        "make": car.make,
+        "model": car.model,
+        "year": car.year,
+        "price_sar": car.price_sar,
+        "mileage_km": car.mileage_km,
+        "body_type": car.body_type,
+        "transmission": car.transmission,
+        "fuel_type": car.fuel_type,
+        "drivetrain": car.drivetrain,
+        "condition": car.condition,
+        "title_ar": car.title_ar,
+        "description_ar": car.description_ar,
+        "published_at": car.published_at.isoformat() if car.published_at else None,
     }
+    if car.latitude is not None and car.longitude is not None:
+        doc["location"] = {"lat": car.latitude, "lon": car.longitude}
     upsert_car(str(car.id), doc)
     return {"ok": True, "status": car.status.value, "published_at": car.published_at}
 

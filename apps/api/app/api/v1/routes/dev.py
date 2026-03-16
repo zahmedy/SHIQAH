@@ -51,6 +51,8 @@ def reindex_search(session: Session = Depends(get_session)):
             "description_ar": car.description_ar,
             "published_at": car.published_at.isoformat() if car.published_at else None,
         }
+        if car.latitude is not None and car.longitude is not None:
+            doc["location"] = {"lat": car.latitude, "lon": car.longitude}
         upsert_car(str(car.id), doc)
 
     return {"ok": True, "indexed": len(cars)}
