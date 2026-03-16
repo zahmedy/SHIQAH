@@ -44,7 +44,7 @@ export default async function HomePage() {
         </div>
         <p>
           Built for speed and trust. Search live listings, open detailed pages,
-          and send direct leads to sellers in seconds.
+          and chat with sellers in seconds.
         </p>
 
         <div className="hero-actions">
@@ -68,8 +68,8 @@ export default async function HomePage() {
           <p className="stat-value">Rich Specs + Gallery</p>
         </article>
         <article className="stat-card">
-          <p className="stat-label">Lead Capture</p>
-          <p className="stat-value">Call + WhatsApp + Form</p>
+          <p className="stat-label">In-App Chat</p>
+          <p className="stat-value">Live Buyer Threads</p>
         </article>
       </section>
 

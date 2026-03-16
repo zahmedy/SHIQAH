@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { apiGet } from "@/lib/api";
-import LeadForm from "./LeadForm";
+import ChatPanel from "./ChatPanel";
 
 type Photo = {
   id: number;
@@ -166,8 +166,8 @@ export default async function CarDetailPage({
 
         <hr className="separator" />
 
-        <h3 className="subheading">Send a Lead</h3>
-        <LeadForm carId={car.id} />
+        <h3 className="subheading">In-App Chat</h3>
+        <ChatPanel carId={car.id} />
       </aside>
     </main>
   );

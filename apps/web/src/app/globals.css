@@ -482,6 +482,85 @@ a {
   margin-top: 0.7rem;
 }
 
+.chat-panel {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 0.9rem;
+  background: linear-gradient(180deg, #071a2b 0%, #081d31 100%);
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  align-items: flex-start;
+  margin-bottom: 0.8rem;
+}
+
+.chat-title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.chat-subtitle {
+  margin: 0.3rem 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.chat-login {
+  white-space: nowrap;
+}
+
+.chat-messages {
+  display: grid;
+  gap: 0.6rem;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 0.3rem;
+}
+
+.chat-bubble {
+  max-width: 80%;
+  padding: 0.6rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #0b2235;
+  font-size: 0.92rem;
+}
+
+.chat-bubble p {
+  margin: 0;
+}
+
+.chat-bubble span {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.chat-buyer {
+  margin-left: auto;
+  border-color: color-mix(in srgb, var(--brand) 40%, var(--line));
+  background: linear-gradient(180deg, #0d2a1b 0%, #0b2519 100%);
+}
+
+.chat-seller {
+  margin-right: auto;
+}
+
+.chat-input-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+}
+
+.chat-input {
+  min-height: 42px;
+}
+
 .separator {
   border: 0;
   border-top: 1px solid var(--line);
