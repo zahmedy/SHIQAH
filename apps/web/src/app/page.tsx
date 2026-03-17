@@ -1,5 +1,4 @@
 import Link from "next/link";
-import LogoMark from "@/components/LogoMark";
 import { apiGet } from "@/lib/api";
 
 type HomeListing = {
@@ -34,46 +33,7 @@ export default async function HomePage() {
 
   return (
     <main className="page shell">
-      <section className="hero hero-home">
-        <div className="hero-logo-wrap">
-          <LogoMark className="hero-logo" />
-          <div>
-            <p className="hero-kicker">Saudi Used-Car Network</p>
-            <h1>Buy and Sell with a Dealer-Grade Experience</h1>
-          </div>
-        </div>
-        <p>
-          Built for speed and trust. Search live listings, open detailed pages,
-          and chat with sellers in seconds.
-        </p>
-
-        <div className="hero-actions">
-          <Link href="/search" className="btn btn-primary">
-            Browse Listings
-          </Link>
-          <Link href="/search?city=Riyadh" className="btn btn-secondary">
-            Riyadh Inventory
-          </Link>
-        </div>
-      </section>
-
-      <h2 className="section-title">Platform Highlights</h2>
-      <section className="stats">
-        <article className="stat-card">
-          <p className="stat-label">Search Engine</p>
-          <p className="stat-value">OpenSearch Core</p>
-        </article>
-        <article className="stat-card">
-          <p className="stat-label">Listing Details</p>
-          <p className="stat-value">Rich Specs + Gallery</p>
-        </article>
-        <article className="stat-card">
-          <p className="stat-label">In-App Chat</p>
-          <p className="stat-value">Live Buyer Threads</p>
-        </article>
-      </section>
-
-      <h2 className="section-title">Latest Listings</h2>
+      <h1 className="section-title">Latest Listings</h1>
       {fetchError ? (
         <div className="notice error">{fetchError}</div>
       ) : listings.length === 0 ? (
