@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import LogoMark from "@/components/LogoMark";
+import TopbarUser from "@/components/TopbarUser";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -39,6 +40,7 @@ export default function RootLayout({
                 Login
               </Link>
             </nav>
+            <TopbarUser />
           </div>
         </header>
         {children}

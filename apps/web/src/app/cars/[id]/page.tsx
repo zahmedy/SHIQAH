@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { apiGet } from "@/lib/api";
 import ChatPanel from "./ChatPanel";
+import OwnerActions from "./OwnerActions";
 
 type Photo = {
   id: number;
@@ -12,6 +13,7 @@ type Photo = {
 
 type Listing = {
   id: number;
+  owner_id: number;
   city: string;
   district?: string;
   make: string;
@@ -83,6 +85,7 @@ export default async function CarDetailPage({
         <header className="listing-head">
           <h1 className="listing-title">{car.title_ar}</h1>
           <p className="car-price">{priceFormatter.format(car.price_sar)} SAR</p>
+          <OwnerActions ownerId={car.owner_id} carId={car.id} />
         </header>
 
         {car.photos?.length ? (
