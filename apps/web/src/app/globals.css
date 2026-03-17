@@ -93,8 +93,10 @@ a {
 
 .brand-wordmark {
   font-family: var(--font-title);
-  font-size: 1.15rem;
-  letter-spacing: 0.08em;
+  font-size: 1.28rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
 }
 
 .brand-tag {
