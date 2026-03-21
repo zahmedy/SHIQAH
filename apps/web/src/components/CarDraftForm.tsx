@@ -96,6 +96,24 @@ const initialForm: FormState = {
   description_ar: "",
 };
 
+const BODY_TYPE_OPTIONS = ["Sedan", "SUV", "Coupe", "Hatchback", "Pickup", "Van"];
+const TRANSMISSION_OPTIONS = ["Automatic", "Manual"];
+const FUEL_TYPE_OPTIONS = ["Petrol", "Hybrid", "Diesel", "Electric"];
+const DRIVETRAIN_OPTIONS = ["FWD", "RWD", "AWD", "4WD"];
+const CONDITION_OPTIONS = ["Used", "New"];
+const COLOR_OPTIONS = [
+  "White",
+  "Black",
+  "Silver",
+  "Gray",
+  "Blue",
+  "Red",
+  "Green",
+  "Brown",
+  "Beige",
+  "Gold",
+];
+
 function field(value?: string | number | null): string {
   if (value === undefined || value === null) return "";
   return String(value);
@@ -208,7 +226,6 @@ export default function CarDraftForm({
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
-  const [locationStatus, setLocationStatus] = useState("");
 
   const activeCarId = useMemo(
     () => (mode === "edit" ? (carId ?? null) : createdId),
@@ -282,26 +299,6 @@ export default function CarDraftForm({
 
     void load();
   }, [mode, carId]);
-
-  function useMyLocation() {
-    if (!navigator.geolocation) {
-      setLocationStatus("Geolocation not supported in this browser.");
-      return;
-    }
-    setLocationStatus("Requesting location...");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude.toFixed(6);
-        const lon = pos.coords.longitude.toFixed(6);
-        setForm((prev) => ({ ...prev, latitude: lat, longitude: lon }));
-        setLocationStatus("Location captured.");
-      },
-      (err) => {
-        setLocationStatus(err.message || "Unable to retrieve location.");
-      },
-      { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 },
-    );
-  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -579,34 +576,6 @@ export default function CarDraftForm({
               </div>
 
               <div>
-                <label className="label" htmlFor="latitude">Listing Location (optional)</label>
-                <div className="inline-actions">
-                  <button type="button" className="btn btn-secondary" onClick={useMyLocation}>
-                    Use my location
-                  </button>
-                  {locationStatus ? <span className="helper-text">{locationStatus}</span> : null}
-                </div>
-                <div className="form-grid form-grid-2">
-                  <input
-                    id="latitude"
-                    className="input"
-                    inputMode="decimal"
-                    placeholder="Latitude"
-                    value={form.latitude}
-                    onChange={(e) => setForm((prev) => ({ ...prev, latitude: e.target.value }))}
-                  />
-                  <input
-                    id="longitude"
-                    className="input"
-                    inputMode="decimal"
-                    placeholder="Longitude"
-                    value={form.longitude}
-                    onChange={(e) => setForm((prev) => ({ ...prev, longitude: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div>
                 <label className="label" htmlFor="make">Make *</label>
                 <input
                   id="make"
@@ -665,62 +634,104 @@ export default function CarDraftForm({
 
               <div>
                 <label className="label" htmlFor="bodyType">Body Type</label>
-                <input
+                <select
                   id="bodyType"
-                  className="input"
+                  className="select"
                   value={form.body_type}
                   onChange={(e) => setForm((prev) => ({ ...prev, body_type: e.target.value }))}
-                />
+                >
+                  <option value="">Select body type</option>
+                  {BODY_TYPE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
                 <label className="label" htmlFor="transmission">Transmission</label>
-                <input
+                <select
                   id="transmission"
-                  className="input"
+                  className="select"
                   value={form.transmission}
                   onChange={(e) => setForm((prev) => ({ ...prev, transmission: e.target.value }))}
-                />
+                >
+                  <option value="">Select transmission</option>
+                  {TRANSMISSION_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
                 <label className="label" htmlFor="fuelType">Fuel Type</label>
-                <input
+                <select
                   id="fuelType"
-                  className="input"
+                  className="select"
                   value={form.fuel_type}
                   onChange={(e) => setForm((prev) => ({ ...prev, fuel_type: e.target.value }))}
-                />
+                >
+                  <option value="">Select fuel type</option>
+                  {FUEL_TYPE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
                 <label className="label" htmlFor="drivetrain">Drivetrain</label>
-                <input
+                <select
                   id="drivetrain"
-                  className="input"
+                  className="select"
                   value={form.drivetrain}
                   onChange={(e) => setForm((prev) => ({ ...prev, drivetrain: e.target.value }))}
-                />
+                >
+                  <option value="">Select drivetrain</option>
+                  {DRIVETRAIN_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
                 <label className="label" htmlFor="condition">Condition</label>
-                <input
+                <select
                   id="condition"
-                  className="input"
+                  className="select"
                   value={form.condition}
                   onChange={(e) => setForm((prev) => ({ ...prev, condition: e.target.value }))}
-                />
+                >
+                  <option value="">Select condition</option>
+                  {CONDITION_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
                 <label className="label" htmlFor="color">Color</label>
-                <input
+                <select
                   id="color"
-                  className="input"
+                  className="select"
                   value={form.color}
                   onChange={(e) => setForm((prev) => ({ ...prev, color: e.target.value }))}
-                />
+                >
+                  <option value="">Select color</option>
+                  {COLOR_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
