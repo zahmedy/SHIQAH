@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import LogoMark from "@/components/LogoMark";
+import TopbarCreate from "@/components/TopbarCreate";
 import TopbarUser from "@/components/TopbarUser";
 import "./globals.css";
 
@@ -29,9 +30,7 @@ export default function RootLayout({
               <Link href="/search" className="nav-link">
                 Search
               </Link>
-              <Link href="/my-cars/new" className="nav-link">
-                Create
-              </Link>
+              <TopbarCreate />
               <TopbarUser />
             </nav>
           </div>
