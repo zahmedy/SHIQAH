@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
@@ -52,14 +53,24 @@ export default function TopbarUser() {
     window.location.reload();
   }
 
-  if (!ready || !label) return null;
+  if (!ready) return null;
+
+  if (!label) {
+    return (
+      <Link href="/login" className="nav-link">
+        Login
+      </Link>
+    );
+  }
 
   return (
-    <div className="topbar-user">
-      <span className="user-pill">{label}</span>
+    <>
+      <Link href="/my-cars" className="user-pill" role="button">
+        {label}
+      </Link>
       <button type="button" className="nav-link" onClick={handleLogout}>
         Logout
       </button>
-    </div>
+    </>
   );
 }

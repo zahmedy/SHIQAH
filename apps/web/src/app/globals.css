@@ -111,12 +111,6 @@ a {
   gap: 0.5rem;
 }
 
-.topbar-user {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
 .user-pill {
   display: inline-flex;
   align-items: center;
