@@ -172,7 +172,6 @@ export default function MyCarsPage() {
         <button type="button" className="btn btn-secondary" onClick={() => void loadCars()} disabled={loading}>
           {loading ? "Loading..." : "Refresh"}
         </button>
-        <Link href="/login" className="btn btn-secondary">Login</Link>
       </section>
 
       {needsLogin && (
