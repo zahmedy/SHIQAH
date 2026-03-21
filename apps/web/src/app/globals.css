@@ -74,36 +74,14 @@ a {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.68rem;
 }
 
 .brand-logo {
-  width: 84px;
-  height: 64px;
+  width: 124px;
+  height: 92px;
   flex: none;
   object-fit: contain;
   display: block;
-}
-
-.brand-copy {
-  display: grid;
-  line-height: 1;
-  gap: 0.28rem;
-}
-
-.brand-wordmark {
-  font-family: var(--font-title);
-  font-size: 1.28rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-weight: 700;
-}
-
-.brand-tag {
-  font-size: 0.72rem;
-  color: var(--muted);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .topnav {
@@ -798,10 +776,6 @@ a {
 @media (max-width: 760px) {
   .topbar-inner {
     min-height: 64px;
-  }
-
-  .brand-tag {
-    display: none;
   }
 
   .hero {

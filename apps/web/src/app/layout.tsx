@@ -24,10 +24,6 @@ export default function RootLayout({
           <div className="shell topbar-inner">
             <Link href="/" className="brand" aria-label="GARAJ home">
               <LogoMark className="brand-logo" />
-              <span className="brand-copy">
-                <span className="brand-wordmark">GARAJ</span>
-                <span className="brand-tag">Cars Marketplace</span>
-              </span>
             </Link>
             <nav className="topnav">
               <Link href="/search" className="nav-link">
