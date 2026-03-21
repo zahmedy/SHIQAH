@@ -76,6 +76,12 @@ type CompleteResponse = {
   public_url: string;
 };
 
+type PendingPhotoPreview = {
+  id: string;
+  fileName: string;
+  objectUrl: string;
+};
+
 const initialForm: FormState = {
   city: "",
   district: "",
@@ -222,6 +228,7 @@ export default function CarDraftForm({
   const [createdId, setCreatedId] = useState<number | null>(null);
   const [photos, setPhotos] = useState<CarPhoto[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [pendingPreviews, setPendingPreviews] = useState<PendingPhotoPreview[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
@@ -300,6 +307,14 @@ export default function CarDraftForm({
     void load();
   }, [mode, carId]);
 
+  useEffect(() => {
+    return () => {
+      for (const preview of pendingPreviews) {
+        URL.revokeObjectURL(preview.objectUrl);
+      }
+    };
+  }, [pendingPreviews]);
+
   async function persistDraft(token: string): Promise<CarOut> {
     const result = buildPayload(form);
     if (result.ok === false) {
@@ -370,7 +385,7 @@ export default function CarDraftForm({
     }
   }
 
-  async function uploadSelectedPhotos() {
+  async function uploadSelectedPhotos(filesToUpload?: File[], previewsToClear?: PendingPhotoPreview[]) {
     setUploadError("");
     setUploadSuccess("");
 
@@ -386,12 +401,13 @@ export default function CarDraftForm({
       return;
     }
 
-    if (selectedFiles.length === 0) {
+    const files = filesToUpload ?? selectedFiles;
+    if (files.length === 0) {
       setUploadError("Select one or more photos first.");
       return;
     }
 
-    const imageFiles = selectedFiles.filter((file) => file.type.startsWith("image/"));
+    const imageFiles = files.filter((file) => file.type.startsWith("image/"));
     if (imageFiles.length === 0) {
       setUploadError("Only image files are allowed.");
       return;
@@ -500,7 +516,39 @@ export default function CarDraftForm({
       setUploadError(`${failedCount} file(s) failed to upload. Check MinIO CORS and retry.`);
     }
 
+    for (const preview of previewsToClear ?? []) {
+      URL.revokeObjectURL(preview.objectUrl);
+    }
+    if (previewsToClear) {
+      setPendingPreviews((current) =>
+        current.filter((preview) => !previewsToClear.some((item) => item.id === preview.id)),
+      );
+    }
+
     setUploading(false);
+  }
+
+  function handlePhotoSelection(files: FileList | null) {
+    const nextFiles = Array.from(files || []);
+    setSelectedFiles(nextFiles);
+
+    if (nextFiles.length === 0) {
+      return;
+    }
+
+    const previews = nextFiles
+      .filter((file) => file.type.startsWith("image/"))
+      .map((file, index) => ({
+        id: `${file.name}-${file.size}-${index}-${Date.now()}`,
+        fileName: file.name,
+        objectUrl: URL.createObjectURL(file),
+      }));
+
+    if (previews.length > 0) {
+      setPendingPreviews((current) => [...current, ...previews]);
+    }
+
+    void uploadSelectedPhotos(nextFiles, previews);
   }
 
   async function submitForReview() {
@@ -791,31 +839,37 @@ export default function CarDraftForm({
                 type="file"
                 accept="image/*"
                 multiple
-                onChange={(e) => setSelectedFiles(Array.from(e.target.files || []))}
+                onChange={(e) => {
+                  handlePhotoSelection(e.target.files);
+                  e.currentTarget.value = "";
+                }}
                 disabled={uploading}
               />
 
               <div className="upload-actions">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => void uploadSelectedPhotos()}
-                  disabled={uploading || selectedFiles.length === 0}
-                >
+                <span className="car-meta">
                   {uploading
-                    ? "Uploading..."
+                    ? "Uploading selected photos..."
                     : !activeCarId && mode === "create"
-                      ? "Create Draft & Upload"
-                      : "Upload Selected"}
-                </button>
-                <span className="car-meta">{selectedFiles.length} file(s) selected</span>
+                      ? "Selecting photos will create the draft and upload them immediately."
+                      : "Selecting photos uploads them immediately."}
+                </span>
               </div>
 
               {uploadError && <p className="notice error">{uploadError}</p>}
               {uploadSuccess && <p className="notice success">{uploadSuccess}</p>}
 
-              {photos.length > 0 ? (
+              {photos.length > 0 || pendingPreviews.length > 0 ? (
                 <div className="upload-photo-grid">
+                  {pendingPreviews.map((preview) => (
+                    <article className="upload-photo-item" key={preview.id}>
+                      <img src={preview.objectUrl} alt={preview.fileName} loading="lazy" />
+                      <div className="upload-photo-meta">
+                        <span className="upload-photo-order">{preview.fileName}</span>
+                        <span className="status-pill status-draft">Uploading</span>
+                      </div>
+                    </article>
+                  ))}
                   {photos.map((photo) => (
                     <article className="upload-photo-item" key={photo.id}>
                       <img src={photo.public_url} alt={`Car photo ${photo.sort_order + 1}`} loading="lazy" />
