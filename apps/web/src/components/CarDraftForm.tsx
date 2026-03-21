@@ -300,6 +300,43 @@ export default function CarDraftForm({
     void load();
   }, [mode, carId]);
 
+  async function persistDraft(token: string): Promise<CarOut> {
+    const result = buildPayload(form);
+    if (result.ok === false) {
+      throw new Error(result.error);
+    }
+
+    const url = mode === "create" ? `${API_BASE}/v1/cars` : `${API_BASE}/v1/cars/${carId}`;
+    const method = mode === "create" ? "POST" : "PATCH";
+    const res = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(result.payload),
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      setNeedsLogin(true);
+      throw new Error("Session expired. Please login again.");
+    }
+
+    if (!res.ok) {
+      throw new Error(await parseApiError(res));
+    }
+
+    const data = (await res.json()) as CarOut;
+    setStatus(data.status);
+    setPhotos(data.photos || []);
+
+    if (mode === "create") {
+      setCreatedId(data.id);
+    }
+
+    return data;
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -317,40 +354,11 @@ export default function CarDraftForm({
       return;
     }
 
-    const result = buildPayload(form);
-    if (result.ok === false) {
-      setError(result.error);
-      return;
-    }
-
     setSaving(true);
     try {
-      const url = mode === "create" ? `${API_BASE}/v1/cars` : `${API_BASE}/v1/cars/${carId}`;
-      const method = mode === "create" ? "POST" : "PATCH";
-      const res = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(result.payload),
-      });
-
-      if (res.status === 401 || res.status === 403) {
-        setNeedsLogin(true);
-        throw new Error("Session expired. Please login again.");
-      }
-
-      if (!res.ok) {
-        throw new Error(await parseApiError(res));
-      }
-
-      const data = (await res.json()) as CarOut;
-      setStatus(data.status);
-      setPhotos(data.photos || photos);
+      const data = await persistDraft(token);
 
       if (mode === "create") {
-        setCreatedId(data.id);
         setSuccess(`Draft #${data.id} created.`);
       } else {
         setSuccess(`Draft #${data.id} updated.`);
@@ -368,11 +376,6 @@ export default function CarDraftForm({
 
     if (!API_BASE) {
       setUploadError("NEXT_PUBLIC_API_BASE is missing.");
-      return;
-    }
-
-    if (!activeCarId) {
-      setUploadError("Create draft first, then upload photos.");
       return;
     }
 
@@ -396,6 +399,21 @@ export default function CarDraftForm({
 
     setUploading(true);
 
+    let targetCarId = activeCarId;
+    let createdForUpload = false;
+
+    if (!targetCarId) {
+      try {
+        const draft = await persistDraft(token);
+        targetCarId = draft.id;
+        createdForUpload = true;
+      } catch (err) {
+        setUploadError(err instanceof Error ? err.message : "Failed to create draft before upload.");
+        setUploading(false);
+        return;
+      }
+    }
+
     let uploadedCount = 0;
     let failedCount = 0;
     const nextPhotos = [...photos];
@@ -403,7 +421,7 @@ export default function CarDraftForm({
     for (const file of imageFiles) {
       try {
         const contentType = file.type || "application/octet-stream";
-        const presignRes = await fetch(`${API_BASE}/v1/cars/${activeCarId}/media/presign`, {
+        const presignRes = await fetch(`${API_BASE}/v1/cars/${targetCarId}/media/presign`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -431,7 +449,7 @@ export default function CarDraftForm({
         }
 
         const isCover = nextPhotos.length === 0;
-        const completeRes = await fetch(`${API_BASE}/v1/cars/${activeCarId}/media/complete`, {
+        const completeRes = await fetch(`${API_BASE}/v1/cars/${targetCarId}/media/complete`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -472,7 +490,11 @@ export default function CarDraftForm({
     setSelectedFiles([]);
 
     if (uploadedCount > 0) {
-      setUploadSuccess(`Uploaded ${uploadedCount} photo(s).`);
+      setUploadSuccess(
+        createdForUpload
+          ? `Draft created and ${uploadedCount} photo(s) uploaded.`
+          : `Uploaded ${uploadedCount} photo(s).`,
+      );
     }
     if (failedCount > 0) {
       setUploadError(`${failedCount} file(s) failed to upload. Check MinIO CORS and retry.`);
@@ -760,32 +782,34 @@ export default function CarDraftForm({
               <h2 className="subheading">Photos</h2>
               <p className="car-meta">Uploaded photos: {photos.length}. At least 4 are needed before submit for review.</p>
 
-              {activeCarId ? (
-                <>
-                  <input
-                    className="upload-file-input"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={(e) => setSelectedFiles(Array.from(e.target.files || []))}
-                    disabled={uploading}
-                  />
+              {!activeCarId && mode === "create" ? (
+                <p className="car-meta">Uploading photos will create the draft first using the form details above.</p>
+              ) : null}
 
-                  <div className="upload-actions">
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => void uploadSelectedPhotos()}
-                      disabled={uploading || selectedFiles.length === 0}
-                    >
-                      {uploading ? "Uploading..." : "Upload Selected"}
-                    </button>
-                    <span className="car-meta">{selectedFiles.length} file(s) selected</span>
-                  </div>
-                </>
-              ) : (
-                <p className="notice">Save draft first to enable photo uploads.</p>
-              )}
+              <input
+                className="upload-file-input"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => setSelectedFiles(Array.from(e.target.files || []))}
+                disabled={uploading}
+              />
+
+              <div className="upload-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => void uploadSelectedPhotos()}
+                  disabled={uploading || selectedFiles.length === 0}
+                >
+                  {uploading
+                    ? "Uploading..."
+                    : !activeCarId && mode === "create"
+                      ? "Create Draft & Upload"
+                      : "Upload Selected"}
+                </button>
+                <span className="car-meta">{selectedFiles.length} file(s) selected</span>
+              </div>
 
               {uploadError && <p className="notice error">{uploadError}</p>}
               {uploadSuccess && <p className="notice success">{uploadSuccess}</p>}
