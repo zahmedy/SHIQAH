@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
@@ -15,9 +15,10 @@ function looksLikeE164(phone: string): boolean {
 }
 
 export default function LoginPage() {
+  const router = useRouter();
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("0000");
-  const [step, setStep] = useState<"request" | "verify" | "done">("request");
+  const [step, setStep] = useState<"request" | "verify">("request");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -93,8 +94,9 @@ export default function LoginPage() {
 
       const data = (await res.json()) as VerifyResponse;
       localStorage.setItem("garaj_access_token", data.access_token);
-      setStep("done");
-      setSuccess("Logged in successfully. Token saved in browser localStorage.");
+      setSuccess("Logged in successfully.");
+      router.replace("/");
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to verify OTP.");
     } finally {
@@ -166,11 +168,6 @@ export default function LoginPage() {
           {success && <p className="notice success">{success}</p>}
         </form>
 
-        {step === "done" && (
-          <div className="auth-next">
-            <Link href="/search" className="btn btn-secondary">Go to Search</Link>
-          </div>
-        )}
       </section>
     </main>
   );
