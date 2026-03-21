@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
@@ -15,7 +14,6 @@ function looksLikeE164(phone: string): boolean {
 }
 
 export default function LoginPage() {
-  const router = useRouter();
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("0000");
   const [step, setStep] = useState<"request" | "verify">("request");
@@ -94,9 +92,8 @@ export default function LoginPage() {
 
       const data = (await res.json()) as VerifyResponse;
       localStorage.setItem("garaj_access_token", data.access_token);
-      setSuccess("Logged in successfully.");
-      router.replace("/");
-      router.refresh();
+      window.dispatchEvent(new Event("garaj-auth-changed"));
+      window.location.replace("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to verify OTP.");
     } finally {

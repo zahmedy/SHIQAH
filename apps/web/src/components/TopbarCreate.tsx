@@ -10,31 +10,44 @@ export default function TopbarCreate() {
   const [href, setHref] = useState("/login");
 
   useEffect(() => {
-    if (!API_BASE) {
-      return;
-    }
+    async function load() {
+      if (!API_BASE) {
+        setHref("/login");
+        return;
+      }
 
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      return;
-    }
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (!token) {
+        setHref("/login");
+        return;
+      }
 
-    const load = async () => {
       try {
         const res = await fetch(`${API_BASE}/v1/me`, {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
         });
         if (!res.ok) {
+          setHref("/login");
           return;
         }
         setHref("/my-cars/new");
       } catch {
-        // Keep the fallback href when auth cannot be confirmed.
+        setHref("/login");
       }
-    };
+    }
+
+    function handleAuthChange() {
+      void load();
+    }
 
     void load();
+    window.addEventListener("garaj-auth-changed", handleAuthChange);
+    window.addEventListener("focus", handleAuthChange);
+    return () => {
+      window.removeEventListener("garaj-auth-changed", handleAuthChange);
+      window.removeEventListener("focus", handleAuthChange);
+    };
   }, []);
 
   return (

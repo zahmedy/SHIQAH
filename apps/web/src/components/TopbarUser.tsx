@@ -18,23 +18,27 @@ export default function TopbarUser() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!API_BASE) {
-      setReady(true);
-      return;
-    }
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      setReady(true);
-      return;
-    }
+    async function load() {
+      if (!API_BASE) {
+        setLabel("");
+        setReady(true);
+        return;
+      }
 
-    const load = async () => {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (!token) {
+        setLabel("");
+        setReady(true);
+        return;
+      }
+
       try {
         const res = await fetch(`${API_BASE}/v1/me`, {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
         });
         if (!res.ok) {
+          setLabel("");
           setReady(true);
           return;
         }
@@ -43,14 +47,28 @@ export default function TopbarUser() {
       } finally {
         setReady(true);
       }
-    };
+    }
+
+    function handleAuthChange() {
+      setReady(false);
+      void load();
+    }
 
     void load();
+    window.addEventListener("garaj-auth-changed", handleAuthChange);
+    window.addEventListener("focus", handleAuthChange);
+    return () => {
+      window.removeEventListener("garaj-auth-changed", handleAuthChange);
+      window.removeEventListener("focus", handleAuthChange);
+    };
   }, []);
 
   function handleLogout() {
     localStorage.removeItem(TOKEN_KEY);
-    window.location.reload();
+    setLabel("");
+    setReady(true);
+    window.dispatchEvent(new Event("garaj-auth-changed"));
+    window.location.replace("/");
   }
 
   if (!ready) return null;
