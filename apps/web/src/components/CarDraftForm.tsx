@@ -38,6 +38,8 @@ type CarPayload = {
 type CarOut = CarPayload & {
   id: number;
   status: string;
+  review_reason?: string | null;
+  review_source?: string | null;
   photos?: CarPhoto[];
 };
 
@@ -220,6 +222,7 @@ export default function CarDraftForm({
 }) {
   const [form, setForm] = useState<FormState>(initialForm);
   const [status, setStatus] = useState<string>("");
+  const [reviewReason, setReviewReason] = useState<string>("");
   const [loading, setLoading] = useState(mode === "edit");
   const [saving, setSaving] = useState(false);
   const [needsLogin, setNeedsLogin] = useState(false);
@@ -277,6 +280,7 @@ export default function CarDraftForm({
         }
         const car = (await res.json()) as CarOut;
         setStatus(car.status);
+        setReviewReason(car.review_reason || "");
         setPhotos(car.photos || []);
         setForm({
           city: field(car.city),
@@ -343,6 +347,7 @@ export default function CarDraftForm({
 
     const data = (await res.json()) as CarOut;
     setStatus(data.status);
+    setReviewReason(data.review_reason || "");
     setPhotos(data.photos || []);
 
     if (mode === "create") {
@@ -618,6 +623,12 @@ export default function CarDraftForm({
             Current status: <strong>{status}</strong>
           </p>
         )}
+
+        {status === "rejected" && reviewReason ? (
+          <p className="notice error">
+            Rejected: {reviewReason}
+          </p>
+        ) : null}
 
         {needsLogin && <p className="notice">Login required to manage drafts.</p>}
         {loading && <p className="notice">Loading draft...</p>}
