@@ -30,6 +30,13 @@ type MyCar = {
   created_at: string;
 };
 
+type MeResponse = {
+  id: number;
+  phone_e164: string;
+  role: string;
+  verified_at: string | null;
+};
+
 const priceFormatter = new Intl.NumberFormat("en-US");
 
 async function parseApiError(res: Response): Promise<string> {
@@ -63,6 +70,8 @@ export default function MyCarsPage() {
   const [success, setSuccess] = useState("");
   const [needsLogin, setNeedsLogin] = useState(false);
   const [submittingId, setSubmittingId] = useState<number | null>(null);
+  const [adminActionId, setAdminActionId] = useState<number | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const canLoad = useMemo(() => Boolean(API_BASE), []);
 
@@ -86,6 +95,27 @@ export default function MyCarsPage() {
     }
 
     try {
+      const meRes = await fetch(`${API_BASE}/v1/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        cache: "no-store",
+      });
+
+      if (meRes.status === 401 || meRes.status === 403) {
+        setNeedsLogin(true);
+        setError("Your session is missing or expired. Please login again.");
+        setLoading(false);
+        return;
+      }
+
+      if (!meRes.ok) {
+        throw new Error(await parseApiError(meRes));
+      }
+
+      const me = (await meRes.json()) as MeResponse;
+      setIsAdmin(me.role === "admin");
+
       const res = await fetch(`${API_BASE}/v1/seller/cars`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -157,6 +187,91 @@ export default function MyCarsPage() {
       setError(err instanceof Error ? err.message : "Failed to submit listing.");
     } finally {
       setSubmittingId(null);
+    }
+  }
+
+  async function approveCar(carId: number) {
+    setError("");
+    setSuccess("");
+
+    if (!canLoad || !API_BASE) {
+      setError("NEXT_PUBLIC_API_BASE is missing.");
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setNeedsLogin(true);
+      setError("Login required.");
+      return;
+    }
+
+    setAdminActionId(carId);
+    try {
+      const res = await fetch(`${API_BASE}/v1/admin/cars/${carId}/approve`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(await parseApiError(res));
+      }
+
+      setCars((prev) => prev.map((car) => (car.id === carId ? { ...car, status: "active" } : car)));
+      setSuccess(`Car #${carId} approved.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to approve listing.");
+    } finally {
+      setAdminActionId(null);
+    }
+  }
+
+  async function rejectCar(carId: number) {
+    setError("");
+    setSuccess("");
+
+    if (!canLoad || !API_BASE) {
+      setError("NEXT_PUBLIC_API_BASE is missing.");
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setNeedsLogin(true);
+      setError("Login required.");
+      return;
+    }
+
+    const reason = window.prompt("Rejection reason", "Needs manual fixes");
+    if (!reason) {
+      return;
+    }
+
+    setAdminActionId(carId);
+    try {
+      const res = await fetch(`${API_BASE}/v1/admin/cars/${carId}/reject?reason=${encodeURIComponent(reason)}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(await parseApiError(res));
+      }
+
+      setCars((prev) =>
+        prev.map((car) =>
+          car.id === carId ? { ...car, status: "rejected", review_reason: reason, review_source: "admin" } : car,
+        ),
+      );
+      setSuccess(`Car #${carId} rejected.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to reject listing.");
+    } finally {
+      setAdminActionId(null);
     }
   }
 
@@ -237,6 +352,27 @@ export default function MyCarsPage() {
                       {submittingId === car.id ? "Submitting..." : "Submit for Review"}
                     </button>
                   )}
+
+                  {isAdmin && car.status === "pending_review" ? (
+                    <>
+                      <button
+                        type="button"
+                        className="btn btn-primary card-action"
+                        disabled={adminActionId === car.id}
+                        onClick={() => void approveCar(car.id)}
+                      >
+                        {adminActionId === car.id ? "Working..." : "Approve"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary card-action"
+                        disabled={adminActionId === car.id}
+                        onClick={() => void rejectCar(car.id)}
+                      >
+                        Reject
+                      </button>
+                    </>
+                  ) : null}
 
                   {car.status === "active" ? (
                     <Link href={`/cars/${car.id}`} className="btn btn-secondary card-action">
