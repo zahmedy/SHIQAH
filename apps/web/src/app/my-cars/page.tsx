@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const TOKEN_KEY = "garaj_access_token";
+const FLASH_KEY = "garaj_flash";
 
 type CarPhoto = {
   id: number;
@@ -146,6 +147,31 @@ export default function MyCarsPage() {
   useEffect(() => {
     void loadCars();
   }, [loadCars]);
+
+  useEffect(() => {
+    const rawFlash = sessionStorage.getItem(FLASH_KEY);
+    if (!rawFlash) {
+      return;
+    }
+
+    sessionStorage.removeItem(FLASH_KEY);
+
+    try {
+      const flash = JSON.parse(rawFlash) as { type?: string; message?: string };
+      if (!flash.message) {
+        return;
+      }
+
+      if (flash.type === "error") {
+        setError(flash.message);
+        return;
+      }
+
+      setSuccess(flash.message);
+    } catch {
+      // Ignore invalid flash payloads.
+    }
+  }, []);
 
   async function submitForReview(carId: number) {
     setError("");

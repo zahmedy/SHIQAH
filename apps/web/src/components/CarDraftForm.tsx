@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const TOKEN_KEY = "garaj_access_token";
+const FLASH_KEY = "garaj_flash";
 
 type DraftFormMode = "create" | "edit";
 
@@ -220,6 +222,7 @@ export default function CarDraftForm({
   mode: DraftFormMode;
   carId?: number;
 }) {
+  const router = useRouter();
   const [form, setForm] = useState<FormState>(initialForm);
   const [status, setStatus] = useState<string>("");
   const [reviewReason, setReviewReason] = useState<string>("");
@@ -227,7 +230,6 @@ export default function CarDraftForm({
   const [saving, setSaving] = useState(false);
   const [needsLogin, setNeedsLogin] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [createdId, setCreatedId] = useState<number | null>(null);
   const [photos, setPhotos] = useState<CarPhoto[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -235,7 +237,6 @@ export default function CarDraftForm({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
-  const [submittingReview, setSubmittingReview] = useState(false);
 
   const activeCarId = useMemo(
     () => (mode === "edit" ? (carId ?? null) : createdId),
@@ -319,6 +320,12 @@ export default function CarDraftForm({
     };
   }, [pendingPreviews]);
 
+  function redirectToMyCars(type: "success" | "error", message: string) {
+    sessionStorage.setItem(FLASH_KEY, JSON.stringify({ type, message }));
+    router.replace("/my-cars");
+    router.refresh();
+  }
+
   async function persistDraft(token: string): Promise<CarOut> {
     const result = buildPayload(form);
     if (result.ok === false) {
@@ -357,10 +364,32 @@ export default function CarDraftForm({
     return data;
   }
 
+  async function submitListingForReview(carIdToSubmit: number, token: string): Promise<CarOut> {
+    const res = await fetch(`${API_BASE}/v1/cars/${carIdToSubmit}/submit`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      setNeedsLogin(true);
+      throw new Error("Session expired. Please login again.");
+    }
+
+    if (!res.ok) {
+      throw new Error(await parseApiError(res));
+    }
+
+    const data = (await res.json()) as CarOut;
+    setStatus(data.status);
+    setReviewReason(data.review_reason || "");
+    return data;
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    setSuccess("");
 
     if (!API_BASE) {
       setError("NEXT_PUBLIC_API_BASE is missing.");
@@ -376,15 +405,38 @@ export default function CarDraftForm({
 
     setSaving(true);
     try {
-      const data = await persistDraft(token);
+      const saved = await persistDraft(token);
 
-      if (mode === "create") {
-        setSuccess(`Draft #${data.id} created.`);
-      } else {
-        setSuccess(`Listing #${data.id} updated.`);
+      if (saved.status === "active") {
+        redirectToMyCars("success", "Listing updated successfully.");
+        return;
       }
+
+      if (saved.status === "pending_review") {
+        redirectToMyCars("success", "Listing updated and is pending review.");
+        return;
+      }
+
+      const submitted = await submitListingForReview(saved.id, token);
+
+      if (submitted.status === "active") {
+        redirectToMyCars("success", "Listing submitted and approved successfully.");
+        return;
+      }
+
+      if (submitted.status === "pending_review") {
+        redirectToMyCars("success", "Listing submitted and is pending review.");
+        return;
+      }
+
+      if (submitted.status === "rejected") {
+        redirectToMyCars("error", submitted.review_reason || "Listing was rejected.");
+        return;
+      }
+
+      redirectToMyCars("success", "Listing submitted.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save draft.");
+      setError(err instanceof Error ? err.message : "Failed to submit listing.");
     } finally {
       setSaving(false);
     }
@@ -556,58 +608,6 @@ export default function CarDraftForm({
     void uploadSelectedPhotos(nextFiles, previews);
   }
 
-  async function submitForReview() {
-    setError("");
-    setSuccess("");
-
-    if (!API_BASE) {
-      setError("NEXT_PUBLIC_API_BASE is missing.");
-      return;
-    }
-    if (!activeCarId) {
-      setError("Create draft first, then submit for review.");
-      return;
-    }
-    if (status !== "draft") {
-      setError("Only draft listings can be submitted.");
-      return;
-    }
-
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      setNeedsLogin(true);
-      setError("Login required.");
-      return;
-    }
-
-    setSubmittingReview(true);
-    try {
-      const res = await fetch(`${API_BASE}/v1/cars/${activeCarId}/submit`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (res.status === 401 || res.status === 403) {
-        setNeedsLogin(true);
-        throw new Error("Session expired. Please login again.");
-      }
-
-      if (!res.ok) {
-        throw new Error(await parseApiError(res));
-      }
-
-      const data = (await res.json()) as CarOut;
-      setStatus(data.status);
-      setSuccess(`Draft #${data.id} submitted for review.`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to submit listing.");
-    } finally {
-      setSubmittingReview(false);
-    }
-  }
-
   const title = mode === "create" ? "Create Draft" : `Edit Listing #${carId ?? ""}`;
 
   return (
@@ -615,7 +615,7 @@ export default function CarDraftForm({
       <section className="auth-card draft-card">
         <h1>{title}</h1>
         <p className="auth-note">
-          Fill the required fields now and save as draft. You can update details before submission.
+          Fill the required fields and submit. You can still update your listing later.
         </p>
 
         {status && (
@@ -898,18 +898,8 @@ export default function CarDraftForm({
 
             <div className="auth-actions">
               <button className="btn btn-primary" type="submit" disabled={saving || loading}>
-                {saving ? "Saving..." : mode === "create" ? "Create Draft" : "Save Changes"}
+                {saving ? "Submitting..." : "Submit"}
               </button>
-              {activeCarId && status === "draft" ? (
-                <button
-                  className="btn btn-primary"
-                  type="button"
-                  disabled={saving || loading || uploading || submittingReview}
-                  onClick={() => void submitForReview()}
-                >
-                  {submittingReview ? "Submitting..." : "Submit for Review"}
-                </button>
-              ) : null}
               <Link href="/my-cars" className="btn btn-secondary">Back to My Cars</Link>
               {createdId ? (
                 <Link href={`/my-cars/${createdId}/edit`} className="btn btn-secondary">
@@ -919,7 +909,6 @@ export default function CarDraftForm({
             </div>
 
             {error && <p className="notice error">{error}</p>}
-            {success && <p className="notice success">{success}</p>}
           </form>
         )}
       </section>
