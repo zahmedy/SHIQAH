@@ -23,7 +23,13 @@ DISALLOWED_TERMS = (
 )
 
 
-def _build_search_doc(car: CarListing) -> dict:
+def build_search_doc(session: Session, car: CarListing) -> dict:
+    photos = session.exec(
+        select(CarMedia)
+        .where(CarMedia.car_id == car.id)
+        .order_by(CarMedia.sort_order.asc(), CarMedia.id.asc())
+    ).all()
+
     doc = {
         "id": str(car.id),
         "city": car.city,
@@ -40,6 +46,15 @@ def _build_search_doc(car: CarListing) -> dict:
         "condition": car.condition,
         "title_ar": car.title_ar,
         "description_ar": car.description_ar,
+        "photos": [
+            {
+                "id": photo.id,
+                "public_url": photo.public_url,
+                "sort_order": photo.sort_order,
+                "is_cover": photo.is_cover,
+            }
+            for photo in photos
+        ],
         "published_at": car.published_at.isoformat() if car.published_at else None,
     }
     if car.latitude is not None and car.longitude is not None:
@@ -64,7 +79,7 @@ def approve_listing(
     session.add(car)
     session.commit()
     session.refresh(car)
-    upsert_car(str(car.id), _build_search_doc(car))
+    upsert_car(str(car.id), build_search_doc(session, car))
     return car
 
 

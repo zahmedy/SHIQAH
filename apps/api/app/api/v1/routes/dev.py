@@ -6,6 +6,7 @@ from app.models.user import User, UserRole
 from app.models.car import CarListing, CarStatus
 from app.core.config import settings
 from app.services.opensearch import upsert_car
+from app.services.review import build_search_doc
 
 router = APIRouter(prefix="/dev", tags=["dev"])
 
@@ -33,26 +34,7 @@ def reindex_search(session: Session = Depends(get_session)):
 
     cars = session.exec(select(CarListing).where(CarListing.status == CarStatus.active)).all()
     for car in cars:
-        doc = {
-            "id": str(car.id),
-            "city": car.city,
-            "district": car.district,
-            "make": car.make,
-            "model": car.model,
-            "year": car.year,
-            "price_sar": car.price_sar,
-            "mileage_km": car.mileage_km,
-            "body_type": car.body_type,
-            "transmission": car.transmission,
-            "fuel_type": car.fuel_type,
-            "drivetrain": car.drivetrain,
-            "condition": car.condition,
-            "title_ar": car.title_ar,
-            "description_ar": car.description_ar,
-            "published_at": car.published_at.isoformat() if car.published_at else None,
-        }
-        if car.latitude is not None and car.longitude is not None:
-            doc["location"] = {"lat": car.latitude, "lon": car.longitude}
+        doc = build_search_doc(session, car)
         upsert_car(str(car.id), doc)
 
     return {"ok": True, "indexed": len(cars)}
