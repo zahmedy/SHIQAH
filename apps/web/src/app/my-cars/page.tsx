@@ -33,6 +33,7 @@ type MyCar = {
 
 type MeResponse = {
   id: number;
+  name: string | null;
   phone_e164: string;
   role: string;
   verified_at: string | null;

@@ -28,6 +28,7 @@ type Listing = {
   body_type?: string;
   condition?: string;
   color?: string;
+  published_at?: string;
   photos: Photo[];
 };
 
@@ -35,6 +36,7 @@ type PublicCarResponse = {
   listing: Listing;
   seller: {
     id: number | null;
+    name: string | null;
     phone_e164: string | null;
   };
   contact: {
@@ -48,6 +50,18 @@ const priceFormatter = new Intl.NumberFormat("en-US");
 function specValue(value?: string | number | null) {
   if (value === null || value === undefined || value === "") return "—";
   return value;
+}
+
+function formatPostedAt(value?: string) {
+  if (!value) return "Recently";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Recently";
+  return date.toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default async function CarDetailPage({
@@ -85,6 +99,7 @@ export default async function CarDetailPage({
         <header className="listing-head">
           <h1 className="listing-title">{car.title_ar}</h1>
           <p className="car-price">{priceFormatter.format(car.price_sar)} SAR</p>
+          <p className="car-meta">By {data.seller.name || "Seller"} • Posted {formatPostedAt(car.published_at)}</p>
           <OwnerActions ownerId={car.owner_id} carId={car.id} />
         </header>
 
@@ -153,6 +168,7 @@ export default async function CarDetailPage({
 
       <aside className="panel">
         <h2 className="subheading">Contact Seller</h2>
+        <p className="car-meta">{data.seller.name || "Seller"}</p>
         <div className="contact-actions">
           {data.contact.call_phone_e164 && (
             <a href={`tel:${data.contact.call_phone_e164}`} className="btn btn-secondary">

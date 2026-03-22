@@ -14,6 +14,7 @@ function looksLikeE164(phone: string): boolean {
 }
 
 export default function LoginPage() {
+  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("0000");
   const [step, setStep] = useState<"request" | "verify">("request");
@@ -80,7 +81,11 @@ export default function LoginPage() {
       const res = await fetch(`${API_BASE}/v1/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone_e164: phone.trim(), code: code.trim() }),
+        body: JSON.stringify({
+          phone_e164: phone.trim(),
+          code: code.trim(),
+          name: name.trim() || undefined,
+        }),
       });
 
       if (!res.ok) {
@@ -110,6 +115,17 @@ export default function LoginPage() {
         </p>
 
         <form onSubmit={step === "request" ? requestOtp : verifyOtp} className="filters">
+          <div>
+            <label className="label" htmlFor="name">Name</label>
+            <input
+              id="name"
+              className="input"
+              placeholder="Your name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+
           <div>
             <label className="label" htmlFor="phone">Phone (E.164)</label>
             <input

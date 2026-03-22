@@ -9,7 +9,10 @@ def ensure_index() -> None:
     idx = settings.OPENSEARCH_INDEX
     if c.indices.exists(index=idx):
         try:
-            c.indices.put_mapping(index=idx, body={"properties": {"location": {"type": "geo_point"}}})
+            c.indices.put_mapping(
+                index=idx,
+                body={"properties": {"location": {"type": "geo_point"}, "seller_name": {"type": "text"}}},
+            )
         except Exception:
             pass
         return
@@ -30,6 +33,7 @@ def ensure_index() -> None:
                 "fuel_type": {"type": "keyword"},
                 "drivetrain": {"type": "keyword"},
                 "condition": {"type": "keyword"},
+                "seller_name": {"type": "text"},
                 "title_ar": {"type": "text"},
                 "description_ar": {"type": "text"},
                 "published_at": {"type": "date"},

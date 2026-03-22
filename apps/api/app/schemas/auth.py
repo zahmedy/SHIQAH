@@ -6,6 +6,7 @@ class OTPRequest(BaseModel):
 class OTPVerify(BaseModel):
     phone_e164: str
     code: str
+    name: str | None = None
 
 class TokenResponse(BaseModel):
     access_token: str

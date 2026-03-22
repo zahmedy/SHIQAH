@@ -8,6 +8,7 @@ const TOKEN_KEY = "garaj_access_token";
 
 type MeResponse = {
   id: number;
+  name: string | null;
   phone_e164: string;
   role: string;
   verified_at: string | null;
@@ -43,7 +44,7 @@ export default function TopbarUser() {
           return;
         }
         const me = (await res.json()) as MeResponse;
-        setLabel(me.phone_e164 || "Logged in");
+        setLabel(me.name || me.phone_e164 || "Logged in");
       } finally {
         setReady(true);
       }

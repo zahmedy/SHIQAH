@@ -16,6 +16,7 @@ class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
     role: UserRole = Field(default=UserRole.buyer, index=True)
+    name: Optional[str] = None
     phone_e164: str = Field(index=True, unique=True)
 
     # For MVP: we fake OTP; later integrate Twilio Verify

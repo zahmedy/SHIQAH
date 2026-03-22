@@ -7,6 +7,7 @@ from sqlmodel import Session, select, func
 from app.core.config import settings
 from app.db.session import engine
 from app.models.car import CarListing, CarMedia, CarStatus
+from app.models.user import User
 from app.services.opensearch import delete_car, upsert_car
 
 AUTO_REVIEW_SOURCE = "auto"
@@ -29,9 +30,11 @@ def build_search_doc(session: Session, car: CarListing) -> dict:
         .where(CarMedia.car_id == car.id)
         .order_by(CarMedia.sort_order.asc(), CarMedia.id.asc())
     ).all()
+    seller = session.exec(select(User).where(User.id == car.owner_id)).first()
 
     doc = {
         "id": str(car.id),
+        "seller_name": seller.name if seller and seller.name else None,
         "city": car.city,
         "district": car.district,
         "make": car.make,
