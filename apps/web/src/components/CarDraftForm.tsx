@@ -381,7 +381,7 @@ export default function CarDraftForm({
       if (mode === "create") {
         setSuccess(`Draft #${data.id} created.`);
       } else {
-        setSuccess(`Draft #${data.id} updated.`);
+        setSuccess(`Listing #${data.id} updated.`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save draft.");
@@ -608,7 +608,7 @@ export default function CarDraftForm({
     }
   }
 
-  const title = mode === "create" ? "Create Draft" : `Edit Draft #${carId ?? ""}`;
+  const title = mode === "create" ? "Create Draft" : `Edit Listing #${carId ?? ""}`;
 
   return (
     <main className="page shell auth-wrap">

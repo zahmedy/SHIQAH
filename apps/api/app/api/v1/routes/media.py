@@ -4,10 +4,12 @@ from sqlmodel import Session, select, func
 from app.core.deps import get_current_user
 from app.db.session import get_session
 from app.models.user import User
-from app.models.car import CarListing, CarMedia
+from app.models.car import CarListing, CarMedia, CarStatus
 from app.schemas.media import PresignRequest, PresignResponse, MediaCompleteRequest
 from app.services.s3 import make_storage_key, presign_put
 from app.core.config import settings
+from app.services.opensearch import upsert_car
+from app.services.review import build_search_doc
 
 router = APIRouter(tags=["media"])
 
@@ -63,4 +65,7 @@ def complete_upload(
     session.add(media)
     session.commit()
     session.refresh(media)
+    session.refresh(car)
+    if car.status == CarStatus.active:
+        upsert_car(str(car.id), build_search_doc(session, car))
     return {"ok": True, "media_id": media.id, "public_url": media.public_url}

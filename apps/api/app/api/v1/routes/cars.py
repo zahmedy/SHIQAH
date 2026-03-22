@@ -8,7 +8,8 @@ from app.db.session import get_session
 from app.models.user import User
 from app.models.car import CarListing, CarStatus, CarMedia
 from app.schemas.car import CarCreate, CarUpdate, CarOut, CarPhoto
-from app.services.review import enqueue_auto_review
+from app.services.opensearch import upsert_car
+from app.services.review import build_search_doc, enqueue_auto_review
 
 router = APIRouter(tags=["cars"])
 
@@ -107,8 +108,8 @@ def update_car(
         raise HTTPException(status_code=404, detail="Not found")
     ensure_owner(car, user)
 
-    if car.status not in (CarStatus.draft, CarStatus.pending_review, CarStatus.rejected):
-        raise HTTPException(status_code=400, detail="Only draft/pending/rejected can be edited")
+    if car.status not in (CarStatus.draft, CarStatus.pending_review, CarStatus.rejected, CarStatus.active):
+        raise HTTPException(status_code=400, detail="Only draft/pending/rejected/active can be edited")
 
     data = payload.model_dump(exclude_unset=True)
     if "year" in data:
@@ -139,6 +140,8 @@ def update_car(
     session.add(car)
     session.commit()
     session.refresh(car)
+    if car.status == CarStatus.active:
+        upsert_car(str(car.id), build_search_doc(session, car))
     photos_map = _load_photos_map(session, [car.id])
     return to_car_out(car, photos=photos_map.get(car.id, []))
 

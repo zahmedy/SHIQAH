@@ -336,9 +336,9 @@ export default function MyCarsPage() {
                     </p>
                   ) : null}
 
-                  {(car.status === "draft" || car.status === "pending_review" || car.status === "rejected") && (
+                  {(car.status === "draft" || car.status === "pending_review" || car.status === "rejected" || car.status === "active") && (
                     <Link href={`/my-cars/${car.id}/edit`} className="btn btn-secondary card-action">
-                      {car.status === "rejected" ? "Fix and Resubmit" : "Edit Draft"}
+                      {car.status === "rejected" ? "Fix and Resubmit" : "Edit Listing"}
                     </Link>
                   )}
 
