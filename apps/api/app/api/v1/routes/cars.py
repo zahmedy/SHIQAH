@@ -8,6 +8,7 @@ from app.db.session import get_session
 from app.models.user import User
 from app.models.car import CarListing, CarStatus, CarMedia
 from app.schemas.car import CarCreate, CarUpdate, CarOut, CarPhoto
+from app.services.review import enqueue_auto_review
 
 router = APIRouter(tags=["cars"])
 
@@ -106,8 +107,8 @@ def update_car(
         raise HTTPException(status_code=404, detail="Not found")
     ensure_owner(car, user)
 
-    if car.status not in (CarStatus.draft, CarStatus.pending_review):
-        raise HTTPException(status_code=400, detail="Only draft/pending can be edited")
+    if car.status not in (CarStatus.draft, CarStatus.pending_review, CarStatus.rejected):
+        raise HTTPException(status_code=400, detail="Only draft/pending/rejected can be edited")
 
     data = payload.model_dump(exclude_unset=True)
     if "year" in data:
@@ -128,6 +129,11 @@ def update_car(
 
     for k, v in data.items():
         setattr(car, k, v)
+    if car.status == CarStatus.rejected:
+        car.status = CarStatus.draft
+        car.reviewed_at = None
+        car.review_source = None
+        car.review_reason = None
     car.updated_at = datetime.utcnow()
 
     session.add(car)
@@ -185,9 +191,13 @@ def submit_car(
 
     car.status = CarStatus.pending_review
     car.updated_at = datetime.utcnow()
+    car.reviewed_at = None
+    car.review_source = None
+    car.review_reason = None
 
     session.add(car)
     session.commit()
+    enqueue_auto_review(car.id)
     session.refresh(car)
     photos_map = _load_photos_map(session, [car.id])
     return to_car_out(car, photos=photos_map.get(car.id, []))

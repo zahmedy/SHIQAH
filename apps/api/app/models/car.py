@@ -56,6 +56,9 @@ class CarListing(SQLModel, table=True):
     description_ar: str
 
     published_at: Optional[datetime] = Field(default=None, index=True)
+    reviewed_at: Optional[datetime] = Field(default=None, index=True)
+    review_source: Optional[str] = Field(default=None)
+    review_reason: Optional[str] = Field(default=None)
 
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
     updated_at: datetime = Field(default_factory=datetime.utcnow, index=True)

@@ -16,6 +16,8 @@ type CarPhoto = {
 type MyCar = {
   id: number;
   status: string;
+  review_reason?: string;
+  review_source?: string;
   city: string;
   district?: string;
   make: string;
@@ -212,6 +214,12 @@ export default function MyCarsPage() {
                   <p className="car-meta">{car.mileage_km ? `${car.mileage_km.toLocaleString()} km` : "Mileage not set"}</p>
                   <p className="car-meta">Created {formatDate(car.created_at)}</p>
                   <p className="car-price">{priceFormatter.format(car.price_sar)} SAR</p>
+
+                  {car.review_reason ? (
+                    <p className="car-meta card-note">
+                      Review: {car.review_reason}
+                    </p>
+                  ) : null}
 
                   {(car.status === "draft" || car.status === "pending_review") && (
                     <Link href={`/my-cars/${car.id}/edit`} className="btn btn-secondary card-action">

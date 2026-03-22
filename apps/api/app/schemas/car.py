@@ -85,6 +85,9 @@ class CarOut(BaseModel):
     description_ar: str
 
     published_at: Optional[datetime]
+    reviewed_at: Optional[datetime]
+    review_source: Optional[str]
+    review_reason: Optional[str]
     created_at: datetime
     updated_at: datetime
 
