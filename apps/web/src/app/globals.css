@@ -389,8 +389,32 @@ a {
   font-size: 0.9rem;
 }
 
+.listing-price-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-top: 0.45rem;
+}
+
+.car-footer-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-top: 0.75rem;
+}
+
+.car-price-meta,
+.car-footer-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  text-align: right;
+}
+
 .car-price {
-  margin: 0.65rem 0 0;
+  margin: 0;
   font-weight: 700;
   font-size: 1.23rem;
   color: var(--brand);
@@ -800,6 +824,17 @@ a {
 
   .car-row {
     flex-direction: column;
+  }
+
+  .car-price-row,
+  .car-footer-row,
+  .listing-price-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .car-footer-meta {
+    text-align: left;
   }
 
   .draft-grid {

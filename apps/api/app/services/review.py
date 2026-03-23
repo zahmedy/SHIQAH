@@ -34,6 +34,7 @@ def build_search_doc(session: Session, car: CarListing) -> dict:
 
     doc = {
         "id": str(car.id),
+        "owner_id": car.owner_id,
         "seller_name": seller.name if seller and seller.name else None,
         "city": car.city,
         "district": car.district,
@@ -182,3 +183,12 @@ def enqueue_auto_review(car_id: int) -> None:
         queue.enqueue(review_listing_job, car_id)
     except Exception:
         review_listing_job(car_id)
+
+
+def reindex_owner_active_listings(session: Session, owner_id: int) -> None:
+    cars = session.exec(
+        select(CarListing)
+        .where(CarListing.owner_id == owner_id, CarListing.status == CarStatus.active)
+    ).all()
+    for car in cars:
+        upsert_car(str(car.id), build_search_doc(session, car))

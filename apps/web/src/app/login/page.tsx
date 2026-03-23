@@ -3,10 +3,16 @@
 import { FormEvent, useState } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
+const NAME_KEY = "garaj_user_name";
 
 type VerifyResponse = {
   access_token: string;
   token_type: string;
+};
+
+type OTPRequestResponse = {
+  ok: boolean;
+  needs_name: boolean;
 };
 
 function looksLikeE164(phone: string): boolean {
@@ -18,6 +24,7 @@ export default function LoginPage() {
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("0000");
   const [step, setStep] = useState<"request" | "verify">("request");
+  const [needsName, setNeedsName] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -49,6 +56,8 @@ export default function LoginPage() {
         throw new Error(detail || `Failed with status ${res.status}`);
       }
 
+      const data = (await res.json()) as OTPRequestResponse;
+      setNeedsName(Boolean(data.needs_name));
       setStep("verify");
       setSuccess("OTP requested. For MVP, use code 0000.");
     } catch (err) {
@@ -65,6 +74,10 @@ export default function LoginPage() {
 
     if (!API_BASE) {
       setError("NEXT_PUBLIC_API_BASE is missing.");
+      return;
+    }
+    if (needsName && !name.trim()) {
+      setError("Enter your name.");
       return;
     }
     if (!looksLikeE164(phone)) {
@@ -97,6 +110,9 @@ export default function LoginPage() {
 
       const data = (await res.json()) as VerifyResponse;
       localStorage.setItem("garaj_access_token", data.access_token);
+      if (name.trim()) {
+        localStorage.setItem(NAME_KEY, name.trim());
+      }
       window.dispatchEvent(new Event("garaj-auth-changed"));
       window.location.replace("/");
     } catch (err) {
@@ -111,21 +127,10 @@ export default function LoginPage() {
       <section className="auth-card">
         <h1>Login</h1>
         <p className="auth-note">
-          Enter your phone number, request OTP, then verify. MVP code is <strong>0000</strong>.
+          Enter your phone number, request OTP, then verify. New users will be asked for their name. MVP code is <strong>0000</strong>.
         </p>
 
         <form onSubmit={step === "request" ? requestOtp : verifyOtp} className="filters">
-          <div>
-            <label className="label" htmlFor="name">Name</label>
-            <input
-              id="name"
-              className="input"
-              placeholder="Your name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-
           <div>
             <label className="label" htmlFor="phone">Phone (E.164)</label>
             <input
@@ -136,6 +141,19 @@ export default function LoginPage() {
               onChange={(e) => setPhone(e.target.value)}
             />
           </div>
+
+          {needsName && (
+            <div>
+              <label className="label" htmlFor="name">Name</label>
+              <input
+                id="name"
+                className="input"
+                placeholder="Your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+          )}
 
           {step !== "request" && (
             <div>
@@ -166,6 +184,7 @@ export default function LoginPage() {
                   disabled={loading}
                   onClick={() => {
                     setStep("request");
+                    setNeedsName(false);
                     setCode("0000");
                     setSuccess("");
                     setError("");

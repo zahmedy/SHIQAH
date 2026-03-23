@@ -64,6 +64,15 @@ function formatPostedAt(value?: string) {
   });
 }
 
+function sellerAndTime(sellerName?: string | null, publishedAt?: string) {
+  const parts = [];
+  if (sellerName && !/^seller(\s+\d+)?$/i.test(sellerName)) {
+    parts.push(sellerName);
+  }
+  parts.push(formatPostedAt(publishedAt));
+  return parts.join(" • ");
+}
+
 export default async function CarDetailPage({
   params,
 }: {
@@ -98,8 +107,10 @@ export default async function CarDetailPage({
       <section className="panel">
         <header className="listing-head">
           <h1 className="listing-title">{car.title_ar}</h1>
-          <p className="car-price">{priceFormatter.format(car.price_sar)} SAR</p>
-          <p className="car-meta">By {data.seller.name || "Seller"} • Posted {formatPostedAt(car.published_at)}</p>
+          <div className="listing-price-row">
+            <p className="car-price-meta">{sellerAndTime(data.seller.name, car.published_at)}</p>
+            <p className="car-price">{priceFormatter.format(car.price_sar)} SAR</p>
+          </div>
           <OwnerActions ownerId={car.owner_id} carId={car.id} />
         </header>
 
@@ -168,7 +179,9 @@ export default async function CarDetailPage({
 
       <aside className="panel">
         <h2 className="subheading">Contact Seller</h2>
-        <p className="car-meta">{data.seller.name || "Seller"}</p>
+        {data.seller.name && !/^seller(\s+\d+)?$/i.test(data.seller.name) ? (
+          <p className="car-meta">{data.seller.name}</p>
+        ) : null}
         <div className="contact-actions">
           {data.contact.call_phone_e164 && (
             <a href={`tel:${data.contact.call_phone_e164}`} className="btn btn-secondary">

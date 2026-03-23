@@ -11,7 +11,13 @@ def ensure_index() -> None:
         try:
             c.indices.put_mapping(
                 index=idx,
-                body={"properties": {"location": {"type": "geo_point"}, "seller_name": {"type": "text"}}},
+                body={
+                    "properties": {
+                        "location": {"type": "geo_point"},
+                        "seller_name": {"type": "text"},
+                        "owner_id": {"type": "integer"},
+                    }
+                },
             )
         except Exception:
             pass
@@ -21,6 +27,7 @@ def ensure_index() -> None:
         "mappings": {
             "properties": {
                 "id": {"type": "keyword"},
+                "owner_id": {"type": "integer"},
                 "city": {"type": "keyword"},
                 "district": {"type": "keyword"},
                 "make": {"type": "keyword"},

@@ -3,7 +3,7 @@ import { apiGet } from "@/lib/api";
 
 type HomeListing = {
   id: number | string;
-  seller_name?: string;
+  owner_id?: number;
   city: string;
   district?: string;
   make: string;
@@ -22,16 +22,26 @@ type HomeSearchResponse = {
 
 const priceFormatter = new Intl.NumberFormat("en-US");
 
-function formatPostedAt(value?: string) {
+function formatHoursAgo(value?: string) {
   if (!value) return "Recently";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Recently";
-  return date.toLocaleString("en-GB", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const diffHours = Math.max(1, Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60)));
+  return `${diffHours}h ago`;
+}
+
+function locationUserAndTime(city?: string, district?: string, ownerId?: number, publishedAt?: string) {
+  const parts = [];
+  if (district && city) {
+    parts.push(`${district}, ${city}`);
+  } else if (city) {
+    parts.push(city);
+  }
+  if (ownerId !== undefined) {
+    parts.push(`User ${ownerId}`);
+  }
+  parts.push(formatHoursAgo(publishedAt));
+  return parts.join(" • ");
 }
 
 export default async function HomePage() {
@@ -66,10 +76,11 @@ export default async function HomePage() {
                 <div className="car-body">
                   <h3 className="car-title">{car.title_ar || `${car.make} ${car.model}`}</h3>
                   <p className="car-meta">{car.make} {car.model} • {car.year}</p>
-                  <p className="car-meta">By {car.seller_name || "Seller"} • Posted {formatPostedAt(car.published_at)}</p>
-                  <p className="car-meta">{car.city}{car.district ? `, ${car.district}` : ""}</p>
                   <p className="car-meta">{car.mileage_km ? `${car.mileage_km.toLocaleString()} km` : "Mileage not set"}</p>
-                  <p className="car-price">{priceFormatter.format(car.price_sar)} SAR</p>
+                  <div className="car-footer-row">
+                    <p className="car-price">{priceFormatter.format(car.price_sar)} SAR</p>
+                    <p className="car-footer-meta">{locationUserAndTime(car.city, car.district, car.owner_id, car.published_at)}</p>
+                  </div>
                 </div>
               </Link>
             );
