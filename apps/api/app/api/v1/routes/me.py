@@ -49,10 +49,10 @@ def update_me(
         name = payload.name.strip()
         if not name:
             raise HTTPException(status_code=400, detail="Name is required")
+        should_reindex = True
         if name != user.name:
             user.name = name
             changed = True
-            should_reindex = True
 
     if payload.user_id is not None:
         try:
@@ -60,6 +60,7 @@ def update_me(
         except ValueError:
             raise HTTPException(status_code=400, detail=USER_ID_ERROR)
 
+        should_reindex = True
         if is_user_id_taken(session, public_user_id, exclude_user_id=user.id):
             raise HTTPException(status_code=409, detail="User ID is already taken")
 
@@ -67,14 +68,12 @@ def update_me(
             user.user_id = public_user_id
             changed = True
 
-    if not changed:
-        return serialize_me(user)
+    if changed:
+        session.add(user)
+        session.commit()
+        session.refresh(user)
 
-    session.add(user)
-    session.commit()
-    session.refresh(user)
-
-    if should_reindex and user.name:
+    if should_reindex and user.id is not None:
         reindex_owner_active_listings(session, user.id)
 
     return serialize_me(user)

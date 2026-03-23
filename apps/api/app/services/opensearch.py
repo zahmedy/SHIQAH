@@ -15,6 +15,7 @@ def ensure_index() -> None:
                     "properties": {
                         "location": {"type": "geo_point"},
                         "seller_name": {"type": "text"},
+                        "seller_user_id": {"type": "keyword"},
                         "owner_id": {"type": "integer"},
                     }
                 },
@@ -28,6 +29,7 @@ def ensure_index() -> None:
             "properties": {
                 "id": {"type": "keyword"},
                 "owner_id": {"type": "integer"},
+                "seller_user_id": {"type": "keyword"},
                 "city": {"type": "keyword"},
                 "district": {"type": "keyword"},
                 "make": {"type": "keyword"},

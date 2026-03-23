@@ -36,6 +36,7 @@ def build_search_doc(session: Session, car: CarListing) -> dict:
         "id": str(car.id),
         "owner_id": car.owner_id,
         "seller_name": seller.name if seller and seller.name else None,
+        "seller_user_id": seller.user_id if seller and seller.user_id else None,
         "city": car.city,
         "district": car.district,
         "make": car.make,

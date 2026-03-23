@@ -41,6 +41,7 @@ def public_car_detail(car_id: int, session: Session = Depends(get_session)):
         "seller": {
             "id": seller.id if seller else None,
             "name": seller.name if seller else None,
+            "user_id": seller.user_id if seller else None,
             "phone_e164": seller_phone,
         },
         "contact": {

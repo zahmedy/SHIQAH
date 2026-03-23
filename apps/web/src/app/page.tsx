@@ -4,6 +4,7 @@ import { apiGet } from "@/lib/api";
 type HomeListing = {
   id: number | string;
   owner_id?: number;
+  seller_user_id?: string;
   city: string;
   district?: string;
   make: string;
@@ -30,15 +31,15 @@ function formatHoursAgo(value?: string) {
   return `${diffHours}h ago`;
 }
 
-function locationUserAndTime(city?: string, district?: string, ownerId?: number, publishedAt?: string) {
+function locationUserAndTime(city?: string, district?: string, sellerUserId?: string, publishedAt?: string) {
   const parts = [];
   if (district && city) {
     parts.push(`${district}, ${city}`);
   } else if (city) {
     parts.push(city);
   }
-  if (ownerId !== undefined) {
-    parts.push(`User ${ownerId}`);
+  if (sellerUserId) {
+    parts.push(`@${sellerUserId}`);
   }
   parts.push(formatHoursAgo(publishedAt));
   return parts.join(" • ");
@@ -79,7 +80,7 @@ export default async function HomePage() {
                   <p className="car-meta">{car.mileage_km ? `${car.mileage_km.toLocaleString()} km` : "Mileage not set"}</p>
                   <div className="car-footer-row">
                     <p className="car-price">{priceFormatter.format(car.price_sar)} SAR</p>
-                    <p className="car-footer-meta">{locationUserAndTime(car.city, car.district, car.owner_id, car.published_at)}</p>
+                    <p className="car-footer-meta">{locationUserAndTime(car.city, car.district, car.seller_user_id, car.published_at)}</p>
                   </div>
                 </div>
               </Link>

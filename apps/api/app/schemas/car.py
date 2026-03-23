@@ -95,6 +95,7 @@ class CarOut(BaseModel):
 class PublicSellerOut(BaseModel):
     id: Optional[int]
     name: Optional[str]
+    user_id: Optional[str]
     phone_e164: Optional[str]
 
 

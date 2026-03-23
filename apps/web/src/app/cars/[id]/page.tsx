@@ -37,6 +37,7 @@ type PublicCarResponse = {
   seller: {
     id: number | null;
     name: string | null;
+    user_id: string | null;
     phone_e164: string | null;
   };
   contact: {
@@ -64,10 +65,21 @@ function formatPostedAt(value?: string) {
   });
 }
 
-function sellerAndTime(sellerName?: string | null, publishedAt?: string) {
-  const parts = [];
+function sellerLabel(sellerUserId?: string | null, sellerName?: string | null) {
+  if (sellerUserId) {
+    return `@${sellerUserId}`;
+  }
   if (sellerName && !/^seller(\s+\d+)?$/i.test(sellerName)) {
-    parts.push(sellerName);
+    return sellerName;
+  }
+  return "";
+}
+
+function sellerAndTime(sellerUserId?: string | null, sellerName?: string | null, publishedAt?: string) {
+  const parts = [];
+  const label = sellerLabel(sellerUserId, sellerName);
+  if (label) {
+    parts.push(label);
   }
   parts.push(formatPostedAt(publishedAt));
   return parts.join(" • ");
@@ -108,7 +120,7 @@ export default async function CarDetailPage({
         <header className="listing-head">
           <h1 className="listing-title">{car.title_ar}</h1>
           <div className="listing-price-row">
-            <p className="car-price-meta">{sellerAndTime(data.seller.name, car.published_at)}</p>
+            <p className="car-price-meta">{sellerAndTime(data.seller.user_id, data.seller.name, car.published_at)}</p>
             <p className="car-price">{priceFormatter.format(car.price_sar)} SAR</p>
           </div>
           <OwnerActions ownerId={car.owner_id} carId={car.id} />
@@ -179,8 +191,8 @@ export default async function CarDetailPage({
 
       <aside className="panel">
         <h2 className="subheading">Contact Seller</h2>
-        {data.seller.name && !/^seller(\s+\d+)?$/i.test(data.seller.name) ? (
-          <p className="car-meta">{data.seller.name}</p>
+        {sellerLabel(data.seller.user_id, data.seller.name) ? (
+          <p className="car-meta">{sellerLabel(data.seller.user_id, data.seller.name)}</p>
         ) : null}
         <div className="contact-actions">
           {data.contact.call_phone_e164 && (
