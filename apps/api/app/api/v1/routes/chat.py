@@ -26,7 +26,19 @@ def list_chat_messages(
         .where(ChatMessage.car_id == car_id)
         .order_by(ChatMessage.created_at.asc(), ChatMessage.id.asc())
     ).all()
-    return [ChatMessageOut(**msg.model_dump()) for msg in messages]
+    sender_ids = {msg.sender_user_id for msg in messages}
+    sender_user_ids = {}
+    if sender_ids:
+        senders = session.exec(select(User).where(User.id.in_(sender_ids))).all()
+        sender_user_ids = {sender.id: sender.user_id for sender in senders}
+
+    return [
+        ChatMessageOut(
+            **msg.model_dump(),
+            sender_public_user_id=sender_user_ids.get(msg.sender_user_id),
+        )
+        for msg in messages
+    ]
 
 
 @router.post("/cars/{car_id}/chat", response_model=ChatMessageOut)
@@ -52,4 +64,7 @@ def create_chat_message(
     session.add(message)
     session.commit()
     session.refresh(message)
-    return ChatMessageOut(**message.model_dump())
+    return ChatMessageOut(
+        **message.model_dump(),
+        sender_public_user_id=user.user_id,
+    )

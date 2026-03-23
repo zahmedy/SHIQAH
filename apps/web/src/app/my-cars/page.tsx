@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const TOKEN_KEY = "garaj_access_token";
@@ -34,6 +34,7 @@ type MyCar = {
 type MeResponse = {
   id: number;
   name: string | null;
+  user_id: string | null;
   phone_e164: string;
   role: string;
   verified_at: string | null;
@@ -74,6 +75,9 @@ export default function MyCarsPage() {
   const [submittingId, setSubmittingId] = useState<number | null>(null);
   const [adminActionId, setAdminActionId] = useState<number | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [me, setMe] = useState<MeResponse | null>(null);
+  const [userId, setUserId] = useState("");
+  const [savingUserId, setSavingUserId] = useState(false);
 
   const canLoad = useMemo(() => Boolean(API_BASE), []);
 
@@ -116,6 +120,8 @@ export default function MyCarsPage() {
       }
 
       const me = (await meRes.json()) as MeResponse;
+      setMe(me);
+      setUserId(me.user_id || "");
       setIsAdmin(me.role === "admin");
 
       const res = await fetch(`${API_BASE}/v1/seller/cars`, {
@@ -214,6 +220,60 @@ export default function MyCarsPage() {
       setError(err instanceof Error ? err.message : "Failed to submit listing.");
     } finally {
       setSubmittingId(null);
+    }
+  }
+
+  async function saveUserId(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!canLoad || !API_BASE) {
+      setError("NEXT_PUBLIC_API_BASE is missing.");
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setNeedsLogin(true);
+      setError("Login required.");
+      return;
+    }
+
+    if (!userId.trim()) {
+      setError("User ID is required.");
+      return;
+    }
+
+    setSavingUserId(true);
+    try {
+      const res = await fetch(`${API_BASE}/v1/me`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ user_id: userId.trim() }),
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        setNeedsLogin(true);
+        throw new Error("Session expired. Please login again.");
+      }
+
+      if (!res.ok) {
+        throw new Error(await parseApiError(res));
+      }
+
+      const updatedMe = (await res.json()) as MeResponse;
+      setMe(updatedMe);
+      setUserId(updatedMe.user_id || "");
+      setSuccess(`User ID updated to @${updatedMe.user_id}.`);
+      window.dispatchEvent(new Event("garaj-auth-changed"));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update user ID.");
+    } finally {
+      setSavingUserId(false);
     }
   }
 
@@ -317,6 +377,43 @@ export default function MyCarsPage() {
           {loading ? "Loading..." : "Refresh"}
         </button>
       </section>
+
+      {!needsLogin && me && (
+        <section className="panel spaced-top-sm">
+          <h2 className="subheading">Account</h2>
+          <p className="helper-text">Your public user ID appears in chat and can be changed at any time.</p>
+          <form className="filters spaced-top-sm" onSubmit={saveUserId}>
+            <div className="form-grid form-grid-2">
+              <div>
+                <label className="label" htmlFor="user-id">Public User ID</label>
+                <input
+                  id="user-id"
+                  className="input"
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                  placeholder="user-123"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+                <p className="helper-text">3-32 characters. Letters, numbers, dots, underscores, and dashes only.</p>
+              </div>
+
+              <div>
+                <label className="label" htmlFor="account-phone">Phone</label>
+                <input id="account-phone" className="input" value={me.phone_e164} disabled />
+                <p className="helper-text">Current account ID: {me.user_id ? `@${me.user_id}` : "Not set yet"}</p>
+              </div>
+            </div>
+
+            <div className="inline-actions">
+              <button type="submit" className="btn btn-primary" disabled={savingUserId}>
+                {savingUserId ? "Saving..." : "Save User ID"}
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
 
       {needsLogin && (
         <div className="notice">

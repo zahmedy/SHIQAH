@@ -10,6 +10,7 @@ type Message = {
   id: number;
   car_id: number;
   sender_user_id: number;
+  sender_public_user_id: string | null;
   message: string;
   created_at: string;
 };
@@ -128,7 +129,7 @@ export default function ChatPanel({ carId }: { carId: number }) {
       <div className="chat-header">
         <div>
           <p className="chat-title">Car #{carId} Conversation</p>
-          <p className="chat-subtitle">Messages are saved per listing and show sender user IDs.</p>
+          <p className="chat-subtitle">Messages are saved per listing and show each sender&apos;s public user ID.</p>
         </div>
         {!hasSession && (
           <Link href="/login" className="btn btn-secondary chat-login">
@@ -151,7 +152,9 @@ export default function ChatPanel({ carId }: { carId: number }) {
                 className={`chat-bubble ${msg.sender_user_id === meId ? "chat-buyer" : "chat-seller"}`}
               >
                 <p>{msg.message}</p>
-                <span>User {msg.sender_user_id} · {formatTime(msg.created_at)}</span>
+                <span>
+                  {msg.sender_public_user_id ? `@${msg.sender_public_user_id}` : `User ${msg.sender_user_id}`} · {formatTime(msg.created_at)}
+                </span>
               </div>
             ))
           )}

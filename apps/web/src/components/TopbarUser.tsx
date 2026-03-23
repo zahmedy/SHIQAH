@@ -10,6 +10,7 @@ const NAME_KEY = "garaj_user_name";
 type MeResponse = {
   id: number;
   name: string | null;
+  user_id: string | null;
   phone_e164: string;
   role: string;
   verified_at: string | null;
@@ -64,7 +65,7 @@ export default function TopbarUser() {
         if (resolvedName) {
           localStorage.setItem(NAME_KEY, resolvedName);
         }
-        setLabel(resolvedName || me.phone_e164 || "Logged in");
+        setLabel(me.user_id ? `@${me.user_id}` : resolvedName || me.phone_e164 || "Logged in");
       } finally {
         setReady(true);
       }

@@ -7,6 +7,7 @@ from app.db.session import get_session
 from app.models.user import User, UserRole
 from app.core.security import create_access_token
 from app.services.review import reindex_owner_active_listings
+from app.services.user_identity import ensure_user_id
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -51,6 +52,9 @@ def verify_otp(payload: OTPVerify, session: Session = Depends(get_session)):
         session.add(user)
         session.commit()
         session.refresh(user)
+
+    if not user.user_id:
+        ensure_user_id(session, user)
 
     if user.name:
         reindex_owner_active_listings(session, user.id)
