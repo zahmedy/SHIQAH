@@ -228,6 +228,12 @@ a {
   color: var(--text);
 }
 
+.btn-danger {
+  background: color-mix(in srgb, var(--error) 10%, #ffffff);
+  color: var(--error);
+  border-color: color-mix(in srgb, var(--error) 42%, var(--line));
+}
+
 .section-title {
   margin: 1.8rem 0 0.9rem;
   font-family: var(--font-title);

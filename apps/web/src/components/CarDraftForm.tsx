@@ -242,6 +242,7 @@ export default function CarDraftForm({
   const [uploadSuccess, setUploadSuccess] = useState("");
   const [removingPhotoId, setRemovingPhotoId] = useState<number | null>(null);
   const [mainPhotoId, setMainPhotoId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeCarId = useMemo(
@@ -484,6 +485,59 @@ export default function CarDraftForm({
       setError(err instanceof Error ? err.message : "Failed to submit listing.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDeleteListing() {
+    setError("");
+    setSuccess("");
+
+    if (!API_BASE) {
+      setError("NEXT_PUBLIC_API_BASE is missing.");
+      return;
+    }
+    if (!activeCarId) {
+      setError("Save the listing before deleting it.");
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setNeedsLogin(true);
+      setError("Login required.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Delete this listing? This will remove the listing, photos, and related messages.",
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`${API_BASE}/v1/cars/${activeCarId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        setNeedsLogin(true);
+        throw new Error("Session expired. Please login again.");
+      }
+
+      if (!res.ok) {
+        throw new Error(await parseApiError(res));
+      }
+
+      redirectToMyCars("success", status === "draft" ? "Draft deleted." : "Listing deleted.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete listing.");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -1108,6 +1162,16 @@ export default function CarDraftForm({
                   onClick={() => void handleSubmitForReview()}
                 >
                   {saving ? "Submitting..." : "Save & Submit"}
+                </button>
+              ) : null}
+              {activeCarId ? (
+                <button
+                  className="btn btn-danger"
+                  type="button"
+                  disabled={deleting || saving || loading}
+                  onClick={() => void handleDeleteListing()}
+                >
+                  {deleting ? "Deleting..." : status === "draft" ? "Delete Draft" : "Delete Listing"}
                 </button>
               ) : null}
               <Link href="/my-cars" className="btn btn-secondary">Back to My Cars</Link>
