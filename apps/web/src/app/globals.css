@@ -658,12 +658,15 @@ a {
 }
 
 .upload-file-input {
-  width: 100%;
-  border: 1px dashed var(--line-strong);
-  border-radius: 12px;
-  background: #ffffff;
-  color: var(--muted);
-  padding: 0.8rem;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .upload-actions {
@@ -672,6 +675,14 @@ a {
   align-items: center;
   gap: 0.6rem;
   margin-top: 0.7rem;
+}
+
+.upload-empty-state {
+  margin-top: 0.8rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: 12px;
+  padding: 1rem;
+  background: var(--panel-soft);
 }
 
 .upload-photo-grid {
@@ -703,9 +714,32 @@ a {
   padding: 0.5rem;
 }
 
+.upload-photo-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-left: auto;
+}
+
 .upload-photo-order {
   color: var(--muted);
   font-size: 0.8rem;
+}
+
+.upload-photo-button {
+  border: 0;
+  background: transparent;
+  color: var(--error);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.upload-photo-button:disabled {
+  color: var(--muted);
+  cursor: default;
 }
 
 .auth-card h1 {

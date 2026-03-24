@@ -26,3 +26,8 @@ def presign_put(storage_key: str, content_type: str) -> str:
         },
         ExpiresIn=60 * 10,
     )
+
+
+def delete_object(storage_key: str) -> None:
+    c = s3_client()
+    c.delete_object(Bucket=settings.S3_BUCKET, Key=storage_key)

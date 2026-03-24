@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import CityField from "@/components/CityField";
 
@@ -239,11 +239,15 @@ export default function CarDraftForm({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
+  const [removingPhotoId, setRemovingPhotoId] = useState<number | null>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeCarId = useMemo(
     () => (mode === "edit" ? (carId ?? null) : createdId),
     [mode, carId, createdId],
   );
+  const remainingPhotos = Math.max(0, 4 - photos.length);
+  const hasEnoughPhotos = photos.length >= 4;
 
   useEffect(() => {
     if (mode !== "edit") return;
@@ -567,12 +571,12 @@ export default function CarDraftForm({
     if (uploadedCount > 0) {
       setUploadSuccess(
         createdForUpload
-          ? `Draft created and ${uploadedCount} photo(s) uploaded.`
-          : `Uploaded ${uploadedCount} photo(s).`,
+          ? `${uploadedCount} photo${uploadedCount === 1 ? "" : "s"} added. Your listing was saved first.`
+          : `${uploadedCount} photo${uploadedCount === 1 ? "" : "s"} added.`,
       );
     }
     if (failedCount > 0) {
-      setUploadError(`${failedCount} file(s) failed to upload. Check MinIO CORS and retry.`);
+      setUploadError(`${failedCount} photo${failedCount === 1 ? "" : "s"} could not be added. Please try again.`);
     }
 
     for (const preview of previewsToClear ?? []) {
@@ -608,6 +612,61 @@ export default function CarDraftForm({
     }
 
     void uploadSelectedPhotos(nextFiles, previews);
+  }
+
+  async function removePhoto(photoId: number) {
+    setUploadError("");
+    setUploadSuccess("");
+
+    if (!API_BASE) {
+      setUploadError("NEXT_PUBLIC_API_BASE is missing.");
+      return;
+    }
+    if (!activeCarId) {
+      setUploadError("Save the listing before removing photos.");
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setNeedsLogin(true);
+      setUploadError("Login required.");
+      return;
+    }
+
+    setRemovingPhotoId(photoId);
+    try {
+      const res = await fetch(`${API_BASE}/v1/cars/${activeCarId}/media/${photoId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        setNeedsLogin(true);
+        throw new Error("Session expired. Please login again.");
+      }
+
+      if (!res.ok) {
+        throw new Error(await parseApiError(res));
+      }
+
+      setPhotos((prev) => {
+        const remaining = prev.filter((photo) => photo.id !== photoId);
+        const currentCoverId = remaining.find((photo) => photo.is_cover)?.id ?? null;
+        return remaining.map((photo, index) => ({
+          ...photo,
+          sort_order: index,
+          is_cover: currentCoverId ? photo.id === currentCoverId : index === 0,
+        }));
+      });
+      setUploadSuccess("Photo removed.");
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Failed to remove photo.");
+    } finally {
+      setRemovingPhotoId(null);
+    }
   }
 
   const title = mode === "create" ? "Create Draft" : `Edit Listing #${carId ?? ""}`;
@@ -840,13 +899,16 @@ export default function CarDraftForm({
 
             <section className="upload-panel">
               <h2 className="subheading">Photos</h2>
-              <p className="car-meta">Uploaded photos: {photos.length}. At least 4 are needed before submit for review.</p>
+              <p className="car-meta">
+                Add clear photos buyers can trust. Start with the outside, inside, dashboard, and anything important to note.
+              </p>
 
               {!activeCarId && mode === "create" ? (
-                <p className="car-meta">Uploading photos will create the draft first using the form details above.</p>
+                <p className="helper-text">Your listing will be saved automatically when you add the first photos.</p>
               ) : null}
 
               <input
+                ref={photoInputRef}
                 className="upload-file-input"
                 type="file"
                 accept="image/*"
@@ -859,14 +921,31 @@ export default function CarDraftForm({
               />
 
               <div className="upload-actions">
-                <span className="car-meta">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => photoInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? "Adding photos..." : photos.length > 0 ? "Add More Photos" : "Add Photos"}
+                </button>
+                <span className={`status-pill ${hasEnoughPhotos ? "status-active" : "status-pending-review"}`}>
+                  {hasEnoughPhotos ? `${photos.length} photos ready` : `${remainingPhotos} more needed`}
+                </span>
+                <span className="helper-text">
                   {uploading
-                    ? "Uploading selected photos..."
+                    ? "Your selected photos are being added now."
                     : !activeCarId && mode === "create"
-                      ? "Selecting photos will create the draft and upload them immediately."
-                      : "Selecting photos uploads them immediately."}
+                      ? "Choose one or more photos to save the listing and add them right away."
+                      : "Choose one or more photos. They will be added right away."}
                 </span>
               </div>
+
+              <p className="helper-text">
+                {hasEnoughPhotos
+                  ? "You have enough photos to publish."
+                  : `Add at least ${remainingPhotos} more photo${remainingPhotos === 1 ? "" : "s"} to publish.`}
+              </p>
 
               {uploadError && <p className="notice error">{uploadError}</p>}
               {uploadSuccess && <p className="notice success">{uploadSuccess}</p>}
@@ -878,7 +957,7 @@ export default function CarDraftForm({
                       <img src={preview.objectUrl} alt={preview.fileName} loading="lazy" />
                       <div className="upload-photo-meta">
                         <span className="upload-photo-order">{preview.fileName}</span>
-                        <span className="status-pill status-draft">Uploading</span>
+                        <span className="status-pill status-draft">Adding</span>
                       </div>
                     </article>
                   ))}
@@ -886,14 +965,27 @@ export default function CarDraftForm({
                     <article className="upload-photo-item" key={photo.id}>
                       <img src={photo.public_url} alt={`Car photo ${photo.sort_order + 1}`} loading="lazy" />
                       <div className="upload-photo-meta">
-                        <span className="upload-photo-order">#{photo.sort_order + 1}</span>
-                        {photo.is_cover ? <span className="status-pill status-active">Cover</span> : null}
+                        <span className="upload-photo-order">Photo {photo.sort_order + 1}</span>
+                        <div className="upload-photo-controls">
+                          {photo.is_cover ? <span className="status-pill status-active">Main photo</span> : null}
+                          <button
+                            type="button"
+                            className="upload-photo-button"
+                            onClick={() => void removePhoto(photo.id)}
+                            disabled={removingPhotoId === photo.id || uploading}
+                          >
+                            {removingPhotoId === photo.id ? "Removing..." : "Remove"}
+                          </button>
+                        </div>
                       </div>
                     </article>
                   ))}
                 </div>
               ) : (
-                <p className="car-meta">No photos uploaded yet.</p>
+                <div className="upload-empty-state">
+                  <p className="car-meta">No photos yet.</p>
+                  <p className="helper-text">Listings with several clear photos perform better and are easier to trust.</p>
+                </div>
               )}
             </section>
 
