@@ -241,6 +241,7 @@ export default function CarDraftForm({
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
   const [removingPhotoId, setRemovingPhotoId] = useState<number | null>(null);
+  const [mainPhotoId, setMainPhotoId] = useState<number | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeCarId = useMemo(
@@ -707,6 +708,64 @@ export default function CarDraftForm({
     }
   }
 
+  async function setMainPhoto(photoId: number) {
+    setUploadError("");
+    setUploadSuccess("");
+
+    if (!API_BASE) {
+      setUploadError("NEXT_PUBLIC_API_BASE is missing.");
+      return;
+    }
+    if (!activeCarId) {
+      setUploadError("Save the listing before changing the main photo.");
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setNeedsLogin(true);
+      setUploadError("Login required.");
+      return;
+    }
+
+    setMainPhotoId(photoId);
+    try {
+      const res = await fetch(`${API_BASE}/v1/cars/${activeCarId}/media/${photoId}/main`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        setNeedsLogin(true);
+        throw new Error("Session expired. Please login again.");
+      }
+
+      if (!res.ok) {
+        throw new Error(await parseApiError(res));
+      }
+
+      setPhotos((prev) => {
+        const chosen = prev.find((photo) => photo.id === photoId);
+        if (!chosen) {
+          return prev;
+        }
+        const reordered = [chosen, ...prev.filter((photo) => photo.id !== photoId)];
+        return reordered.map((photo, index) => ({
+          ...photo,
+          sort_order: index,
+          is_cover: photo.id === photoId,
+        }));
+      });
+      setUploadSuccess("Main photo updated.");
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Failed to update main photo.");
+    } finally {
+      setMainPhotoId(null);
+    }
+  }
+
   const title = mode === "create" ? "Create Draft" : `Edit Listing #${carId ?? ""}`;
 
   return (
@@ -1006,11 +1065,21 @@ export default function CarDraftForm({
                         <span className="upload-photo-order">Photo {photo.sort_order + 1}</span>
                         <div className="upload-photo-controls">
                           {photo.is_cover ? <span className="status-pill status-active">Main photo</span> : null}
+                          {!photo.is_cover ? (
+                            <button
+                              type="button"
+                              className="upload-photo-button upload-photo-button-neutral"
+                              onClick={() => void setMainPhoto(photo.id)}
+                              disabled={mainPhotoId === photo.id || removingPhotoId === photo.id || uploading}
+                            >
+                              {mainPhotoId === photo.id ? "Saving..." : "Make Main"}
+                            </button>
+                          ) : null}
                           <button
                             type="button"
                             className="upload-photo-button"
                             onClick={() => void removePhoto(photo.id)}
-                            disabled={removingPhotoId === photo.id || uploading}
+                            disabled={mainPhotoId === photo.id || removingPhotoId === photo.id || uploading}
                           >
                             {removingPhotoId === photo.id ? "Removing..." : "Remove"}
                           </button>

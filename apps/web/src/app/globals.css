@@ -737,6 +737,10 @@ a {
   padding: 0;
 }
 
+.upload-photo-button-neutral {
+  color: var(--brand-deep);
+}
+
 .upload-photo-button:disabled {
   color: var(--muted);
   cursor: default;
