@@ -232,6 +232,7 @@ export default function CarDraftForm({
   const [saving, setSaving] = useState(false);
   const [needsLogin, setNeedsLogin] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [createdId, setCreatedId] = useState<number | null>(null);
   const [photos, setPhotos] = useState<CarPhoto[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -248,6 +249,8 @@ export default function CarDraftForm({
   );
   const remainingPhotos = Math.max(0, 4 - photos.length);
   const hasEnoughPhotos = photos.length >= 4;
+  const isReviewLocked = status === "active" || status === "pending_review";
+  const saveButtonLabel = isReviewLocked ? "Save Changes" : "Save Draft";
 
   useEffect(() => {
     if (mode !== "edit") return;
@@ -272,6 +275,7 @@ export default function CarDraftForm({
     const load = async () => {
       setLoading(true);
       setError("");
+      setSuccess("");
       try {
         const res = await fetch(`${API_BASE}/v1/cars/${carId}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -396,6 +400,40 @@ export default function CarDraftForm({
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setSuccess("");
+
+    if (!API_BASE) {
+      setError("NEXT_PUBLIC_API_BASE is missing.");
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setNeedsLogin(true);
+      setError("Login required.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const saved = await persistDraft(token);
+
+      if (saved.status === "active" || saved.status === "pending_review") {
+        redirectToMyCars("success", "Changes saved.");
+        return;
+      }
+
+      redirectToMyCars("success", "Draft saved.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save draft.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSubmitForReview() {
+    setError("");
+    setSuccess("");
 
     if (!API_BASE) {
       setError("NEXT_PUBLIC_API_BASE is missing.");
@@ -676,7 +714,7 @@ export default function CarDraftForm({
       <section className="auth-card draft-card">
         <h1>{title}</h1>
         <p className="auth-note">
-          Fill the required fields and submit. You can still update your listing later.
+          Fill in the listing details, save a draft at any time, and submit when you're ready.
         </p>
 
         {status && (
@@ -990,9 +1028,19 @@ export default function CarDraftForm({
             </section>
 
             <div className="auth-actions">
-              <button className="btn btn-primary" type="submit" disabled={saving || loading}>
-                {saving ? "Submitting..." : "Submit"}
+              <button className="btn btn-secondary" type="submit" disabled={saving || loading}>
+                {saving ? "Saving..." : saveButtonLabel}
               </button>
+              {!isReviewLocked ? (
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  disabled={saving || loading}
+                  onClick={() => void handleSubmitForReview()}
+                >
+                  {saving ? "Submitting..." : "Save & Submit"}
+                </button>
+              ) : null}
               <Link href="/my-cars" className="btn btn-secondary">Back to My Cars</Link>
               {createdId ? (
                 <Link href={`/my-cars/${createdId}/edit`} className="btn btn-secondary">
@@ -1001,6 +1049,7 @@ export default function CarDraftForm({
               ) : null}
             </div>
 
+            {success && <p className="notice success">{success}</p>}
             {error && <p className="notice error">{error}</p>}
           </form>
         )}
