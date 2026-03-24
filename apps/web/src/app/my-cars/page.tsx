@@ -74,7 +74,6 @@ export default function MyCarsPage() {
   const [needsLogin, setNeedsLogin] = useState(false);
   const [submittingId, setSubmittingId] = useState<number | null>(null);
   const [adminActionId, setAdminActionId] = useState<number | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [me, setMe] = useState<MeResponse | null>(null);
   const [userId, setUserId] = useState("");
@@ -363,54 +362,6 @@ export default function MyCarsPage() {
     }
   }
 
-  async function deleteCar(carId: number) {
-    setError("");
-    setSuccess("");
-
-    if (!canLoad || !API_BASE) {
-      setError("NEXT_PUBLIC_API_BASE is missing.");
-      return;
-    }
-
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      setNeedsLogin(true);
-      setError("Login required.");
-      return;
-    }
-
-    const confirmed = window.confirm("Delete this listing? This will remove the listing, photos, and related messages.");
-    if (!confirmed) {
-      return;
-    }
-
-    setDeletingId(carId);
-    try {
-      const res = await fetch(`${API_BASE}/v1/cars/${carId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (res.status === 401 || res.status === 403) {
-        setNeedsLogin(true);
-        throw new Error("Session expired. Please login again.");
-      }
-
-      if (!res.ok) {
-        throw new Error(await parseApiError(res));
-      }
-
-      setCars((prev) => prev.filter((car) => car.id !== carId));
-      setSuccess(`Listing #${carId} deleted.`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete listing.");
-    } finally {
-      setDeletingId(null);
-    }
-  }
-
   return (
     <main className="page shell">
       <section className="hero hero-mini">
@@ -514,15 +465,6 @@ export default function MyCarsPage() {
                       {car.status === "rejected" ? "Fix and Resubmit" : "Edit Listing"}
                     </Link>
                   )}
-
-                  <button
-                    type="button"
-                    className="btn btn-danger card-action"
-                    disabled={deletingId === car.id}
-                    onClick={() => void deleteCar(car.id)}
-                  >
-                    {deletingId === car.id ? "Deleting..." : car.status === "draft" ? "Delete Draft" : "Delete Listing"}
-                  </button>
 
                   {car.status === "draft" && (
                     <button

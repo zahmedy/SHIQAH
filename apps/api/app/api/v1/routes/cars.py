@@ -232,14 +232,15 @@ def delete_owner_car(
     for lead in leads:
         session.delete(lead)
 
+    session.flush()
     session.delete(car)
     session.commit()
 
     delete_car(str(car_id))
     for storage_key in storage_keys:
-      try:
-          delete_object(storage_key)
-      except Exception:
-          pass
+        try:
+            delete_object(storage_key)
+        except Exception:
+            pass
 
     return {"ok": True}
