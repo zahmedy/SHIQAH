@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
+import { useLocale } from "@/components/LocaleProvider";
+import { formatClockTime } from "@/lib/locale";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const TOKEN_KEY = "garaj_access_token";
 
@@ -19,15 +22,6 @@ type MeResponse = {
   id: number;
 };
 
-function formatTime(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 async function parseApiError(res: Response): Promise<string> {
   const contentType = res.headers.get("content-type") || "";
   const payload = contentType.includes("application/json") ? await res.json() : await res.text();
@@ -36,6 +30,7 @@ async function parseApiError(res: Response): Promise<string> {
 }
 
 export default function ChatPanel({ carId }: { carId: number }) {
+  const locale = useLocale();
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [hasSession, setHasSession] = useState(false);
@@ -43,6 +38,35 @@ export default function ChatPanel({ carId }: { carId: number }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
+  const text = locale === "ar"
+    ? {
+        loadChatFailed: "تعذر تحميل المحادثة.",
+        sendMessageFailed: "تعذر إرسال الرسالة.",
+        conversationTitle: `محادثة السيارة #${carId}`,
+        conversationSubtitle: "تُحفظ الرسائل لكل إعلان وتعرض المعرّف العام لكل مرسل.",
+        loginToChat: "سجل الدخول للمحادثة",
+        loadingChat: "جارٍ تحميل المحادثة...",
+        noMessages: "لا توجد رسائل بعد.",
+        typeMessage: "اكتب رسالتك...",
+        loginToStart: "سجل الدخول لبدء المحادثة",
+        sending: "جارٍ الإرسال...",
+        send: "إرسال",
+        user: "مستخدم",
+      }
+    : {
+        loadChatFailed: "Failed to load chat.",
+        sendMessageFailed: "Failed to send message.",
+        conversationTitle: `Car #${carId} Conversation`,
+        conversationSubtitle: "Messages are saved per listing and show each sender's public user ID.",
+        loginToChat: "Login to Chat",
+        loadingChat: "Loading chat...",
+        noMessages: "No messages yet.",
+        typeMessage: "Type your message...",
+        loginToStart: "Login to start chatting",
+        sending: "Sending...",
+        send: "Send",
+        user: "User",
+      };
 
   useEffect(() => {
     const token = localStorage.getItem(TOKEN_KEY);
@@ -78,14 +102,14 @@ export default function ChatPanel({ carId }: { carId: number }) {
         setMeId(me.id);
         setMessages(chat);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load chat.");
+        setError(err instanceof Error ? err.message : text.loadChatFailed);
       } finally {
         setLoading(false);
       }
     };
 
     void load();
-  }, [carId]);
+  }, [carId, text.loadChatFailed]);
 
   const canSend = useMemo(() => hasSession && draft.trim().length > 0 && !sending, [hasSession, draft, sending]);
 
@@ -118,7 +142,7 @@ export default function ChatPanel({ carId }: { carId: number }) {
       setMessages((prev) => [...prev, created]);
       setDraft("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send message.");
+      setError(err instanceof Error ? err.message : text.sendMessageFailed);
     } finally {
       setSending(false);
     }
@@ -128,23 +152,23 @@ export default function ChatPanel({ carId }: { carId: number }) {
     <section className="chat-panel">
       <div className="chat-header">
         <div>
-          <p className="chat-title">Car #{carId} Conversation</p>
-          <p className="chat-subtitle">Messages are saved per listing and show each sender&apos;s public user ID.</p>
+          <p className="chat-title">{text.conversationTitle}</p>
+          <p className="chat-subtitle">{text.conversationSubtitle}</p>
         </div>
         {!hasSession && (
           <Link href="/login" className="btn btn-secondary chat-login">
-            Login to Chat
+            {text.loginToChat}
           </Link>
         )}
       </div>
 
       {error && <p className="notice error">{error}</p>}
-      {loading && <p className="notice">Loading chat...</p>}
+      {loading && <p className="notice">{text.loadingChat}</p>}
 
       {!loading && (
         <div className="chat-messages">
           {messages.length === 0 ? (
-            <p className="car-meta">No messages yet.</p>
+            <p className="car-meta">{text.noMessages}</p>
           ) : (
             messages.map((msg) => (
               <div
@@ -153,7 +177,7 @@ export default function ChatPanel({ carId }: { carId: number }) {
               >
                 <p>{msg.message}</p>
                 <span>
-                  {msg.sender_public_user_id ? `@${msg.sender_public_user_id}` : `User ${msg.sender_user_id}`} · {formatTime(msg.created_at)}
+                  {msg.sender_public_user_id ? `@${msg.sender_public_user_id}` : `${text.user} ${msg.sender_user_id}`} · {formatClockTime(msg.created_at, locale)}
                 </span>
               </div>
             ))
@@ -164,7 +188,7 @@ export default function ChatPanel({ carId }: { carId: number }) {
       <div className="chat-input-row">
         <input
           className="input chat-input"
-          placeholder={hasSession ? "Type your message..." : "Login to start chatting"}
+          placeholder={hasSession ? text.typeMessage : text.loginToStart}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           disabled={!hasSession}
@@ -175,7 +199,7 @@ export default function ChatPanel({ carId }: { carId: number }) {
           onClick={sendMessage}
           disabled={!canSend}
         >
-          {sending ? "Sending..." : "Send"}
+          {sending ? text.sending : text.send}
         </button>
       </div>
     </section>

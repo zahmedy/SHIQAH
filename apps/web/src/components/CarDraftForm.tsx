@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 
 import CityField from "@/components/CityField";
+import { useLocale } from "@/components/LocaleProvider";
+import { translateStatus, translateValue, type Locale } from "@/lib/locale";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const TOKEN_KEY = "garaj_access_token";
@@ -88,6 +90,12 @@ type PendingPhotoPreview = {
   objectUrl: string;
 };
 
+type PhotoViewerItem = {
+  id: string;
+  src: string;
+  label: string;
+};
+
 const initialForm: FormState = {
   city: "",
   district: "",
@@ -152,46 +160,47 @@ async function parseApiError(res: Response): Promise<string> {
   return detail || `Failed with status ${res.status}`;
 }
 
-function buildPayload(form: FormState): BuildPayloadResult {
+function buildPayload(form: FormState, locale: Locale): BuildPayloadResult {
   const city = form.city.trim();
   const make = form.make.trim();
   const model = form.model.trim();
   const title = form.title_ar.trim();
   const description = form.description_ar.trim();
+  const isArabic = locale === "ar";
 
   if (!city || !make || !model || !title || !description) {
-    return { ok: false, error: "Please fill all required fields." };
+    return { ok: false, error: isArabic ? "يرجى تعبئة جميع الحقول المطلوبة." : "Please fill all required fields." };
   }
 
   const year = Number(form.year);
   const maxYear = new Date().getUTCFullYear() + 1;
   if (!Number.isInteger(year) || year < 1980 || year > maxYear) {
-    return { ok: false, error: `Year must be between 1980 and ${maxYear}.` };
+    return { ok: false, error: isArabic ? `يجب أن تكون السنة بين 1980 و ${maxYear}.` : `Year must be between 1980 and ${maxYear}.` };
   }
 
   const price = Number(form.price_sar);
   if (!Number.isInteger(price) || price <= 0) {
-    return { ok: false, error: "Price must be a positive integer." };
+    return { ok: false, error: isArabic ? "يجب أن يكون السعر رقمًا صحيحًا موجبًا." : "Price must be a positive integer." };
   }
 
   const mileage = parseOptionalNumber(form.mileage_km);
   if (form.mileage_km.trim() && (mileage === undefined || mileage < 0)) {
-    return { ok: false, error: "Mileage must be zero or a positive integer." };
+    return { ok: false, error: isArabic ? "يجب أن يكون الممشى صفرًا أو رقمًا صحيحًا موجبًا." : "Mileage must be zero or a positive integer." };
   }
 
   const latitude = parseOptionalFloat(form.latitude);
   const longitude = parseOptionalFloat(form.longitude);
   if ((form.latitude.trim() && latitude === undefined) || (form.longitude.trim() && longitude === undefined)) {
-    return { ok: false, error: "Latitude/longitude must be valid numbers." };
+    return { ok: false, error: isArabic ? "يجب أن تكون خطوط الطول والعرض أرقامًا صحيحة." : "Latitude/longitude must be valid numbers." };
   }
   if ((latitude !== undefined && longitude === undefined) || (latitude === undefined && longitude !== undefined)) {
-    return { ok: false, error: "Provide both latitude and longitude, or leave both empty." };
+    return { ok: false, error: isArabic ? "أدخل خطي العرض والطول معًا أو اتركهما فارغين." : "Provide both latitude and longitude, or leave both empty." };
   }
   if (latitude !== undefined && (latitude < -90 || latitude > 90)) {
-    return { ok: false, error: "Latitude must be between -90 and 90." };
+    return { ok: false, error: isArabic ? "يجب أن يكون خط العرض بين -90 و 90." : "Latitude must be between -90 and 90." };
   }
   if (longitude !== undefined && (longitude < -180 || longitude > 180)) {
-    return { ok: false, error: "Longitude must be between -180 and 180." };
+    return { ok: false, error: isArabic ? "يجب أن يكون خط الطول بين -180 و 180." : "Longitude must be between -180 and 180." };
   }
 
   const payload: CarPayload = {
@@ -224,6 +233,8 @@ export default function CarDraftForm({
   mode: DraftFormMode;
   carId?: number;
 }) {
+  const locale = useLocale();
+  const isArabic = locale === "ar";
   const router = useRouter();
   const [form, setForm] = useState<FormState>(initialForm);
   const [status, setStatus] = useState<string>("");
@@ -243,6 +254,7 @@ export default function CarDraftForm({
   const [removingPhotoId, setRemovingPhotoId] = useState<number | null>(null);
   const [mainPhotoId, setMainPhotoId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeCarId = useMemo(
@@ -252,17 +264,235 @@ export default function CarDraftForm({
   const remainingPhotos = Math.max(0, 4 - photos.length);
   const hasEnoughPhotos = photos.length >= 4;
   const isReviewLocked = status === "active" || status === "pending_review";
-  const saveButtonLabel = isReviewLocked ? "Save Changes" : "Save Draft";
+  const text = isArabic
+    ? {
+        saveChanges: "حفظ التغييرات",
+        saveDraft: "حفظ المسودة",
+        photoNumber: (index: number) => `صورة ${index}`,
+        invalidCarId: "معرّف السيارة غير صالح.",
+        missingApiBase: "متغير NEXT_PUBLIC_API_BASE غير موجود.",
+        loadDraftFailed: "تعذر تحميل المسودة.",
+        sessionExpired: "انتهت الجلسة. سجل الدخول مرة أخرى.",
+        loginRequired: "تسجيل الدخول مطلوب.",
+        changesSaved: "تم حفظ التغييرات.",
+        draftSaved: "تم حفظ المسودة.",
+        saveDraftFailed: "تعذر حفظ المسودة.",
+        listingUpdated: "تم تحديث الإعلان بنجاح.",
+        listingPendingReview: "تم تحديث الإعلان وهو الآن قيد المراجعة.",
+        listingApproved: "تم إرسال الإعلان وتمت الموافقة عليه بنجاح.",
+        listingSubmittedPending: "تم إرسال الإعلان وهو الآن قيد المراجعة.",
+        listingRejected: "تم رفض الإعلان.",
+        listingSubmitted: "تم إرسال الإعلان.",
+        submitListingFailed: "تعذر إرسال الإعلان.",
+        saveBeforeDelete: "احفظ الإعلان قبل حذفه.",
+        deleteConfirm: "هل تريد حذف هذا الإعلان؟ سيتم حذف الإعلان والصور والرسائل المرتبطة به.",
+        draftDeleted: "تم حذف المسودة.",
+        listingDeleted: "تم حذف الإعلان.",
+        deleteFailed: "تعذر حذف الإعلان.",
+        selectPhotosFirst: "اختر صورة واحدة أو أكثر أولًا.",
+        imagesOnly: "الملفات المسموحة هي الصور فقط.",
+        createDraftBeforeUploadFailed: "تعذر إنشاء مسودة قبل رفع الصور.",
+        failedUpload: (fileName: string, statusCode: number) => `فشل رفع ${fileName} (${statusCode}).`,
+        photosAddedSavedFirst: (count: number) => `تمت إضافة ${count} صورة. تم حفظ الإعلان أولًا.`,
+        photosAdded: (count: number) => `تمت إضافة ${count} صورة.`,
+        photosAddFailed: (count: number) => `تعذر إضافة ${count} صورة. حاول مرة أخرى.`,
+        saveBeforeRemovingPhotos: "احفظ الإعلان قبل حذف الصور.",
+        photoRemoved: "تم حذف الصورة.",
+        removePhotoFailed: "تعذر حذف الصورة.",
+        saveBeforeMainPhoto: "احفظ الإعلان قبل تغيير الصورة الرئيسية.",
+        mainPhotoUpdated: "تم تحديث الصورة الرئيسية.",
+        updateMainPhotoFailed: "تعذر تحديث الصورة الرئيسية.",
+        createDraftTitle: "إنشاء مسودة",
+        editListingTitle: (id?: number) => `تعديل الإعلان #${id ?? ""}`,
+        formNote: "أدخل تفاصيل الإعلان، واحفظه كمسودة في أي وقت، ثم أرسله عندما تصبح جاهزًا.",
+        currentStatus: "الحالة الحالية",
+        rejected: "مرفوض",
+        loginRequiredForDrafts: "تسجيل الدخول مطلوب لإدارة المسودات.",
+        loadingDraft: "جارٍ تحميل المسودة...",
+        cityLabel: "المدينة *",
+        cityHelp: "اختر مدينة رئيسية أو اختر أخرى لإدخالها يدويًا.",
+        otherCity: "اكتب مدينة أخرى",
+        district: "الحي",
+        make: "الشركة *",
+        model: "الموديل *",
+        year: "السنة *",
+        price: "السعر (ر.س) *",
+        mileage: "الممشى (كم)",
+        bodyType: "نوع الهيكل",
+        selectBodyType: "اختر نوع الهيكل",
+        transmission: "ناقل الحركة",
+        selectTransmission: "اختر ناقل الحركة",
+        fuelType: "نوع الوقود",
+        selectFuelType: "اختر نوع الوقود",
+        drivetrain: "نظام الدفع",
+        selectDrivetrain: "اختر نظام الدفع",
+        condition: "الحالة",
+        selectCondition: "اختر الحالة",
+        color: "اللون",
+        selectColor: "اختر اللون",
+        titleLabel: "العنوان *",
+        descriptionLabel: "الوصف *",
+        photos: "الصور",
+        photosHelp: "أضف صورًا واضحة تعطي المشتري ثقة. ابدأ بالخارج والداخل والعداد وأي ملاحظات مهمة.",
+        autoSaveOnFirstPhotos: "سيتم حفظ الإعلان تلقائيًا عند إضافة أول مجموعة صور.",
+        addingPhotos: "جارٍ إضافة الصور...",
+        addMorePhotos: "أضف صورًا أخرى",
+        addPhotos: "أضف صورًا",
+        photosReady: (count: number) => `${count} صور جاهزة`,
+        moreNeeded: (count: number) => `${count} أخرى مطلوبة`,
+        photosUploadingNow: "يتم الآن إضافة الصور التي اخترتها.",
+        choosePhotosAndSave: "اختر صورة أو أكثر ليتم حفظ الإعلان وإضافتها مباشرة.",
+        choosePhotos: "اختر صورة أو أكثر. ستتم إضافتها مباشرة.",
+        enoughPhotosToPublish: "لديك صور كافية للنشر.",
+        morePhotosToPublish: (count: number) => `أضف ${count} صورة إضافية على الأقل للنشر.`,
+        adding: "جارٍ الإضافة",
+        mainPhoto: "الصورة الرئيسية",
+        makeMain: "اجعلها رئيسية",
+        removing: "جارٍ الحذف...",
+        remove: "حذف",
+        noPhotosYet: "لا توجد صور بعد.",
+        photoPerformanceNote: "الإعلانات التي تحتوي على صور واضحة ومتعددة تكون أكثر موثوقية.",
+        photoViewer: "عارض الصور",
+        closePhotoViewer: "إغلاق عارض الصور",
+        previousPhoto: "الصورة السابقة",
+        nextPhoto: "الصورة التالية",
+        saving: "جارٍ الحفظ...",
+        submitting: "جارٍ الإرسال...",
+        saveAndSubmit: "حفظ وإرسال",
+        deleting: "جارٍ الحذف...",
+        deleteDraft: "حذف المسودة",
+        deleteListing: "حذف الإعلان",
+        backToMyCars: "العودة إلى سياراتي",
+        editCreatedDraft: "تعديل المسودة التي تم إنشاؤها",
+      }
+    : {
+        saveChanges: "Save Changes",
+        saveDraft: "Save Draft",
+        photoNumber: (index: number) => `Photo ${index}`,
+        invalidCarId: "Invalid car id.",
+        missingApiBase: "NEXT_PUBLIC_API_BASE is missing.",
+        loadDraftFailed: "Failed to load draft.",
+        sessionExpired: "Session expired. Please login again.",
+        loginRequired: "Login required.",
+        changesSaved: "Changes saved.",
+        draftSaved: "Draft saved.",
+        saveDraftFailed: "Failed to save draft.",
+        listingUpdated: "Listing updated successfully.",
+        listingPendingReview: "Listing updated and is pending review.",
+        listingApproved: "Listing submitted and approved successfully.",
+        listingSubmittedPending: "Listing submitted and is pending review.",
+        listingRejected: "Listing was rejected.",
+        listingSubmitted: "Listing submitted.",
+        submitListingFailed: "Failed to submit listing.",
+        saveBeforeDelete: "Save the listing before deleting it.",
+        deleteConfirm: "Delete this listing? This will remove the listing, photos, and related messages.",
+        draftDeleted: "Draft deleted.",
+        listingDeleted: "Listing deleted.",
+        deleteFailed: "Failed to delete listing.",
+        selectPhotosFirst: "Select one or more photos first.",
+        imagesOnly: "Only image files are allowed.",
+        createDraftBeforeUploadFailed: "Failed to create draft before upload.",
+        failedUpload: (fileName: string, statusCode: number) => `Failed upload for ${fileName} (${statusCode}).`,
+        photosAddedSavedFirst: (count: number) => `${count} photo${count === 1 ? "" : "s"} added. Your listing was saved first.`,
+        photosAdded: (count: number) => `${count} photo${count === 1 ? "" : "s"} added.`,
+        photosAddFailed: (count: number) => `${count} photo${count === 1 ? "" : "s"} could not be added. Please try again.`,
+        saveBeforeRemovingPhotos: "Save the listing before removing photos.",
+        photoRemoved: "Photo removed.",
+        removePhotoFailed: "Failed to remove photo.",
+        saveBeforeMainPhoto: "Save the listing before changing the main photo.",
+        mainPhotoUpdated: "Main photo updated.",
+        updateMainPhotoFailed: "Failed to update main photo.",
+        createDraftTitle: "Create Draft",
+        editListingTitle: (id?: number) => `Edit Listing #${id ?? ""}`,
+        formNote: "Fill in the listing details, save a draft at any time, and submit when you're ready.",
+        currentStatus: "Current status",
+        rejected: "Rejected",
+        loginRequiredForDrafts: "Login required to manage drafts.",
+        loadingDraft: "Loading draft...",
+        cityLabel: "City *",
+        cityHelp: "Choose a major city or select Other to enter one manually.",
+        otherCity: "Enter another city",
+        district: "District",
+        make: "Make *",
+        model: "Model *",
+        year: "Year *",
+        price: "Price (SAR) *",
+        mileage: "Mileage (KM)",
+        bodyType: "Body Type",
+        selectBodyType: "Select body type",
+        transmission: "Transmission",
+        selectTransmission: "Select transmission",
+        fuelType: "Fuel Type",
+        selectFuelType: "Select fuel type",
+        drivetrain: "Drivetrain",
+        selectDrivetrain: "Select drivetrain",
+        condition: "Condition",
+        selectCondition: "Select condition",
+        color: "Color",
+        selectColor: "Select color",
+        titleLabel: "Title (Arabic) *",
+        descriptionLabel: "Description (Arabic) *",
+        photos: "Photos",
+        photosHelp: "Add clear photos buyers can trust. Start with the outside, inside, dashboard, and anything important to note.",
+        autoSaveOnFirstPhotos: "Your listing will be saved automatically when you add the first photos.",
+        addingPhotos: "Adding photos...",
+        addMorePhotos: "Add More Photos",
+        addPhotos: "Add Photos",
+        photosReady: (count: number) => `${count} photos ready`,
+        moreNeeded: (count: number) => `${count} more needed`,
+        photosUploadingNow: "Your selected photos are being added now.",
+        choosePhotosAndSave: "Choose one or more photos to save the listing and add them right away.",
+        choosePhotos: "Choose one or more photos. They will be added right away.",
+        enoughPhotosToPublish: "You have enough photos to publish.",
+        morePhotosToPublish: (count: number) => `Add at least ${count} more photo${count === 1 ? "" : "s"} to publish.`,
+        adding: "Adding",
+        mainPhoto: "Main photo",
+        makeMain: "Make Main",
+        removing: "Removing...",
+        remove: "Remove",
+        noPhotosYet: "No photos yet.",
+        photoPerformanceNote: "Listings with several clear photos perform better and are easier to trust.",
+        photoViewer: "Photo viewer",
+        closePhotoViewer: "Close photo viewer",
+        previousPhoto: "Previous photo",
+        nextPhoto: "Next photo",
+        saving: "Saving...",
+        submitting: "Submitting...",
+        saveAndSubmit: "Save & Submit",
+        deleting: "Deleting...",
+        deleteDraft: "Delete Draft",
+        deleteListing: "Delete Listing",
+        backToMyCars: "Back to My Cars",
+        editCreatedDraft: "Edit Created Draft",
+      };
+  const saveButtonLabel = isReviewLocked ? text.saveChanges : text.saveDraft;
+  const viewerItems = useMemo<PhotoViewerItem[]>(
+    () => [
+      ...pendingPreviews.map((preview) => ({
+        id: preview.id,
+        src: preview.objectUrl,
+        label: preview.fileName,
+      })),
+      ...photos.map((photo) => ({
+        id: `photo-${photo.id}`,
+        src: photo.public_url,
+        label: text.photoNumber(photo.sort_order + 1),
+      })),
+    ],
+    [pendingPreviews, photos, text],
+  );
+  const activeViewerItem =
+    viewerIndex !== null && viewerItems[viewerIndex] ? viewerItems[viewerIndex] : null;
 
   useEffect(() => {
     if (mode !== "edit") return;
     if (!carId) {
-      setError("Invalid car id.");
+      setError(text.invalidCarId);
       setLoading(false);
       return;
     }
     if (!API_BASE) {
-      setError("NEXT_PUBLIC_API_BASE is missing.");
+      setError(text.missingApiBase);
       setLoading(false);
       return;
     }
@@ -315,14 +545,14 @@ export default function CarDraftForm({
           description_ar: field(car.description_ar),
         });
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load draft.");
+        setError(err instanceof Error ? err.message : text.loadDraftFailed);
       } finally {
         setLoading(false);
       }
     };
 
     void load();
-  }, [mode, carId]);
+  }, [mode, carId, text.invalidCarId, text.loadDraftFailed, text.missingApiBase]);
 
   useEffect(() => {
     return () => {
@@ -332,6 +562,36 @@ export default function CarDraftForm({
     };
   }, [pendingPreviews]);
 
+  useEffect(() => {
+    if (viewerIndex === null) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setViewerIndex(null);
+        return;
+      }
+      if (event.key === "ArrowRight") {
+        setViewerIndex((current) => {
+          if (current === null || viewerItems.length === 0) return current;
+          return (current + 1) % viewerItems.length;
+        });
+      }
+      if (event.key === "ArrowLeft") {
+        setViewerIndex((current) => {
+          if (current === null || viewerItems.length === 0) return current;
+          return (current - 1 + viewerItems.length) % viewerItems.length;
+        });
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [viewerIndex, viewerItems]);
+
   function redirectToMyCars(type: "success" | "error", message: string) {
     sessionStorage.setItem(FLASH_KEY, JSON.stringify({ type, message }));
     router.replace("/my-cars");
@@ -339,7 +599,7 @@ export default function CarDraftForm({
   }
 
   async function persistDraft(token: string): Promise<CarOut> {
-    const result = buildPayload(form);
+    const result = buildPayload(form, locale);
     if (result.ok === false) {
       throw new Error(result.error);
     }
@@ -357,7 +617,7 @@ export default function CarDraftForm({
 
     if (res.status === 401 || res.status === 403) {
       setNeedsLogin(true);
-      throw new Error("Session expired. Please login again.");
+      throw new Error(text.sessionExpired);
     }
 
     if (!res.ok) {
@@ -386,7 +646,7 @@ export default function CarDraftForm({
 
     if (res.status === 401 || res.status === 403) {
       setNeedsLogin(true);
-      throw new Error("Session expired. Please login again.");
+      throw new Error(text.sessionExpired);
     }
 
     if (!res.ok) {
@@ -405,14 +665,14 @@ export default function CarDraftForm({
     setSuccess("");
 
     if (!API_BASE) {
-      setError("NEXT_PUBLIC_API_BASE is missing.");
+      setError(text.missingApiBase);
       return;
     }
 
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
       setNeedsLogin(true);
-      setError("Login required.");
+      setError(text.loginRequired);
       return;
     }
 
@@ -421,13 +681,13 @@ export default function CarDraftForm({
       const saved = await persistDraft(token);
 
       if (saved.status === "active" || saved.status === "pending_review") {
-        redirectToMyCars("success", "Changes saved.");
+        redirectToMyCars("success", text.changesSaved);
         return;
       }
 
-      redirectToMyCars("success", "Draft saved.");
+      redirectToMyCars("success", text.draftSaved);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save draft.");
+      setError(err instanceof Error ? err.message : text.saveDraftFailed);
     } finally {
       setSaving(false);
     }
@@ -438,14 +698,14 @@ export default function CarDraftForm({
     setSuccess("");
 
     if (!API_BASE) {
-      setError("NEXT_PUBLIC_API_BASE is missing.");
+      setError(text.missingApiBase);
       return;
     }
 
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
       setNeedsLogin(true);
-      setError("Login required.");
+      setError(text.loginRequired);
       return;
     }
 
@@ -454,35 +714,35 @@ export default function CarDraftForm({
       const saved = await persistDraft(token);
 
       if (saved.status === "active") {
-        redirectToMyCars("success", "Listing updated successfully.");
+        redirectToMyCars("success", text.listingUpdated);
         return;
       }
 
       if (saved.status === "pending_review") {
-        redirectToMyCars("success", "Listing updated and is pending review.");
+        redirectToMyCars("success", text.listingPendingReview);
         return;
       }
 
       const submitted = await submitListingForReview(saved.id, token);
 
       if (submitted.status === "active") {
-        redirectToMyCars("success", "Listing submitted and approved successfully.");
+        redirectToMyCars("success", text.listingApproved);
         return;
       }
 
       if (submitted.status === "pending_review") {
-        redirectToMyCars("success", "Listing submitted and is pending review.");
+        redirectToMyCars("success", text.listingSubmittedPending);
         return;
       }
 
       if (submitted.status === "rejected") {
-        redirectToMyCars("error", submitted.review_reason || "Listing was rejected.");
+        redirectToMyCars("error", submitted.review_reason || text.listingRejected);
         return;
       }
 
-      redirectToMyCars("success", "Listing submitted.");
+      redirectToMyCars("success", text.listingSubmitted);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to submit listing.");
+      setError(err instanceof Error ? err.message : text.submitListingFailed);
     } finally {
       setSaving(false);
     }
@@ -493,24 +753,22 @@ export default function CarDraftForm({
     setSuccess("");
 
     if (!API_BASE) {
-      setError("NEXT_PUBLIC_API_BASE is missing.");
+      setError(text.missingApiBase);
       return;
     }
     if (!activeCarId) {
-      setError("Save the listing before deleting it.");
+      setError(text.saveBeforeDelete);
       return;
     }
 
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
       setNeedsLogin(true);
-      setError("Login required.");
+      setError(text.loginRequired);
       return;
     }
 
-    const confirmed = window.confirm(
-      "Delete this listing? This will remove the listing, photos, and related messages.",
-    );
+    const confirmed = window.confirm(text.deleteConfirm);
     if (!confirmed) {
       return;
     }
@@ -526,16 +784,16 @@ export default function CarDraftForm({
 
       if (res.status === 401 || res.status === 403) {
         setNeedsLogin(true);
-        throw new Error("Session expired. Please login again.");
+        throw new Error(text.sessionExpired);
       }
 
       if (!res.ok) {
         throw new Error(await parseApiError(res));
       }
 
-      redirectToMyCars("success", status === "draft" ? "Draft deleted." : "Listing deleted.");
+      redirectToMyCars("success", status === "draft" ? text.draftDeleted : text.listingDeleted);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete listing.");
+      setError(err instanceof Error ? err.message : text.deleteFailed);
     } finally {
       setDeleting(false);
     }
@@ -546,26 +804,26 @@ export default function CarDraftForm({
     setUploadSuccess("");
 
     if (!API_BASE) {
-      setUploadError("NEXT_PUBLIC_API_BASE is missing.");
+      setUploadError(text.missingApiBase);
       return;
     }
 
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
       setNeedsLogin(true);
-      setUploadError("Login required.");
+      setUploadError(text.loginRequired);
       return;
     }
 
     const files = filesToUpload ?? selectedFiles;
     if (files.length === 0) {
-      setUploadError("Select one or more photos first.");
+      setUploadError(text.selectPhotosFirst);
       return;
     }
 
     const imageFiles = files.filter((file) => file.type.startsWith("image/"));
     if (imageFiles.length === 0) {
-      setUploadError("Only image files are allowed.");
+      setUploadError(text.imagesOnly);
       return;
     }
 
@@ -580,7 +838,7 @@ export default function CarDraftForm({
         targetCarId = draft.id;
         createdForUpload = true;
       } catch (err) {
-        setUploadError(err instanceof Error ? err.message : "Failed to create draft before upload.");
+        setUploadError(err instanceof Error ? err.message : text.createDraftBeforeUploadFailed);
         setUploading(false);
         return;
       }
@@ -617,7 +875,7 @@ export default function CarDraftForm({
         });
 
         if (!uploadRes.ok) {
-          throw new Error(`Failed upload for ${file.name} (${uploadRes.status}).`);
+          throw new Error(text.failedUpload(file.name, uploadRes.status));
         }
 
         const isCover = nextPhotos.length === 0;
@@ -664,12 +922,12 @@ export default function CarDraftForm({
     if (uploadedCount > 0) {
       setUploadSuccess(
         createdForUpload
-          ? `${uploadedCount} photo${uploadedCount === 1 ? "" : "s"} added. Your listing was saved first.`
-          : `${uploadedCount} photo${uploadedCount === 1 ? "" : "s"} added.`,
+          ? text.photosAddedSavedFirst(uploadedCount)
+          : text.photosAdded(uploadedCount),
       );
     }
     if (failedCount > 0) {
-      setUploadError(`${failedCount} photo${failedCount === 1 ? "" : "s"} could not be added. Please try again.`);
+      setUploadError(text.photosAddFailed(failedCount));
     }
 
     for (const preview of previewsToClear ?? []) {
@@ -712,18 +970,18 @@ export default function CarDraftForm({
     setUploadSuccess("");
 
     if (!API_BASE) {
-      setUploadError("NEXT_PUBLIC_API_BASE is missing.");
+      setUploadError(text.missingApiBase);
       return;
     }
     if (!activeCarId) {
-      setUploadError("Save the listing before removing photos.");
+      setUploadError(text.saveBeforeRemovingPhotos);
       return;
     }
 
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
       setNeedsLogin(true);
-      setUploadError("Login required.");
+      setUploadError(text.loginRequired);
       return;
     }
 
@@ -738,7 +996,7 @@ export default function CarDraftForm({
 
       if (res.status === 401 || res.status === 403) {
         setNeedsLogin(true);
-        throw new Error("Session expired. Please login again.");
+        throw new Error(text.sessionExpired);
       }
 
       if (!res.ok) {
@@ -754,12 +1012,49 @@ export default function CarDraftForm({
           is_cover: currentCoverId ? photo.id === currentCoverId : index === 0,
         }));
       });
-      setUploadSuccess("Photo removed.");
+      setUploadSuccess(text.photoRemoved);
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "Failed to remove photo.");
+      setUploadError(err instanceof Error ? err.message : text.removePhotoFailed);
     } finally {
       setRemovingPhotoId(null);
     }
+  }
+
+  function openViewer(targetId: string) {
+    const index = viewerItems.findIndex((item) => item.id === targetId);
+    if (index >= 0) {
+      setViewerIndex(index);
+    }
+  }
+
+  function showNextPhoto() {
+    setViewerIndex((current) => {
+      if (current === null || viewerItems.length === 0) return current;
+      return (current + 1) % viewerItems.length;
+    });
+  }
+
+  function showPreviousPhoto() {
+    setViewerIndex((current) => {
+      if (current === null || viewerItems.length === 0) return current;
+      return (current - 1 + viewerItems.length) % viewerItems.length;
+    });
+  }
+
+  function handlePreviewImageClick(event: MouseEvent<HTMLImageElement>) {
+    if (viewerItems.length < 2) {
+      return;
+    }
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const clickOffset = event.clientX - bounds.left;
+
+    if (clickOffset < bounds.width / 2) {
+      showPreviousPhoto();
+      return;
+    }
+
+    showNextPhoto();
   }
 
   async function setMainPhoto(photoId: number) {
@@ -767,18 +1062,18 @@ export default function CarDraftForm({
     setUploadSuccess("");
 
     if (!API_BASE) {
-      setUploadError("NEXT_PUBLIC_API_BASE is missing.");
+      setUploadError(text.missingApiBase);
       return;
     }
     if (!activeCarId) {
-      setUploadError("Save the listing before changing the main photo.");
+      setUploadError(text.saveBeforeMainPhoto);
       return;
     }
 
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
       setNeedsLogin(true);
-      setUploadError("Login required.");
+      setUploadError(text.loginRequired);
       return;
     }
 
@@ -793,7 +1088,7 @@ export default function CarDraftForm({
 
       if (res.status === 401 || res.status === 403) {
         setNeedsLogin(true);
-        throw new Error("Session expired. Please login again.");
+        throw new Error(text.sessionExpired);
       }
 
       if (!res.ok) {
@@ -812,53 +1107,51 @@ export default function CarDraftForm({
           is_cover: photo.id === photoId,
         }));
       });
-      setUploadSuccess("Main photo updated.");
+      setUploadSuccess(text.mainPhotoUpdated);
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "Failed to update main photo.");
+      setUploadError(err instanceof Error ? err.message : text.updateMainPhotoFailed);
     } finally {
       setMainPhotoId(null);
     }
   }
 
-  const title = mode === "create" ? "Create Draft" : `Edit Listing #${carId ?? ""}`;
+  const title = mode === "create" ? text.createDraftTitle : text.editListingTitle(carId);
 
   return (
     <main className="page shell auth-wrap">
       <section className="auth-card draft-card">
         <h1>{title}</h1>
-        <p className="auth-note">
-          Fill in the listing details, save a draft at any time, and submit when you're ready.
-        </p>
+        <p className="auth-note">{text.formNote}</p>
 
         {status && (
           <p className="car-meta">
-            Current status: <strong>{status}</strong>
+            {text.currentStatus}: <strong>{translateStatus(locale, status)}</strong>
           </p>
         )}
 
         {status === "rejected" && reviewReason ? (
           <p className="notice error">
-            Rejected: {reviewReason}
+            {text.rejected}: {reviewReason}
           </p>
         ) : null}
 
-        {needsLogin && <p className="notice">Login required to manage drafts.</p>}
-        {loading && <p className="notice">Loading draft...</p>}
+        {needsLogin && <p className="notice">{text.loginRequiredForDrafts}</p>}
+        {loading && <p className="notice">{text.loadingDraft}</p>}
 
         {!loading && (
           <form className="filters" onSubmit={onSubmit}>
             <div className="draft-grid">
               <CityField
                 id="city"
-                label="City *"
+                label={text.cityLabel}
                 value={form.city}
                 onChange={(city) => setForm((prev) => ({ ...prev, city }))}
-                helperText="Choose a major city or select Other to enter one manually."
-                otherPlaceholder="Enter another city"
+                helperText={text.cityHelp}
+                otherPlaceholder={text.otherCity}
               />
 
               <div>
-                <label className="label" htmlFor="district">District</label>
+                <label className="label" htmlFor="district">{text.district}</label>
                 <input
                   id="district"
                   className="input"
@@ -868,7 +1161,7 @@ export default function CarDraftForm({
               </div>
 
               <div>
-                <label className="label" htmlFor="make">Make *</label>
+                <label className="label" htmlFor="make">{text.make}</label>
                 <input
                   id="make"
                   className="input"
@@ -878,7 +1171,7 @@ export default function CarDraftForm({
               </div>
 
               <div>
-                <label className="label" htmlFor="model">Model *</label>
+                <label className="label" htmlFor="model">{text.model}</label>
                 <input
                   id="model"
                   className="input"
@@ -888,7 +1181,7 @@ export default function CarDraftForm({
               </div>
 
               <div>
-                <label className="label" htmlFor="year">Year *</label>
+                <label className="label" htmlFor="year">{text.year}</label>
                 <input
                   id="year"
                   className="input"
@@ -901,7 +1194,7 @@ export default function CarDraftForm({
               </div>
 
               <div>
-                <label className="label" htmlFor="price">Price (SAR) *</label>
+                <label className="label" htmlFor="price">{text.price}</label>
                 <input
                   id="price"
                   className="input"
@@ -913,7 +1206,7 @@ export default function CarDraftForm({
               </div>
 
               <div>
-                <label className="label" htmlFor="mileage">Mileage (KM)</label>
+                <label className="label" htmlFor="mileage">{text.mileage}</label>
                 <input
                   id="mileage"
                   className="input"
@@ -925,102 +1218,102 @@ export default function CarDraftForm({
               </div>
 
               <div>
-                <label className="label" htmlFor="bodyType">Body Type</label>
+                <label className="label" htmlFor="bodyType">{text.bodyType}</label>
                 <select
                   id="bodyType"
                   className="select"
                   value={form.body_type}
                   onChange={(e) => setForm((prev) => ({ ...prev, body_type: e.target.value }))}
                 >
-                  <option value="">Select body type</option>
+                  <option value="">{text.selectBodyType}</option>
                   {BODY_TYPE_OPTIONS.map((option) => (
                     <option key={option} value={option}>
-                      {option}
+                      {translateValue(locale, option)}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="label" htmlFor="transmission">Transmission</label>
+                <label className="label" htmlFor="transmission">{text.transmission}</label>
                 <select
                   id="transmission"
                   className="select"
                   value={form.transmission}
                   onChange={(e) => setForm((prev) => ({ ...prev, transmission: e.target.value }))}
                 >
-                  <option value="">Select transmission</option>
+                  <option value="">{text.selectTransmission}</option>
                   {TRANSMISSION_OPTIONS.map((option) => (
                     <option key={option} value={option}>
-                      {option}
+                      {translateValue(locale, option)}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="label" htmlFor="fuelType">Fuel Type</label>
+                <label className="label" htmlFor="fuelType">{text.fuelType}</label>
                 <select
                   id="fuelType"
                   className="select"
                   value={form.fuel_type}
                   onChange={(e) => setForm((prev) => ({ ...prev, fuel_type: e.target.value }))}
                 >
-                  <option value="">Select fuel type</option>
+                  <option value="">{text.selectFuelType}</option>
                   {FUEL_TYPE_OPTIONS.map((option) => (
                     <option key={option} value={option}>
-                      {option}
+                      {translateValue(locale, option)}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="label" htmlFor="drivetrain">Drivetrain</label>
+                <label className="label" htmlFor="drivetrain">{text.drivetrain}</label>
                 <select
                   id="drivetrain"
                   className="select"
                   value={form.drivetrain}
                   onChange={(e) => setForm((prev) => ({ ...prev, drivetrain: e.target.value }))}
                 >
-                  <option value="">Select drivetrain</option>
+                  <option value="">{text.selectDrivetrain}</option>
                   {DRIVETRAIN_OPTIONS.map((option) => (
                     <option key={option} value={option}>
-                      {option}
+                      {translateValue(locale, option)}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="label" htmlFor="condition">Condition</label>
+                <label className="label" htmlFor="condition">{text.condition}</label>
                 <select
                   id="condition"
                   className="select"
                   value={form.condition}
                   onChange={(e) => setForm((prev) => ({ ...prev, condition: e.target.value }))}
                 >
-                  <option value="">Select condition</option>
+                  <option value="">{text.selectCondition}</option>
                   {CONDITION_OPTIONS.map((option) => (
                     <option key={option} value={option}>
-                      {option}
+                      {translateValue(locale, option)}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="label" htmlFor="color">Color</label>
+                <label className="label" htmlFor="color">{text.color}</label>
                 <select
                   id="color"
                   className="select"
                   value={form.color}
                   onChange={(e) => setForm((prev) => ({ ...prev, color: e.target.value }))}
                 >
-                  <option value="">Select color</option>
+                  <option value="">{text.selectColor}</option>
                   {COLOR_OPTIONS.map((option) => (
                     <option key={option} value={option}>
-                      {option}
+                      {translateValue(locale, option)}
                     </option>
                   ))}
                 </select>
@@ -1028,7 +1321,7 @@ export default function CarDraftForm({
             </div>
 
             <div>
-              <label className="label" htmlFor="title">Title (Arabic) *</label>
+              <label className="label" htmlFor="title">{text.titleLabel}</label>
               <input
                 id="title"
                 className="input"
@@ -1038,7 +1331,7 @@ export default function CarDraftForm({
             </div>
 
             <div>
-              <label className="label" htmlFor="description">Description (Arabic) *</label>
+              <label className="label" htmlFor="description">{text.descriptionLabel}</label>
               <textarea
                 id="description"
                 className="textarea"
@@ -1049,13 +1342,11 @@ export default function CarDraftForm({
             </div>
 
             <section className="upload-panel">
-              <h2 className="subheading">Photos</h2>
-              <p className="car-meta">
-                Add clear photos buyers can trust. Start with the outside, inside, dashboard, and anything important to note.
-              </p>
+              <h2 className="subheading">{text.photos}</h2>
+              <p className="car-meta">{text.photosHelp}</p>
 
               {!activeCarId && mode === "create" ? (
-                <p className="helper-text">Your listing will be saved automatically when you add the first photos.</p>
+                <p className="helper-text">{text.autoSaveOnFirstPhotos}</p>
               ) : null}
 
               <input
@@ -1078,24 +1369,24 @@ export default function CarDraftForm({
                   onClick={() => photoInputRef.current?.click()}
                   disabled={uploading}
                 >
-                  {uploading ? "Adding photos..." : photos.length > 0 ? "Add More Photos" : "Add Photos"}
+                  {uploading ? text.addingPhotos : photos.length > 0 ? text.addMorePhotos : text.addPhotos}
                 </button>
                 <span className={`status-pill ${hasEnoughPhotos ? "status-active" : "status-pending-review"}`}>
-                  {hasEnoughPhotos ? `${photos.length} photos ready` : `${remainingPhotos} more needed`}
+                  {hasEnoughPhotos ? text.photosReady(photos.length) : text.moreNeeded(remainingPhotos)}
                 </span>
                 <span className="helper-text">
                   {uploading
-                    ? "Your selected photos are being added now."
+                    ? text.photosUploadingNow
                     : !activeCarId && mode === "create"
-                      ? "Choose one or more photos to save the listing and add them right away."
-                      : "Choose one or more photos. They will be added right away."}
+                      ? text.choosePhotosAndSave
+                      : text.choosePhotos}
                 </span>
               </div>
 
               <p className="helper-text">
                 {hasEnoughPhotos
-                  ? "You have enough photos to publish."
-                  : `Add at least ${remainingPhotos} more photo${remainingPhotos === 1 ? "" : "s"} to publish.`}
+                  ? text.enoughPhotosToPublish
+                  : text.morePhotosToPublish(remainingPhotos)}
               </p>
 
               {uploadError && <p className="notice error">{uploadError}</p>}
@@ -1105,20 +1396,32 @@ export default function CarDraftForm({
                 <div className="upload-photo-grid">
                   {pendingPreviews.map((preview) => (
                     <article className="upload-photo-item" key={preview.id}>
-                      <img src={preview.objectUrl} alt={preview.fileName} loading="lazy" />
+                      <button
+                        type="button"
+                        className="upload-photo-preview"
+                        onClick={() => openViewer(preview.id)}
+                      >
+                        <img src={preview.objectUrl} alt={preview.fileName} loading="lazy" />
+                      </button>
                       <div className="upload-photo-meta">
                         <span className="upload-photo-order">{preview.fileName}</span>
-                        <span className="status-pill status-draft">Adding</span>
+                        <span className="status-pill status-draft">{text.adding}</span>
                       </div>
                     </article>
                   ))}
                   {photos.map((photo) => (
                     <article className="upload-photo-item" key={photo.id}>
-                      <img src={photo.public_url} alt={`Car photo ${photo.sort_order + 1}`} loading="lazy" />
+                      <button
+                        type="button"
+                        className="upload-photo-preview"
+                        onClick={() => openViewer(`photo-${photo.id}`)}
+                      >
+                        <img src={photo.public_url} alt={`Car photo ${photo.sort_order + 1}`} loading="lazy" />
+                      </button>
                       <div className="upload-photo-meta">
-                        <span className="upload-photo-order">Photo {photo.sort_order + 1}</span>
+                        <span className="upload-photo-order">{text.photoNumber(photo.sort_order + 1)}</span>
                         <div className="upload-photo-controls">
-                          {photo.is_cover ? <span className="status-pill status-active">Main photo</span> : null}
+                          {photo.is_cover ? <span className="status-pill status-active">{text.mainPhoto}</span> : null}
                           {!photo.is_cover ? (
                             <button
                               type="button"
@@ -1126,7 +1429,7 @@ export default function CarDraftForm({
                               onClick={() => void setMainPhoto(photo.id)}
                               disabled={mainPhotoId === photo.id || removingPhotoId === photo.id || uploading}
                             >
-                              {mainPhotoId === photo.id ? "Saving..." : "Make Main"}
+                              {mainPhotoId === photo.id ? text.saving : text.makeMain}
                             </button>
                           ) : null}
                           <button
@@ -1135,7 +1438,7 @@ export default function CarDraftForm({
                             onClick={() => void removePhoto(photo.id)}
                             disabled={mainPhotoId === photo.id || removingPhotoId === photo.id || uploading}
                           >
-                            {removingPhotoId === photo.id ? "Removing..." : "Remove"}
+                            {removingPhotoId === photo.id ? text.removing : text.remove}
                           </button>
                         </div>
                       </div>
@@ -1144,15 +1447,61 @@ export default function CarDraftForm({
                 </div>
               ) : (
                 <div className="upload-empty-state">
-                  <p className="car-meta">No photos yet.</p>
-                  <p className="helper-text">Listings with several clear photos perform better and are easier to trust.</p>
+                  <p className="car-meta">{text.noPhotosYet}</p>
+                  <p className="helper-text">{text.photoPerformanceNote}</p>
                 </div>
               )}
             </section>
 
+            {activeViewerItem ? (
+              <div className="photo-viewer" role="dialog" aria-modal="true" aria-label={text.photoViewer}>
+                <button type="button" className="photo-viewer-backdrop" onClick={() => setViewerIndex(null)} aria-label={text.closePhotoViewer} />
+                <div className="photo-viewer-card">
+                  <button
+                    type="button"
+                    className="photo-viewer-close"
+                    onClick={() => setViewerIndex(null)}
+                    aria-label={text.closePhotoViewer}
+                  >
+                    x
+                  </button>
+                  {viewerItems.length > 1 ? (
+                    <button
+                      type="button"
+                      className="photo-viewer-nav photo-viewer-prev"
+                      onClick={showPreviousPhoto}
+                      aria-label={text.previousPhoto}
+                    >
+                      ‹
+                    </button>
+                  ) : null}
+                  <img
+                    className={`photo-viewer-image${viewerItems.length > 1 ? " photo-viewer-image-interactive" : ""}`}
+                    src={activeViewerItem.src}
+                    alt={activeViewerItem.label}
+                    onClick={handlePreviewImageClick}
+                  />
+                  {viewerItems.length > 1 ? (
+                    <button
+                      type="button"
+                      className="photo-viewer-nav photo-viewer-next"
+                      onClick={showNextPhoto}
+                      aria-label={text.nextPhoto}
+                    >
+                      ›
+                    </button>
+                  ) : null}
+                  <p className="photo-viewer-caption">
+                    {activeViewerItem.label}
+                    {viewerItems.length > 1 ? ` (${viewerIndex! + 1}/${viewerItems.length})` : ""}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
             <div className="auth-actions">
               <button className="btn btn-secondary" type="submit" disabled={saving || loading}>
-                {saving ? "Saving..." : saveButtonLabel}
+                {saving ? text.saving : saveButtonLabel}
               </button>
               {!isReviewLocked ? (
                 <button
@@ -1161,7 +1510,7 @@ export default function CarDraftForm({
                   disabled={saving || loading}
                   onClick={() => void handleSubmitForReview()}
                 >
-                  {saving ? "Submitting..." : "Save & Submit"}
+                  {saving ? text.submitting : text.saveAndSubmit}
                 </button>
               ) : null}
               {activeCarId ? (
@@ -1171,13 +1520,13 @@ export default function CarDraftForm({
                   disabled={deleting || saving || loading}
                   onClick={() => void handleDeleteListing()}
                 >
-                  {deleting ? "Deleting..." : status === "draft" ? "Delete Draft" : "Delete Listing"}
+                  {deleting ? text.deleting : status === "draft" ? text.deleteDraft : text.deleteListing}
                 </button>
               ) : null}
-              <Link href="/my-cars" className="btn btn-secondary">Back to My Cars</Link>
+              <Link href="/my-cars" className="btn btn-secondary">{text.backToMyCars}</Link>
               {createdId ? (
                 <Link href={`/my-cars/${createdId}/edit`} className="btn btn-secondary">
-                  Edit Created Draft
+                  {text.editCreatedDraft}
                 </Link>
               ) : null}
             </div>

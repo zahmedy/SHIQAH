@@ -3,6 +3,14 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
+import { useLocale } from "@/components/LocaleProvider";
+import {
+  formatMileage,
+  formatPrice,
+  formatShortDate,
+  translateStatus,
+} from "@/lib/locale";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const TOKEN_KEY = "garaj_access_token";
 const FLASH_KEY = "garaj_flash";
@@ -40,8 +48,6 @@ type MeResponse = {
   verified_at: string | null;
 };
 
-const priceFormatter = new Intl.NumberFormat("en-US");
-
 async function parseApiError(res: Response): Promise<string> {
   const contentType = res.headers.get("content-type") || "";
   const payload = contentType.includes("application/json") ? await res.json() : await res.text();
@@ -49,24 +55,8 @@ async function parseApiError(res: Response): Promise<string> {
   return detail || `Failed with status ${res.status}`;
 }
 
-function prettifyStatus(value: string): string {
-  return value
-    .split("_")
-    .map((chunk) => chunk.charAt(0).toUpperCase() + chunk.slice(1))
-    .join(" ");
-}
-
-function formatDate(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "Unknown date";
-  return date.toLocaleDateString("en-GB", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 export default function MyCarsPage() {
+  const locale = useLocale();
   const [cars, setCars] = useState<MyCar[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -78,6 +68,97 @@ export default function MyCarsPage() {
   const [me, setMe] = useState<MeResponse | null>(null);
   const [userId, setUserId] = useState("");
   const [savingUserId, setSavingUserId] = useState(false);
+  const text = locale === "ar"
+    ? {
+        missingApiBase: "متغير NEXT_PUBLIC_API_BASE غير موجود.",
+        sessionExpired: "جلسة الدخول مفقودة أو منتهية. سجل الدخول مرة أخرى.",
+        loadListingsFailed: "تعذر تحميل إعلاناتك.",
+        loginRequired: "تسجيل الدخول مطلوب.",
+        submitSuccess: (carId: number) => `تم إرسال السيارة #${carId} للمراجعة.`,
+        submitFailed: "تعذر إرسال الإعلان.",
+        userIdRequired: "اسم المستخدم العام مطلوب.",
+        userIdUpdated: (nextUserId: string) => `تم تحديث اسم المستخدم العام إلى @${nextUserId}.`,
+        userIdUpdateFailed: "تعذر تحديث اسم المستخدم العام.",
+        approveSuccess: (carId: number) => `تمت الموافقة على السيارة #${carId}.`,
+        approveFailed: "تعذر الموافقة على الإعلان.",
+        rejectionReasonPrompt: "سبب الرفض",
+        rejectionReasonDefault: "يحتاج إلى تعديلات يدوية",
+        rejectSuccess: (carId: number) => `تم رفض السيارة #${carId}.`,
+        rejectFailed: "تعذر رفض الإعلان.",
+        title: "سياراتي",
+        subtitle: "تابع إعلاناتك وحالة المراجعة في مكان واحد.",
+        createDraft: "أنشئ مسودة",
+        loading: "جارٍ التحميل...",
+        refresh: "تحديث",
+        account: "الحساب",
+        accountHelp: "يظهر اسم المستخدم العام في المحادثات ويمكن تغييره في أي وقت.",
+        publicUserId: "اسم المستخدم العام",
+        userIdHelp: "من 3 إلى 32 حرفًا: `a-z` و `0-9` و `.` و `_` و `-`",
+        phone: "الهاتف",
+        accountId: (currentUserId: string | null) => `معرّف الحساب الحالي: ${currentUserId ? `@${currentUserId}` : "غير مضبوط بعد"}`,
+        saving: "جارٍ الحفظ...",
+        saveUserId: "حفظ اسم المستخدم",
+        loginRequiredForCars: "تسجيل الدخول مطلوب لعرض سياراتك.",
+        noListingsYet: "ليس لديك أي إعلانات بعد.",
+        cityNotSet: "الموقع غير محدد",
+        createdOn: (value: string) => `تم الإنشاء ${value}`,
+        review: "المراجعة",
+        fixAndResubmit: "عدّل وأعد الإرسال",
+        editListing: "تعديل الإعلان",
+        submitting: "جارٍ الإرسال...",
+        submitForReview: "إرسال للمراجعة",
+        working: "جارٍ التنفيذ...",
+        approve: "موافقة",
+        reject: "رفض",
+        openPublicListing: "فتح الإعلان العام",
+        publicPageAfterActive: "الصفحة العامة تظهر بعد أن تصبح الحالة نشطة.",
+        currentStatus: "الحالة الحالية",
+      }
+    : {
+        missingApiBase: "NEXT_PUBLIC_API_BASE is missing.",
+        sessionExpired: "Your session is missing or expired. Please login again.",
+        loadListingsFailed: "Failed to load your listings.",
+        loginRequired: "Login required.",
+        submitSuccess: (carId: number) => `Car #${carId} submitted for review.`,
+        submitFailed: "Failed to submit listing.",
+        userIdRequired: "User ID is required.",
+        userIdUpdated: (nextUserId: string) => `User ID updated to @${nextUserId}.`,
+        userIdUpdateFailed: "Failed to update user ID.",
+        approveSuccess: (carId: number) => `Car #${carId} approved.`,
+        approveFailed: "Failed to approve listing.",
+        rejectionReasonPrompt: "Rejection reason",
+        rejectionReasonDefault: "Needs manual fixes",
+        rejectSuccess: (carId: number) => `Car #${carId} rejected.`,
+        rejectFailed: "Failed to reject listing.",
+        title: "My Cars",
+        subtitle: "Track your listings and review status in one place.",
+        createDraft: "Create Draft",
+        loading: "Loading...",
+        refresh: "Refresh",
+        account: "Account",
+        accountHelp: "Your public user ID appears in chat and can be changed at any time.",
+        publicUserId: "Public User ID",
+        userIdHelp: "3-32 chars: `a-z`, `0-9`, `.`, `_`, `-`",
+        phone: "Phone",
+        accountId: (currentUserId: string | null) => `Current account ID: ${currentUserId ? `@${currentUserId}` : "Not set yet"}`,
+        saving: "Saving...",
+        saveUserId: "Save User ID",
+        loginRequiredForCars: "Login is required to view your cars.",
+        noListingsYet: "You do not have any listings yet.",
+        cityNotSet: "Location not set",
+        createdOn: (value: string) => `Created ${value}`,
+        review: "Review",
+        fixAndResubmit: "Fix and Resubmit",
+        editListing: "Edit Listing",
+        submitting: "Submitting...",
+        submitForReview: "Submit for Review",
+        working: "Working...",
+        approve: "Approve",
+        reject: "Reject",
+        openPublicListing: "Open Public Listing",
+        publicPageAfterActive: "Public page is available after status becomes Active.",
+        currentStatus: "Current status",
+      };
 
   const canLoad = useMemo(() => Boolean(API_BASE), []);
 
@@ -88,7 +169,7 @@ export default function MyCarsPage() {
     setNeedsLogin(false);
 
     if (!canLoad || !API_BASE) {
-      setError("NEXT_PUBLIC_API_BASE is missing.");
+      setError(text.missingApiBase);
       setLoading(false);
       return;
     }
@@ -110,7 +191,7 @@ export default function MyCarsPage() {
 
       if (meRes.status === 401 || meRes.status === 403) {
         setNeedsLogin(true);
-        setError("Your session is missing or expired. Please login again.");
+        setError(text.sessionExpired);
         setLoading(false);
         return;
       }
@@ -133,7 +214,7 @@ export default function MyCarsPage() {
 
       if (res.status === 401 || res.status === 403) {
         setNeedsLogin(true);
-        setError("Your session is missing or expired. Please login again.");
+        setError(text.sessionExpired);
         setLoading(false);
         return;
       }
@@ -145,11 +226,11 @@ export default function MyCarsPage() {
       const data = (await res.json()) as MyCar[];
       setCars(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load your listings.");
+      setError(err instanceof Error ? err.message : text.loadListingsFailed);
     } finally {
       setLoading(false);
     }
-  }, [canLoad]);
+  }, [canLoad, text.loadListingsFailed, text.missingApiBase, text.sessionExpired]);
 
   useEffect(() => {
     void loadCars();
@@ -185,14 +266,14 @@ export default function MyCarsPage() {
     setSuccess("");
 
     if (!canLoad || !API_BASE) {
-      setError("NEXT_PUBLIC_API_BASE is missing.");
+      setError(text.missingApiBase);
       return;
     }
 
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
       setNeedsLogin(true);
-      setError("Login required.");
+      setError(text.loginRequired);
       return;
     }
 
@@ -215,9 +296,9 @@ export default function MyCarsPage() {
       }
 
       setCars((prev) => prev.map((car) => (car.id === carId ? { ...car, status: "pending_review" } : car)));
-      setSuccess(`Car #${carId} submitted for review.`);
+      setSuccess(text.submitSuccess(carId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to submit listing.");
+      setError(err instanceof Error ? err.message : text.submitFailed);
     } finally {
       setSubmittingId(null);
     }
@@ -229,19 +310,19 @@ export default function MyCarsPage() {
     setSuccess("");
 
     if (!canLoad || !API_BASE) {
-      setError("NEXT_PUBLIC_API_BASE is missing.");
+      setError(text.missingApiBase);
       return;
     }
 
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
       setNeedsLogin(true);
-      setError("Login required.");
+      setError(text.loginRequired);
       return;
     }
 
     if (!userId.trim()) {
-      setError("User ID is required.");
+      setError(text.userIdRequired);
       return;
     }
 
@@ -268,10 +349,10 @@ export default function MyCarsPage() {
       const updatedMe = (await res.json()) as MeResponse;
       setMe(updatedMe);
       setUserId(updatedMe.user_id || "");
-      setSuccess(`User ID updated to @${updatedMe.user_id}.`);
+      setSuccess(text.userIdUpdated(updatedMe.user_id || ""));
       window.dispatchEvent(new Event("garaj-auth-changed"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update user ID.");
+      setError(err instanceof Error ? err.message : text.userIdUpdateFailed);
     } finally {
       setSavingUserId(false);
     }
@@ -282,14 +363,14 @@ export default function MyCarsPage() {
     setSuccess("");
 
     if (!canLoad || !API_BASE) {
-      setError("NEXT_PUBLIC_API_BASE is missing.");
+      setError(text.missingApiBase);
       return;
     }
 
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
       setNeedsLogin(true);
-      setError("Login required.");
+      setError(text.loginRequired);
       return;
     }
 
@@ -307,9 +388,9 @@ export default function MyCarsPage() {
       }
 
       setCars((prev) => prev.map((car) => (car.id === carId ? { ...car, status: "active" } : car)));
-      setSuccess(`Car #${carId} approved.`);
+      setSuccess(text.approveSuccess(carId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to approve listing.");
+      setError(err instanceof Error ? err.message : text.approveFailed);
     } finally {
       setAdminActionId(null);
     }
@@ -320,18 +401,18 @@ export default function MyCarsPage() {
     setSuccess("");
 
     if (!canLoad || !API_BASE) {
-      setError("NEXT_PUBLIC_API_BASE is missing.");
+      setError(text.missingApiBase);
       return;
     }
 
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
       setNeedsLogin(true);
-      setError("Login required.");
+      setError(text.loginRequired);
       return;
     }
 
-    const reason = window.prompt("Rejection reason", "Needs manual fixes");
+    const reason = window.prompt(text.rejectionReasonPrompt, text.rejectionReasonDefault);
     if (!reason) {
       return;
     }
@@ -354,9 +435,9 @@ export default function MyCarsPage() {
           car.id === carId ? { ...car, status: "rejected", review_reason: reason, review_source: "admin" } : car,
         ),
       );
-      setSuccess(`Car #${carId} rejected.`);
+      setSuccess(text.rejectSuccess(carId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to reject listing.");
+      setError(err instanceof Error ? err.message : text.rejectFailed);
     } finally {
       setAdminActionId(null);
     }
@@ -365,27 +446,27 @@ export default function MyCarsPage() {
   return (
     <main className="page shell">
       <section className="hero hero-mini">
-        <h1>My Cars</h1>
-        <p>Track your listings and review status in one place.</p>
+        <h1>{text.title}</h1>
+        <p>{text.subtitle}</p>
       </section>
 
       <section className="mycars-toolbar">
         <Link href="/my-cars/new" className="btn btn-primary">
-          Create Draft
+          {text.createDraft}
         </Link>
         <button type="button" className="btn btn-secondary" onClick={() => void loadCars()} disabled={loading}>
-          {loading ? "Loading..." : "Refresh"}
+          {loading ? text.loading : text.refresh}
         </button>
       </section>
 
       {!needsLogin && me && (
         <section className="panel spaced-top-sm">
-          <h2 className="subheading">Account</h2>
-          <p className="helper-text">Your public user ID appears in chat and can be changed at any time.</p>
+          <h2 className="subheading">{text.account}</h2>
+          <p className="helper-text">{text.accountHelp}</p>
           <form className="filters spaced-top-sm" onSubmit={saveUserId}>
             <div className="form-grid form-grid-2">
               <div>
-                <label className="label" htmlFor="user-id">Public User ID</label>
+                <label className="label" htmlFor="user-id">{text.publicUserId}</label>
                 <input
                   id="user-id"
                   className="input"
@@ -396,19 +477,19 @@ export default function MyCarsPage() {
                   autoCorrect="off"
                   spellCheck={false}
                 />
-                <p className="helper-text">3-32 chars: `a-z`, `0-9`, `.`, `_`, `-`</p>
+                <p className="helper-text">{text.userIdHelp}</p>
               </div>
 
               <div>
-                <label className="label" htmlFor="account-phone">Phone</label>
+                <label className="label" htmlFor="account-phone">{text.phone}</label>
                 <input id="account-phone" className="input" value={me.phone_e164} disabled />
-                <p className="helper-text">Current account ID: {me.user_id ? `@${me.user_id}` : "Not set yet"}</p>
+                <p className="helper-text">{text.accountId(me.user_id)}</p>
               </div>
             </div>
 
             <div className="inline-actions">
               <button type="submit" className="btn btn-primary" disabled={savingUserId}>
-                {savingUserId ? "Saving..." : "Save User ID"}
+                {savingUserId ? text.saving : text.saveUserId}
               </button>
             </div>
           </form>
@@ -417,7 +498,7 @@ export default function MyCarsPage() {
 
       {needsLogin && (
         <div className="notice">
-          Login is required to view your cars.
+          {text.loginRequiredForCars}
         </div>
       )}
 
@@ -425,7 +506,7 @@ export default function MyCarsPage() {
       {success && <div className="notice success">{success}</div>}
 
       {!loading && !needsLogin && !error && cars.length === 0 && (
-        <div className="notice">You do not have any listings yet.</div>
+        <div className="notice">{text.noListingsYet}</div>
       )}
 
       {!loading && !needsLogin && cars.length > 0 && (
@@ -445,24 +526,24 @@ export default function MyCarsPage() {
                 <div className="car-body">
                   <div className="car-row">
                     <h3 className="car-title">{car.title_ar || `${car.make} ${car.model}`}</h3>
-                    <span className={statusClass}>{prettifyStatus(car.status)}</span>
+                    <span className={statusClass}>{translateStatus(locale, car.status)}</span>
                   </div>
 
                   <p className="car-meta">{car.make} {car.model} • {car.year}</p>
-                  <p className="car-meta">{car.city}{car.district ? `, ${car.district}` : ""}</p>
-                  <p className="car-meta">{car.mileage_km ? `${car.mileage_km.toLocaleString()} km` : "Mileage not set"}</p>
-                  <p className="car-meta">Created {formatDate(car.created_at)}</p>
-                  <p className="car-price">{priceFormatter.format(car.price_sar)} SAR</p>
+                  <p className="car-meta">{car.city || text.cityNotSet}{car.district ? `, ${car.district}` : ""}</p>
+                  <p className="car-meta">{formatMileage(car.mileage_km, locale)}</p>
+                  <p className="car-meta">{text.createdOn(formatShortDate(car.created_at, locale))}</p>
+                  <p className="car-price">{formatPrice(car.price_sar, locale)}</p>
 
                   {car.review_reason ? (
                     <p className="car-meta card-note">
-                      Review: {car.review_reason}
+                      {text.review}: {car.review_reason}
                     </p>
                   ) : null}
 
                   {(car.status === "draft" || car.status === "pending_review" || car.status === "rejected" || car.status === "active") && (
                     <Link href={`/my-cars/${car.id}/edit`} className="btn btn-secondary card-action">
-                      {car.status === "rejected" ? "Fix and Resubmit" : "Edit Listing"}
+                      {car.status === "rejected" ? text.fixAndResubmit : text.editListing}
                     </Link>
                   )}
 
@@ -473,7 +554,7 @@ export default function MyCarsPage() {
                       disabled={submittingId === car.id}
                       onClick={() => void submitForReview(car.id)}
                     >
-                      {submittingId === car.id ? "Submitting..." : "Submit for Review"}
+                      {submittingId === car.id ? text.submitting : text.submitForReview}
                     </button>
                   )}
 
@@ -485,7 +566,7 @@ export default function MyCarsPage() {
                         disabled={adminActionId === car.id}
                         onClick={() => void approveCar(car.id)}
                       >
-                        {adminActionId === car.id ? "Working..." : "Approve"}
+                        {adminActionId === car.id ? text.working : text.approve}
                       </button>
                       <button
                         type="button"
@@ -493,17 +574,17 @@ export default function MyCarsPage() {
                         disabled={adminActionId === car.id}
                         onClick={() => void rejectCar(car.id)}
                       >
-                        Reject
+                        {text.reject}
                       </button>
                     </>
                   ) : null}
 
                   {car.status === "active" ? (
                     <Link href={`/cars/${car.id}`} className="btn btn-secondary card-action">
-                      Open Public Listing
+                      {text.openPublicListing}
                     </Link>
                   ) : (
-                    <p className="car-meta card-note">Public page is available after status becomes Active.</p>
+                    <p className="car-meta card-note">{text.publicPageAfterActive}</p>
                   )}
                 </div>
               </article>

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { useLocale } from "@/components/LocaleProvider";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const TOKEN_KEY = "garaj_access_token";
 const NAME_KEY = "garaj_user_name";
@@ -17,8 +19,20 @@ type MeResponse = {
 };
 
 export default function TopbarUser() {
+  const locale = useLocale();
   const [label, setLabel] = useState<string>("");
   const [ready, setReady] = useState(false);
+  const text = locale === "ar"
+    ? {
+        loggedIn: "تم تسجيل الدخول",
+        login: "تسجيل الدخول",
+        logout: "تسجيل الخروج",
+      }
+    : {
+        loggedIn: "Logged in",
+        login: "Login",
+        logout: "Logout",
+      };
 
   useEffect(() => {
     async function load() {
@@ -65,7 +79,7 @@ export default function TopbarUser() {
         if (resolvedName) {
           localStorage.setItem(NAME_KEY, resolvedName);
         }
-        setLabel(me.user_id ? `@${me.user_id}` : resolvedName || me.phone_e164 || "Logged in");
+        setLabel(me.user_id ? `@${me.user_id}` : resolvedName || me.phone_e164 || text.loggedIn);
       } finally {
         setReady(true);
       }
@@ -83,7 +97,7 @@ export default function TopbarUser() {
       window.removeEventListener("garaj-auth-changed", handleAuthChange);
       window.removeEventListener("focus", handleAuthChange);
     };
-  }, []);
+  }, [text.loggedIn]);
 
   function handleLogout() {
     localStorage.removeItem(TOKEN_KEY);
@@ -99,7 +113,7 @@ export default function TopbarUser() {
   if (!label) {
     return (
       <Link href="/login" className="nav-link">
-        Login
+        {text.login}
       </Link>
     );
   }
@@ -110,7 +124,7 @@ export default function TopbarUser() {
         {label}
       </Link>
       <button type="button" className="nav-link" onClick={handleLogout}>
-        Logout
+        {text.logout}
       </button>
     </>
   );

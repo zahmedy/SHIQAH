@@ -1,6 +1,9 @@
 import Link from "next/link";
 
 import { apiGet } from "@/lib/api";
+import ListingPhotoGallery from "@/components/ListingPhotoGallery";
+import { formatDateTime, formatDistance, formatPrice, translateValue, type Locale } from "@/lib/locale";
+import { getServerLocale } from "@/lib/server-locale";
 import ChatPanel from "./ChatPanel";
 import OwnerActions from "./OwnerActions";
 
@@ -46,23 +49,9 @@ type PublicCarResponse = {
   };
 };
 
-const priceFormatter = new Intl.NumberFormat("en-US");
-
 function specValue(value?: string | number | null) {
   if (value === null || value === undefined || value === "") return "—";
   return value;
-}
-
-function formatPostedAt(value?: string) {
-  if (!value) return "Recently";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Recently";
-  return date.toLocaleString("en-GB", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 function sellerLabel(sellerUserId?: string | null, sellerName?: string | null) {
@@ -75,13 +64,13 @@ function sellerLabel(sellerUserId?: string | null, sellerName?: string | null) {
   return "";
 }
 
-function sellerAndTime(sellerUserId?: string | null, sellerName?: string | null, publishedAt?: string) {
+function sellerAndTime(locale: Locale, sellerUserId?: string | null, sellerName?: string | null, publishedAt?: string) {
   const parts = [];
   const label = sellerLabel(sellerUserId, sellerName);
   if (label) {
     parts.push(label);
   }
-  parts.push(formatPostedAt(publishedAt));
+  parts.push(formatDateTime(publishedAt, locale));
   return parts.join(" • ");
 }
 
@@ -91,6 +80,8 @@ export default async function CarDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const locale = await getServerLocale();
+  const isArabic = locale === "ar";
 
   let data: PublicCarResponse | null = null;
   let fetchError = "";
@@ -98,15 +89,15 @@ export default async function CarDetailPage({
   try {
     data = await apiGet<PublicCarResponse>(`/v1/public/cars/${id}`);
   } catch (err) {
-    fetchError = err instanceof Error ? err.message : "Failed to load listing.";
+    fetchError = err instanceof Error ? err.message : isArabic ? "تعذر تحميل الإعلان." : "Failed to load listing.";
   }
 
   if (!data) {
     return (
       <main className="page shell">
-        <div className="notice error">{fetchError || "Listing not found."}</div>
+        <div className="notice error">{fetchError || (isArabic ? "الإعلان غير موجود." : "Listing not found.")}</div>
         <div className="spaced-top">
-          <Link href="/search" className="btn btn-secondary">Back to search</Link>
+          <Link href="/search" className="btn btn-secondary">{isArabic ? "العودة إلى البحث" : "Back to search"}</Link>
         </div>
       </main>
     );
@@ -120,97 +111,93 @@ export default async function CarDetailPage({
         <header className="listing-head">
           <h1 className="listing-title">{car.title_ar}</h1>
           <div className="listing-price-row">
-            <p className="car-price-meta">{sellerAndTime(data.seller.user_id, data.seller.name, car.published_at)}</p>
-            <p className="car-price">{priceFormatter.format(car.price_sar)} SAR</p>
+            <p className="car-price-meta">{sellerAndTime(locale, data.seller.user_id, data.seller.name, car.published_at)}</p>
+            <p className="car-price">{formatPrice(car.price_sar, locale)}</p>
           </div>
           <OwnerActions ownerId={car.owner_id} carId={car.id} />
         </header>
 
         {car.photos?.length ? (
-          <div className="photo-grid">
-            {car.photos.map((photo) => (
-              <img key={photo.id} src={photo.public_url} alt={car.title_ar} loading="lazy" />
-            ))}
-          </div>
+          <ListingPhotoGallery photos={car.photos} title={car.title_ar} />
         ) : (
-          <div className="notice spaced-top-sm">No photos yet.</div>
+          <div className="notice spaced-top-sm">{isArabic ? "لا توجد صور بعد." : "No photos yet."}</div>
         )}
 
         <div className="specs">
           <article className="spec">
-            <p className="spec-key">Make</p>
-            <p className="spec-val">{specValue(car.make)}</p>
+            <p className="spec-key">{isArabic ? "الشركة" : "Make"}</p>
+            <p className="spec-val">{translateValue(locale, specValue(car.make))}</p>
           </article>
           <article className="spec">
-            <p className="spec-key">Model</p>
+            <p className="spec-key">{isArabic ? "الموديل" : "Model"}</p>
             <p className="spec-val">{specValue(car.model)}</p>
           </article>
           <article className="spec">
-            <p className="spec-key">Year</p>
+            <p className="spec-key">{isArabic ? "السنة" : "Year"}</p>
             <p className="spec-val">{specValue(car.year)}</p>
           </article>
           <article className="spec">
-            <p className="spec-key">Mileage</p>
-            <p className="spec-val">{car.mileage_km ? `${car.mileage_km.toLocaleString()} km` : "—"}</p>
+            <p className="spec-key">{isArabic ? "الممشى" : "Mileage"}</p>
+            <p className="spec-val">{car.mileage_km ? formatDistance(car.mileage_km, locale) : "—"}</p>
           </article>
           <article className="spec">
-            <p className="spec-key">City</p>
+            <p className="spec-key">{isArabic ? "المدينة" : "City"}</p>
             <p className="spec-val">{specValue(car.city)}</p>
           </article>
           <article className="spec">
-            <p className="spec-key">District</p>
+            <p className="spec-key">{isArabic ? "الحي" : "District"}</p>
             <p className="spec-val">{specValue(car.district)}</p>
           </article>
           <article className="spec">
-            <p className="spec-key">Transmission</p>
-            <p className="spec-val">{specValue(car.transmission)}</p>
+            <p className="spec-key">{isArabic ? "ناقل الحركة" : "Transmission"}</p>
+            <p className="spec-val">{translateValue(locale, car.transmission)}</p>
           </article>
           <article className="spec">
-            <p className="spec-key">Fuel</p>
-            <p className="spec-val">{specValue(car.fuel_type)}</p>
+            <p className="spec-key">{isArabic ? "الوقود" : "Fuel"}</p>
+            <p className="spec-val">{translateValue(locale, car.fuel_type)}</p>
           </article>
           <article className="spec">
-            <p className="spec-key">Body Type</p>
-            <p className="spec-val">{specValue(car.body_type)}</p>
+            <p className="spec-key">{isArabic ? "نوع الهيكل" : "Body Type"}</p>
+            <p className="spec-val">{translateValue(locale, car.body_type)}</p>
           </article>
           <article className="spec">
-            <p className="spec-key">Condition</p>
-            <p className="spec-val">{specValue(car.condition)}</p>
+            <p className="spec-key">{isArabic ? "الحالة" : "Condition"}</p>
+            <p className="spec-val">{translateValue(locale, car.condition)}</p>
           </article>
           <article className="spec">
-            <p className="spec-key">Color</p>
-            <p className="spec-val">{specValue(car.color)}</p>
+            <p className="spec-key">{isArabic ? "اللون" : "Color"}</p>
+            <p className="spec-val">{translateValue(locale, car.color)}</p>
           </article>
         </div>
 
         <div className="panel panel-soft">
-          <h2 className="subheading">Description</h2>
+          <h2 className="subheading">{isArabic ? "الوصف" : "Description"}</h2>
           <p className="body-copy">{car.description_ar}</p>
         </div>
       </section>
 
       <aside className="panel">
-        <h2 className="subheading">Contact Seller</h2>
+        <h2 className="subheading">{isArabic ? "التواصل مع البائع" : "Contact Seller"}</h2>
         {sellerLabel(data.seller.user_id, data.seller.name) ? (
           <p className="car-meta">{sellerLabel(data.seller.user_id, data.seller.name)}</p>
         ) : null}
         <div className="contact-actions">
           {data.contact.call_phone_e164 && (
             <a href={`tel:${data.contact.call_phone_e164}`} className="btn btn-secondary">
-              Call Seller
+              {isArabic ? "اتصل بالبائع" : "Call Seller"}
             </a>
           )}
 
           {data.contact.whatsapp_url && (
             <a href={data.contact.whatsapp_url} target="_blank" rel="noreferrer" className="btn btn-secondary">
-              Open WhatsApp
+              {isArabic ? "افتح واتساب" : "Open WhatsApp"}
             </a>
           )}
         </div>
 
         <hr className="separator" />
 
-        <h3 className="subheading">In-App Chat</h3>
+        <h3 className="subheading">{isArabic ? "المحادثة داخل الموقع" : "In-App Chat"}</h3>
         <ChatPanel carId={car.id} />
       </aside>
     </main>

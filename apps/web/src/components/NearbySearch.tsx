@@ -3,14 +3,39 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 
+import { useLocale } from "@/components/LocaleProvider";
+import { formatDistance } from "@/lib/locale";
+
 const DISTANCE_OPTIONS = [5, 10, 25, 50, 100, 200, 500];
 
 export default function NearbySearch({ initialRadiusKm }: { initialRadiusKm: number }) {
+  const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<string>("");
   const [radiusKm, setRadiusKm] = useState<number>(initialRadiusKm);
+  const text = locale === "ar"
+    ? {
+        distance: "المسافة",
+        useMyLocation: "استخدم موقعي",
+        clearLocation: "مسح الموقع",
+        geolocationUnsupported: "المتصفح لا يدعم تحديد الموقع.",
+        requestingLocation: "جارٍ طلب الموقع...",
+        unableToRetrieveLocation: "تعذر الحصول على الموقع.",
+        showingWithin: (distance: number) => `يتم عرض الإعلانات ضمن ${formatDistance(distance, locale)}.`,
+        filteringWithin: (distance: number) => `يتم تصفية الإعلانات ضمن ${formatDistance(distance, locale)}.`,
+      }
+    : {
+        distance: "Distance",
+        useMyLocation: "Use my location",
+        clearLocation: "Clear location",
+        geolocationUnsupported: "Geolocation not supported in this browser.",
+        requestingLocation: "Requesting location...",
+        unableToRetrieveLocation: "Unable to retrieve location.",
+        showingWithin: (distance: number) => `Showing listings within ${formatDistance(distance, locale)}.`,
+        filteringWithin: (distance: number) => `Filtering listings within ${formatDistance(distance, locale)}.`,
+      };
 
   const isActive = useMemo(() => {
     return Boolean(searchParams.get("lat") && searchParams.get("lon"));
@@ -40,27 +65,27 @@ export default function NearbySearch({ initialRadiusKm }: { initialRadiusKm: num
 
     const next = new URLSearchParams(searchParams.toString());
     next.set("radius_km", String(nextRadius));
-    setStatus(`Showing listings within ${nextRadius} km.`);
+    setStatus(text.showingWithin(nextRadius));
     updateParams(next);
   }
 
   function handleUseLocation() {
     if (!navigator.geolocation) {
-      setStatus("Geolocation not supported in this browser.");
+      setStatus(text.geolocationUnsupported);
       return;
     }
-    setStatus("Requesting location...");
+    setStatus(text.requestingLocation);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const next = new URLSearchParams(searchParams.toString());
         next.set("lat", pos.coords.latitude.toFixed(6));
         next.set("lon", pos.coords.longitude.toFixed(6));
         next.set("radius_km", String(radiusKm));
-        setStatus(`Using your location within ${radiusKm} km.`);
+        setStatus(text.showingWithin(radiusKm));
         updateParams(next);
       },
       (err) => {
-        setStatus(err.message || "Unable to retrieve location.");
+        setStatus(err.message || text.unableToRetrieveLocation);
       },
       { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 },
     );
@@ -78,7 +103,7 @@ export default function NearbySearch({ initialRadiusKm }: { initialRadiusKm: num
   return (
     <div className="panel-compact">
       <div className="inline-actions">
-        <label className="label" htmlFor="distance-km">Distance</label>
+        <label className="label" htmlFor="distance-km">{text.distance}</label>
         <select
           id="distance-km"
           className="select"
@@ -87,22 +112,22 @@ export default function NearbySearch({ initialRadiusKm }: { initialRadiusKm: num
         >
           {DISTANCE_OPTIONS.map((distance) => (
             <option key={distance} value={distance}>
-              {distance} km
+              {formatDistance(distance, locale)}
             </option>
           ))}
         </select>
         <button type="button" className="btn btn-secondary" onClick={handleUseLocation}>
-          Use my location ({radiusKm} km)
+          {text.useMyLocation} ({formatDistance(radiusKm, locale)})
         </button>
         {isActive ? (
           <button type="button" className="btn" onClick={handleClear}>
-            Clear location
+            {text.clearLocation}
           </button>
         ) : null}
       </div>
       {status ? <div className="helper-text">{status}</div> : null}
       {!status && isActive ? (
-        <div className="helper-text">Filtering listings within {radiusKm} km.</div>
+        <div className="helper-text">{text.filteringWithin(radiusKm)}</div>
       ) : null}
     </div>
   );

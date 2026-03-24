@@ -2,6 +2,8 @@
 
 import { FormEvent, useState } from "react";
 
+import { useLocale } from "@/components/LocaleProvider";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const NAME_KEY = "garaj_user_name";
 
@@ -20,6 +22,7 @@ function looksLikeE164(phone: string): boolean {
 }
 
 export default function LoginPage() {
+  const locale = useLocale();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("0000");
@@ -28,6 +31,49 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const text = locale === "ar"
+    ? {
+        title: "تسجيل الدخول",
+        note: "أدخل رقم هاتفك، اطلب رمز التحقق، ثم أكمل التحقق. سيُطلب من المستخدم الجديد إدخال اسمه. رمز النسخة الحالية هو",
+        missingApiBase: "متغير NEXT_PUBLIC_API_BASE غير موجود.",
+        invalidPhone: "أدخل رقم الهاتف بصيغة E.164 مثل +9665XXXXXXXX.",
+        requestOtpFailed: "تعذر طلب رمز التحقق.",
+        otpRequested: "تم طلب رمز التحقق. في النسخة الحالية استخدم الرمز 0000.",
+        enterName: "أدخل اسمك.",
+        phoneMustBeE164: "يجب أن يكون الهاتف بصيغة E.164.",
+        enterCode: "أدخل رمز التحقق.",
+        verifyOtpFailed: "تعذر التحقق من الرمز.",
+        phoneLabel: "الهاتف (E.164)",
+        nameLabel: "الاسم",
+        yourName: "اسمك",
+        otpCodeLabel: "رمز التحقق",
+        requesting: "جارٍ الطلب...",
+        requestOtp: "اطلب الرمز",
+        verifying: "جارٍ التحقق...",
+        verifyAndLogin: "تحقق وسجل الدخول",
+        back: "رجوع",
+      }
+    : {
+        title: "Login",
+        note: "Enter your phone number, request OTP, then verify. New users will be asked for their name. MVP code is",
+        missingApiBase: "NEXT_PUBLIC_API_BASE is missing.",
+        invalidPhone: "Enter phone in E.164 format, e.g. +9665XXXXXXXX.",
+        requestOtpFailed: "Failed to request OTP.",
+        otpRequested: "OTP requested. For MVP, use code 0000.",
+        enterName: "Enter your name.",
+        phoneMustBeE164: "Phone must be E.164 format.",
+        enterCode: "Enter verification code.",
+        verifyOtpFailed: "Failed to verify OTP.",
+        phoneLabel: "Phone (E.164)",
+        nameLabel: "Name",
+        yourName: "Your name",
+        otpCodeLabel: "OTP Code",
+        requesting: "Requesting...",
+        requestOtp: "Request OTP",
+        verifying: "Verifying...",
+        verifyAndLogin: "Verify & Login",
+        back: "Back",
+      };
 
   async function requestOtp(e: FormEvent) {
     e.preventDefault();
@@ -35,11 +81,11 @@ export default function LoginPage() {
     setSuccess("");
 
     if (!API_BASE) {
-      setError("NEXT_PUBLIC_API_BASE is missing.");
+      setError(text.missingApiBase);
       return;
     }
     if (!looksLikeE164(phone)) {
-      setError("Enter phone in E.164 format, e.g. +9665XXXXXXXX.");
+      setError(text.invalidPhone);
       return;
     }
 
@@ -59,9 +105,9 @@ export default function LoginPage() {
       const data = (await res.json()) as OTPRequestResponse;
       setNeedsName(Boolean(data.needs_name));
       setStep("verify");
-      setSuccess("OTP requested. For MVP, use code 0000.");
+      setSuccess(text.otpRequested);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to request OTP.");
+      setError(err instanceof Error ? err.message : text.requestOtpFailed);
     } finally {
       setLoading(false);
     }
@@ -73,19 +119,19 @@ export default function LoginPage() {
     setSuccess("");
 
     if (!API_BASE) {
-      setError("NEXT_PUBLIC_API_BASE is missing.");
+      setError(text.missingApiBase);
       return;
     }
     if (needsName && !name.trim()) {
-      setError("Enter your name.");
+      setError(text.enterName);
       return;
     }
     if (!looksLikeE164(phone)) {
-      setError("Phone must be E.164 format.");
+      setError(text.phoneMustBeE164);
       return;
     }
     if (!code.trim()) {
-      setError("Enter verification code.");
+      setError(text.enterCode);
       return;
     }
 
@@ -116,7 +162,7 @@ export default function LoginPage() {
       window.dispatchEvent(new Event("garaj-auth-changed"));
       window.location.replace("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to verify OTP.");
+      setError(err instanceof Error ? err.message : text.verifyOtpFailed);
     } finally {
       setLoading(false);
     }
@@ -125,14 +171,12 @@ export default function LoginPage() {
   return (
     <main className="page shell auth-wrap">
       <section className="auth-card">
-        <h1>Login</h1>
-        <p className="auth-note">
-          Enter your phone number, request OTP, then verify. New users will be asked for their name. MVP code is <strong>0000</strong>.
-        </p>
+        <h1>{text.title}</h1>
+        <p className="auth-note">{text.note} <strong>0000</strong>.</p>
 
         <form onSubmit={step === "request" ? requestOtp : verifyOtp} className="filters">
           <div>
-            <label className="label" htmlFor="phone">Phone (E.164)</label>
+            <label className="label" htmlFor="phone">{text.phoneLabel}</label>
             <input
               id="phone"
               className="input"
@@ -144,11 +188,11 @@ export default function LoginPage() {
 
           {needsName && (
             <div>
-              <label className="label" htmlFor="name">Name</label>
+              <label className="label" htmlFor="name">{text.nameLabel}</label>
               <input
                 id="name"
                 className="input"
-                placeholder="Your name"
+                placeholder={text.yourName}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
@@ -157,7 +201,7 @@ export default function LoginPage() {
 
           {step !== "request" && (
             <div>
-              <label className="label" htmlFor="otp">OTP Code</label>
+              <label className="label" htmlFor="otp">{text.otpCodeLabel}</label>
               <input
                 id="otp"
                 className="input"
@@ -171,12 +215,12 @@ export default function LoginPage() {
           <div className="auth-actions">
             {step === "request" ? (
               <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? "Requesting..." : "Request OTP"}
+                {loading ? text.requesting : text.requestOtp}
               </button>
             ) : (
               <>
                 <button type="submit" className="btn btn-primary" disabled={loading}>
-                  {loading ? "Verifying..." : "Verify & Login"}
+                  {loading ? text.verifying : text.verifyAndLogin}
                 </button>
                 <button
                   type="button"
@@ -190,7 +234,7 @@ export default function LoginPage() {
                     setError("");
                   }}
                 >
-                  Back
+                  {text.back}
                 </button>
               </>
             )}

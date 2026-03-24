@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { useLocale } from "@/components/LocaleProvider";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const TOKEN_KEY = "garaj_access_token";
 
@@ -19,6 +21,7 @@ type MeResponse = {
 };
 
 export default function OwnerActions({ ownerId, carId }: OwnerActionsProps) {
+  const locale = useLocale();
   const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
@@ -50,7 +53,7 @@ export default function OwnerActions({ ownerId, carId }: OwnerActionsProps) {
   return (
     <div className="spaced-top-sm">
       <Link href={`/my-cars/${carId}/edit`} className="btn btn-primary">
-        Edit Listing / Upload Photos
+        {locale === "ar" ? "تعديل الإعلان / رفع الصور" : "Edit Listing / Upload Photos"}
       </Link>
     </div>
   );
