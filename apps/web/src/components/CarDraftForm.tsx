@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import CityField from "@/components/CityField";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const TOKEN_KEY = "garaj_access_token";
 const FLASH_KEY = "garaj_flash";
@@ -636,15 +638,14 @@ export default function CarDraftForm({
         {!loading && (
           <form className="filters" onSubmit={onSubmit}>
             <div className="draft-grid">
-              <div>
-                <label className="label" htmlFor="city">City *</label>
-                <input
-                  id="city"
-                  className="input"
-                  value={form.city}
-                  onChange={(e) => setForm((prev) => ({ ...prev, city: e.target.value }))}
-                />
-              </div>
+              <CityField
+                id="city"
+                label="City *"
+                value={form.city}
+                onChange={(city) => setForm((prev) => ({ ...prev, city }))}
+                helperText="Choose a major city or select Other to enter one manually."
+                otherPlaceholder="Enter another city"
+              />
 
               <div>
                 <label className="label" htmlFor="district">District</label>

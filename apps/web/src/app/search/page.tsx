@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { apiGet } from "@/lib/api";
+import CityField from "@/components/CityField";
 import NearbySearch from "@/components/NearbySearch";
 
 type SearchItem = {
@@ -66,6 +67,8 @@ export default async function SearchPage({
   searchParams: Promise<Query>;
 }) {
   const params = await searchParams;
+  const radiusKm = Number(params.radius_km);
+  const initialRadiusKm = Number.isFinite(radiusKm) && radiusKm >= 1 && radiusKm <= 500 ? radiusKm : 50;
 
   const qs = new URLSearchParams();
   if (params.city) qs.set("city", params.city);
@@ -97,7 +100,7 @@ export default async function SearchPage({
       <section className="search-grid">
         <aside className="panel">
           <form className="filters" method="get">
-            <NearbySearch radiusKm={50} />
+            <NearbySearch initialRadiusKm={initialRadiusKm} />
             {params.lat ? <input type="hidden" name="lat" value={params.lat} /> : null}
             {params.lon ? <input type="hidden" name="lon" value={params.lon} /> : null}
             {params.radius_km ? <input type="hidden" name="radius_km" value={params.radius_km} /> : null}
@@ -106,10 +109,15 @@ export default async function SearchPage({
               <input id="q" name="q" defaultValue={params.q ?? ""} placeholder="كامري" className="input" />
             </div>
 
-            <div>
-              <label className="label" htmlFor="city">City</label>
-              <input id="city" name="city" defaultValue={params.city ?? ""} placeholder="Riyadh" className="input" />
-            </div>
+            <CityField
+              id="city"
+              label="City"
+              name="city"
+              defaultValue={params.city ?? ""}
+              blankLabel="Any city"
+              helperText="Pick a major city or choose Other to search a custom city."
+              otherPlaceholder="Enter another city"
+            />
 
             <div>
               <label className="label" htmlFor="make">Make</label>

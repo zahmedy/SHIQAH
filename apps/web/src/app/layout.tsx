@@ -26,16 +26,16 @@ export default function RootLayout({
             <Link href="/" className="brand" aria-label="GARAJ home">
               <LogoMark className="brand-logo" />
             </Link>
+            <form action="/search" method="get" className="topbar-search" role="search">
+              <input
+                type="search"
+                name="q"
+                className="input topbar-search-input"
+                placeholder="Search cars..."
+                aria-label="Search cars"
+              />
+            </form>
             <nav className="topnav">
-              <form action="/search" method="get" className="topbar-search" role="search">
-                <input
-                  type="search"
-                  name="q"
-                  className="input topbar-search-input"
-                  placeholder="Search cars..."
-                  aria-label="Search cars"
-                />
-              </form>
               <TopbarCreate />
               <TopbarUser />
             </nav>

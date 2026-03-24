@@ -68,6 +68,7 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1rem;
   min-height: 72px;
 }
 
@@ -93,8 +94,9 @@ a {
 .topbar-search {
   display: flex;
   align-items: center;
-  flex: 1 1 300px;
-  min-width: min(320px, 40vw);
+  flex: 1 1 420px;
+  min-width: min(420px, 48vw);
+  max-width: 640px;
 }
 
 .topbar-search-input {
@@ -820,15 +822,16 @@ a {
   }
 
   .topnav {
-    width: 100%;
+    margin-left: auto;
     flex-wrap: wrap;
     justify-content: flex-end;
   }
 
   .topbar-search {
-    order: 3;
+    order: 2;
     flex-basis: 100%;
     min-width: 0;
+    max-width: none;
   }
 
   .hero {

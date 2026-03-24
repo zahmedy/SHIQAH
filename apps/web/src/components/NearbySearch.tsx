@@ -1,21 +1,47 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
 
-export default function NearbySearch({ radiusKm }: { radiusKm: number }) {
+const DISTANCE_OPTIONS = [5, 10, 25, 50, 100, 200, 500];
+
+export default function NearbySearch({ initialRadiusKm }: { initialRadiusKm: number }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<string>("");
+  const [radiusKm, setRadiusKm] = useState<number>(initialRadiusKm);
 
   const isActive = useMemo(() => {
     return Boolean(searchParams.get("lat") && searchParams.get("lon"));
   }, [searchParams]);
 
+  useEffect(() => {
+    const nextRadius = Number(searchParams.get("radius_km"));
+    if (Number.isFinite(nextRadius) && nextRadius >= 1 && nextRadius <= 500) {
+      setRadiusKm(nextRadius);
+      return;
+    }
+    setRadiusKm(initialRadiusKm);
+  }, [initialRadiusKm, searchParams]);
+
   function updateParams(next: URLSearchParams) {
     const nextUrl = next.toString() ? `${pathname}?${next.toString()}` : pathname;
     router.replace(nextUrl);
+  }
+
+  function handleRadiusChange(e: ChangeEvent<HTMLSelectElement>) {
+    const nextRadius = Number(e.target.value);
+    setRadiusKm(nextRadius);
+
+    if (!isActive) {
+      return;
+    }
+
+    const next = new URLSearchParams(searchParams.toString());
+    next.set("radius_km", String(nextRadius));
+    setStatus(`Showing listings within ${nextRadius} km.`);
+    updateParams(next);
   }
 
   function handleUseLocation() {
@@ -52,6 +78,19 @@ export default function NearbySearch({ radiusKm }: { radiusKm: number }) {
   return (
     <div className="panel-compact">
       <div className="inline-actions">
+        <label className="label" htmlFor="distance-km">Distance</label>
+        <select
+          id="distance-km"
+          className="select"
+          value={radiusKm}
+          onChange={handleRadiusChange}
+        >
+          {DISTANCE_OPTIONS.map((distance) => (
+            <option key={distance} value={distance}>
+              {distance} km
+            </option>
+          ))}
+        </select>
         <button type="button" className="btn btn-secondary" onClick={handleUseLocation}>
           Use my location ({radiusKm} km)
         </button>
