@@ -86,7 +86,21 @@ a {
 
 .topnav {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
+}
+
+.topbar-search {
+  display: flex;
+  align-items: center;
+  flex: 1 1 300px;
+  min-width: min(320px, 40vw);
+}
+
+.topbar-search-input {
+  min-width: 0;
+  border-radius: 999px;
+  padding-inline: 1rem;
 }
 
 .user-pill {
@@ -800,6 +814,21 @@ a {
 @media (max-width: 760px) {
   .topbar-inner {
     min-height: 64px;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding: 0.4rem 0;
+  }
+
+  .topnav {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .topbar-search {
+    order: 3;
+    flex-basis: 100%;
+    min-width: 0;
   }
 
   .hero {

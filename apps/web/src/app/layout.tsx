@@ -27,9 +27,15 @@ export default function RootLayout({
               <LogoMark className="brand-logo" />
             </Link>
             <nav className="topnav">
-              <Link href="/search" className="nav-link">
-                Search
-              </Link>
+              <form action="/search" method="get" className="topbar-search" role="search">
+                <input
+                  type="search"
+                  name="q"
+                  className="input topbar-search-input"
+                  placeholder="Search cars..."
+                  aria-label="Search cars"
+                />
+              </form>
               <TopbarCreate />
               <TopbarUser />
             </nav>
