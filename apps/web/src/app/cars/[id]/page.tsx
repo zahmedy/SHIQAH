@@ -198,11 +198,11 @@ export default async function CarDetailPage({
 
         <hr className="separator" />
 
-        <OfferForm carId={car.id} />
+        <OfferForm carId={car.id} ownerId={car.owner_id} />
 
         <hr className="separator" />
 
-        <h3 className="subheading">{isArabic ? "المحادثة داخل الموقع" : "In-App Chat"}</h3>
+        <h3 className="subheading">{isArabic ? "المحادثة" : "Chat"}</h3>
         <ChatPanel carId={car.id} />
       </aside>
     </main>

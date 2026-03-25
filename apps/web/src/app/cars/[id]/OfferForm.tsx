@@ -1,81 +1,203 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
 import { useLocale } from "@/components/LocaleProvider";
 import { formatDateTime, formatPrice } from "@/lib/locale";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
+const TOKEN_KEY = "garaj_access_token";
 
 type OfferEntry = {
   id: number;
   amount_sar: number;
   created_at: string;
+  accepted_at: string | null;
 };
 
 type OfferSummary = {
   highest_offer_sar: number | null;
   offer_count: number;
+  bidding_open: boolean;
+  accepted_offer: OfferEntry | null;
   offers: OfferEntry[];
 };
 
-function looksLikeE164(phone: string): boolean {
-  return /^\+\d{8,15}$/.test(phone.trim());
+type OwnerOfferEntry = OfferEntry & {
+  buyer_user_id: number | null;
+  buyer_user_label: string | null;
+  phone_e164: string | null;
+};
+
+type OwnerOfferSummary = {
+  highest_offer_sar: number | null;
+  offer_count: number;
+  bidding_open: boolean;
+  accepted_offer: OwnerOfferEntry | null;
+  offers: OwnerOfferEntry[];
+};
+
+type MeResponse = {
+  id: number;
+};
+
+function isOwnerOfferEntry(offer: OfferEntry | OwnerOfferEntry): offer is OwnerOfferEntry {
+  return "phone_e164" in offer;
 }
 
-export default function OfferForm({ carId }: { carId: number }) {
+function buildWhatsappUrl(phone: string, message: string) {
+  return `https://wa.me/${phone.replace("+", "")}?text=${encodeURIComponent(message)}`;
+}
+
+export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: number }) {
   const locale = useLocale();
   const isArabic = locale === "ar";
   const [amount, setAmount] = useState("");
-  const [phone, setPhone] = useState("");
-  const [note, setNote] = useState("");
+  const [token, setToken] = useState("");
+  const [viewerId, setViewerId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [acceptingId, setAcceptingId] = useState<number | null>(null);
+  const [confirmAmount, setConfirmAmount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<OfferSummary | null>(null);
+  const [ownerSummary, setOwnerSummary] = useState<OwnerOfferSummary | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const isOwner = viewerId === ownerId;
 
   const text = isArabic
     ? {
         title: "المزايدة",
+        ownerTitle: "إدارة العروض",
         highestOffer: "أعلى عرض",
         noOffers: "لا توجد عروض بعد",
         bidCount: (count: number) => `${count} عرض`,
         recentBids: "أحدث العروض",
         amount: "قيمة العرض",
-        phone: "الهاتف للتواصل",
-        phoneHint: "اختياري، بصيغة +9665XXXXXXX",
-        note: "ملاحظة",
-        notePlaceholder: "رسالة قصيرة للبائع",
+        signIn: "سجّل الدخول للمزايدة",
+        signInHint: "يتم استخدام رقمك المسجل تلقائيًا عند تقديم العرض.",
+        minBid: (amountSar: number) => `يجب أن يكون العرض أعلى من ${formatPrice(amountSar, locale)}.`,
+        warningTitle: "تنبيه مهم قبل تقديم العرض",
+        warningBody: "إذا اعتبر مالك السيارة هذا العرض عرضًا وهميًا ولم تكتمل عملية الشراء، سيتم تقييد حسابك من المزايدة لمدة شهر. وإذا تكرر ذلك مرة أخرى فسيتم حظر الحساب نهائيًا.",
+        confirmBid: "أوافق وأقدّم العرض",
+        cancelBid: "إلغاء",
+        confirmAmount: "قيمة العرض",
+        closedHint: "تم إغلاق المزايدة لهذا الإعلان بعد قبول عرض.",
+        ownerHint: "بعد القبول سيتم إغلاق المزايدة.",
+        ownerNoOffers: "لا توجد عروض لإدارتها بعد.",
+        bidder: "المزايد",
+        accept: "قبول العرض",
+        accepting: "جارٍ القبول...",
+        accepted: "تم قبول هذا العرض.",
+        acceptedSummary: "تم قبول عرض لهذه السيارة.",
+        acceptedContactTitle: "التواصل مع صاحب العرض المقبول",
+        bidderPhone: "رقم المزايد",
+        callBidder: "اتصل بالمزايد",
+        whatsappBidder: "واتساب المزايد",
         submit: "قدّم عرضك",
         submitting: "جارٍ الإرسال...",
         loading: "جارٍ تحميل العروض...",
         missingApi: "متغير NEXT_PUBLIC_API_BASE غير موجود.",
         invalidAmount: "أدخل قيمة عرض صحيحة.",
-        invalidPhone: "أدخل الهاتف بصيغة صحيحة مثل +9665XXXXXXX.",
+        lowerThanHighest: (amountSar: number) => `يجب أن يكون العرض أعلى من ${formatPrice(amountSar, locale)}.`,
         success: "تم تسجيل العرض.",
+        acceptedSuccess: "تم قبول العرض وإغلاق المزايدة.",
+        loginRequired: "يجب تسجيل الدخول أولًا لتقديم عرض.",
         failed: "تعذر إرسال العرض.",
+        acceptFailed: "تعذر قبول العرض.",
       }
     : {
         title: "Bidding",
+        ownerTitle: "Offer Management",
         highestOffer: "Highest Offer",
         noOffers: "No offers yet",
         bidCount: (count: number) => `${count} bids`,
         recentBids: "Recent Offers",
         amount: "Your bid",
-        phone: "Contact phone",
-        phoneHint: "Optional, in +9665XXXXXXX format",
-        note: "Note",
-        notePlaceholder: "Short message to the seller",
+        signIn: "Sign in to bid",
+        signInHint: "Your saved account phone number will be used automatically.",
+        minBid: (amountSar: number) => `Your bid must be higher than ${formatPrice(amountSar, locale)}.`,
+        warningTitle: "Important warning before bidding",
+        warningBody: "If the listing owner reports this as a false bid and the purchase is not completed, your account will be blocked from bidding for one month. If it happens again, the account will be banned.",
+        confirmBid: "Accept and Place Bid",
+        cancelBid: "Cancel",
+        confirmAmount: "Bid amount",
+        closedHint: "Bidding is closed for this listing after an offer was accepted.",
+        ownerHint: "Once accepted, bidding is closed.",
+        ownerNoOffers: "No offers to manage yet.",
+        bidder: "Bidder",
+        accept: "Accept Offer",
+        accepting: "Accepting...",
+        accepted: "Accepted",
+        acceptedSummary: "An offer has been accepted for this listing.",
+        acceptedContactTitle: "Contact Accepted Bidder",
+        bidderPhone: "Bidder phone",
+        callBidder: "Call Bidder",
+        whatsappBidder: "WhatsApp Bidder",
         submit: "Place Bid",
         submitting: "Sending...",
         loading: "Loading offers...",
         missingApi: "NEXT_PUBLIC_API_BASE is missing.",
         invalidAmount: "Enter a valid offer amount.",
-        invalidPhone: "Enter phone in a valid format like +9665XXXXXXX.",
+        lowerThanHighest: (amountSar: number) => `Your bid must be higher than ${formatPrice(amountSar, locale)}.`,
         success: "Bid placed.",
+        acceptedSuccess: "Offer accepted and bidding closed.",
+        loginRequired: "You must sign in before placing a bid.",
         failed: "Failed to send offer.",
+        acceptFailed: "Failed to accept offer.",
       };
+
+  const currentSummary = isOwner && ownerSummary ? ownerSummary : summary;
+  const acceptedOffer = currentSummary?.accepted_offer ?? null;
+  const biddingOpen = currentSummary?.bidding_open ?? true;
+  const minimumBid = (currentSummary?.highest_offer_sar ?? 0) + 1;
+  const acceptedOwnerOffer = isOwner && acceptedOffer && isOwnerOfferEntry(acceptedOffer) ? acceptedOffer : null;
+  const acceptedBidderLabel = acceptedOwnerOffer?.buyer_user_label || acceptedOwnerOffer?.phone_e164 || null;
+  const acceptedBidderPhone = acceptedOwnerOffer?.phone_e164 || null;
+  const acceptedBidderWhatsapp = acceptedBidderPhone
+    ? buildWhatsappUrl(
+        acceptedBidderPhone,
+        isArabic
+          ? `السلام عليكم، بخصوص العرض المقبول على السيارة رقم ${carId}`
+          : `Hello, regarding your accepted offer on listing #${carId}`,
+      )
+    : null;
+
+  useEffect(() => {
+    async function syncAuth() {
+      const nextToken = window.localStorage.getItem(TOKEN_KEY) || "";
+      setToken(nextToken);
+
+      if (!API_BASE || !nextToken) {
+        setViewerId(null);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/v1/me`, {
+          headers: { Authorization: `Bearer ${nextToken}` },
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          setViewerId(null);
+          return;
+        }
+        const me = (await res.json()) as MeResponse;
+        setViewerId(me.id);
+      } catch {
+        setViewerId(null);
+      }
+    }
+
+    void syncAuth();
+    window.addEventListener("garaj-auth-changed", syncAuth);
+    window.addEventListener("focus", syncAuth);
+    return () => {
+      window.removeEventListener("garaj-auth-changed", syncAuth);
+      window.removeEventListener("focus", syncAuth);
+    };
+  }, []);
 
   async function loadOffers() {
     if (!API_BASE) {
@@ -112,8 +234,45 @@ export default function OfferForm({ carId }: { carId: number }) {
   // carId/API_BASE are stable for this page lifecycle.
   }, [carId]);
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
+  useEffect(() => {
+    if (acceptedOffer) {
+      setConfirmAmount(null);
+    }
+  }, [acceptedOffer]);
+
+  useEffect(() => {
+    async function loadOwnerOffers() {
+      if (!API_BASE || !token || !isOwner) {
+        setOwnerSummary(null);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/v1/cars/${carId}/offers/manage`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          cache: "no-store",
+        });
+
+        if (!res.ok) {
+          const contentType = res.headers.get("content-type") || "";
+          const payload = contentType.includes("application/json") ? await res.json() : await res.text();
+          const detail = typeof payload === "string" ? payload : payload?.detail;
+          throw new Error(detail || text.failed);
+        }
+
+        const data = (await res.json()) as OwnerOfferSummary;
+        setOwnerSummary(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : text.failed);
+      }
+    }
+
+    void loadOwnerOffers();
+  }, [carId, isOwner, text.failed, token]);
+
+  async function submitBid(nextAmount: number) {
     setError("");
     setSuccess("");
 
@@ -122,33 +281,26 @@ export default function OfferForm({ carId }: { carId: number }) {
       return;
     }
 
-    const parsedAmount = Number(amount);
-    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+    if (!Number.isFinite(nextAmount) || nextAmount <= 0) {
       setError(text.invalidAmount);
       return;
     }
 
-    if (phone.trim() && !looksLikeE164(phone)) {
-      setError(text.invalidPhone);
+    if (!token) {
+      setError(text.loginRequired);
       return;
     }
 
     setSubmitting(true);
     try {
-      const message = [
-        isArabic ? `عرض: ${Math.trunc(parsedAmount)} ر.س` : `Offer: ${Math.trunc(parsedAmount)} SAR`,
-        note.trim(),
-      ].filter(Boolean).join("\n");
-
       const res = await fetch(`${API_BASE}/v1/cars/${carId}/offers`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          amount_sar: Math.trunc(parsedAmount),
-          phone_e164: phone.trim() || undefined,
-          message,
+          amount_sar: Math.trunc(nextAmount),
         }),
       });
 
@@ -160,10 +312,12 @@ export default function OfferForm({ carId }: { carId: number }) {
       }
 
       setAmount("");
-      setPhone("");
-      setNote("");
+      setConfirmAmount(null);
       setSuccess(text.success);
       void loadOffers();
+      if (isOwner) {
+        setOwnerSummary(null);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : text.failed);
     } finally {
@@ -171,76 +325,224 @@ export default function OfferForm({ carId }: { carId: number }) {
     }
   }
 
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+
+    const parsedAmount = Number(amount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setError(text.invalidAmount);
+      return;
+    }
+
+    if (parsedAmount < minimumBid) {
+      setError(text.lowerThanHighest(minimumBid - 1));
+      return;
+    }
+
+    if (!token) {
+      setError(text.loginRequired);
+      return;
+    }
+
+    setConfirmAmount(Math.trunc(parsedAmount));
+  }
+
+  async function handleAccept(offerId: number) {
+    if (!API_BASE || !token) {
+      setError(text.loginRequired);
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+    setAcceptingId(offerId);
+    try {
+      const res = await fetch(`${API_BASE}/v1/cars/${carId}/offers/${offerId}/accept`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const contentType = res.headers.get("content-type") || "";
+        const payload = contentType.includes("application/json") ? await res.json() : await res.text();
+        const detail = typeof payload === "string" ? payload : payload?.detail;
+        throw new Error(detail || text.acceptFailed);
+      }
+
+      setSuccess(text.acceptedSuccess);
+      await Promise.all([loadOffers(), (async () => {
+        const manageRes = await fetch(`${API_BASE}/v1/cars/${carId}/offers/manage`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          cache: "no-store",
+        });
+        if (manageRes.ok) {
+          const data = (await manageRes.json()) as OwnerOfferSummary;
+          setOwnerSummary(data);
+        }
+      })()]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : text.acceptFailed);
+    } finally {
+      setAcceptingId(null);
+    }
+  }
+
   return (
     <section className="offer-panel">
-      <h3 className="subheading">{text.title}</h3>
+      <h3 className="subheading">{isOwner ? text.ownerTitle : text.title}</h3>
       <div className="offer-summary spaced-top-sm">
         <p className="offer-summary-label">{text.highestOffer}</p>
         <p className="offer-summary-value">
-          {summary?.highest_offer_sar ? formatPrice(summary.highest_offer_sar, locale) : text.noOffers}
+          {currentSummary?.highest_offer_sar ? formatPrice(currentSummary.highest_offer_sar, locale) : text.noOffers}
         </p>
-        <p className="offer-summary-count">{text.bidCount(summary?.offer_count ?? 0)}</p>
+        <p className="offer-summary-count">{text.bidCount(currentSummary?.offer_count ?? 0)}</p>
       </div>
 
-      {loading ? (
-        <p className="helper-text spaced-top-sm">{text.loading}</p>
-      ) : summary?.offers.length ? (
-        <div className="offer-list spaced-top-sm">
-          <p className="offer-list-title">{text.recentBids}</p>
-          {summary.offers.map((offer) => (
-            <div key={offer.id} className="offer-list-item">
-              <strong>{formatPrice(offer.amount_sar, locale)}</strong>
-              <span>{formatDateTime(offer.created_at, locale)}</span>
-            </div>
-          ))}
+      {acceptedOffer ? (
+        <p className="notice success spaced-top-sm">
+          {text.acceptedSummary} {formatPrice(acceptedOffer.amount_sar, locale)}
+        </p>
+      ) : null}
+
+      {acceptedOwnerOffer ? (
+        <div className="offer-contact-card spaced-top-sm">
+          <p className="offer-list-title">{text.acceptedContactTitle}</p>
+          {acceptedBidderLabel ? <p className="car-meta">{acceptedBidderLabel}</p> : null}
+          {acceptedBidderPhone ? (
+            <>
+              <p className="car-meta">{text.bidderPhone}: {acceptedBidderPhone}</p>
+              <div className="contact-actions">
+                <a href={`tel:${acceptedBidderPhone}`} className="btn btn-secondary">
+                  {text.callBidder}
+                </a>
+                {acceptedBidderWhatsapp ? (
+                  <a href={acceptedBidderWhatsapp} target="_blank" rel="noreferrer" className="btn btn-secondary">
+                    {text.whatsappBidder}
+                  </a>
+                ) : null}
+              </div>
+            </>
+          ) : null}
         </div>
       ) : null}
 
-      <form className="filters spaced-top-sm" onSubmit={handleSubmit}>
-        <div>
-          <label className="label" htmlFor={`offer-amount-${carId}`}>{text.amount}</label>
-          <input
-            id={`offer-amount-${carId}`}
-            className="input"
-            type="number"
-            min={1}
-            inputMode="numeric"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
+      {loading ? (
+        <p className="helper-text spaced-top-sm">{text.loading}</p>
+      ) : currentSummary?.offers.length ? (
+        <div className="offer-list spaced-top-sm">
+          <p className="offer-list-title">{isOwner ? text.ownerHint : text.recentBids}</p>
+          {currentSummary.offers.map((offer) => (
+            <div key={offer.id} className="offer-list-item">
+              <div className="offer-list-body">
+                <strong>{formatPrice(offer.amount_sar, locale)}</strong>
+                {isOwner && isOwnerOfferEntry(offer) ? (
+                  <span>{text.bidder}: {offer.buyer_user_label || offer.phone_e164 || `#${offer.buyer_user_id ?? offer.id}`}</span>
+                ) : null}
+                <span>{formatDateTime(offer.created_at, locale)}</span>
+              </div>
+              {isOwner ? (
+                offer.accepted_at ? (
+                  <span className="offer-list-badge">{text.accepted}</span>
+                ) : biddingOpen ? (
+                  <button
+                    type="button"
+                    className="btn btn-secondary offer-list-action"
+                    disabled={acceptingId === offer.id}
+                    onClick={() => void handleAccept(offer.id)}
+                  >
+                    {acceptingId === offer.id ? text.accepting : text.accept}
+                  </button>
+                ) : null
+              ) : null}
+            </div>
+          ))}
         </div>
+      ) : isOwner ? (
+        <p className="helper-text spaced-top-sm">{text.ownerNoOffers}</p>
+      ) : null}
 
-        <div>
-          <label className="label" htmlFor={`offer-phone-${carId}`}>{text.phone}</label>
-          <input
-            id={`offer-phone-${carId}`}
-            className="input"
-            placeholder="+9665XXXXXXX"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-          <p className="helper-text">{text.phoneHint}</p>
+      {isOwner ? null : acceptedOffer ? (
+        <p className="helper-text spaced-top-sm">{text.closedHint}</p>
+      ) : token ? (
+        <form className="filters spaced-top-sm" onSubmit={handleSubmit}>
+          <div>
+            <label className="label" htmlFor={`offer-amount-${carId}`}>{text.amount}</label>
+            <input
+              id={`offer-amount-${carId}`}
+              className="input"
+              type="number"
+              min={minimumBid}
+              inputMode="numeric"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </div>
+
+          <p className="helper-text">{text.minBid(minimumBid - 1)}</p>
+          <p className="helper-text">{text.signInHint}</p>
+
+          <button type="submit" className="btn btn-primary" disabled={submitting}>
+            {submitting ? text.submitting : text.submit}
+          </button>
+
+          {error ? <p className="notice error">{error}</p> : null}
+          {success ? <p className="notice success">{success}</p> : null}
+        </form>
+      ) : (
+        <div className="filters spaced-top-sm">
+          <p className="helper-text">{text.signInHint}</p>
+          <Link href="/login" className="btn btn-primary">
+            {text.signIn}
+          </Link>
+          {error ? <p className="notice error">{error}</p> : null}
         </div>
+      )}
 
-        <div>
-          <label className="label" htmlFor={`offer-note-${carId}`}>{text.note}</label>
-          <textarea
-            id={`offer-note-${carId}`}
-            className="textarea"
-            rows={3}
-            placeholder={text.notePlaceholder}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
+      {confirmAmount !== null ? (
+        <div className="photo-viewer" role="dialog" aria-modal="true" aria-label={text.warningTitle}>
+          <button
+            type="button"
+            className="photo-viewer-backdrop"
+            onClick={() => {
+              if (!submitting) {
+                setConfirmAmount(null);
+              }
+            }}
+            aria-label={text.cancelBid}
           />
+          <div className="photo-viewer-card offer-confirm-card">
+            <h4 className="offer-confirm-title">{text.warningTitle}</h4>
+            <p className="offer-confirm-amount">
+              {text.confirmAmount}: {formatPrice(confirmAmount, locale)}
+            </p>
+            <p className="offer-confirm-copy">{text.warningBody}</p>
+            <div className="offer-confirm-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={submitting}
+                onClick={() => setConfirmAmount(null)}
+              >
+                {text.cancelBid}
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={submitting}
+                onClick={() => void submitBid(confirmAmount)}
+              >
+                {submitting ? text.submitting : text.confirmBid}
+              </button>
+            </div>
+          </div>
         </div>
-
-        <button type="submit" className="btn btn-primary" disabled={submitting}>
-          {submitting ? text.submitting : text.submit}
-        </button>
-
-        {error ? <p className="notice error">{error}</p> : null}
-        {success ? <p className="notice success">{success}</p> : null}
-      </form>
+      ) : null}
     </section>
   );
 }

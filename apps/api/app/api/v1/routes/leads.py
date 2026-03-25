@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select, func
 
@@ -5,10 +7,103 @@ from app.db.session import get_session
 from app.models.user import User
 from app.models.car import CarListing, CarStatus
 from app.models.lead import Lead
-from app.schemas.lead import LeadCreate, LeadOut, OfferCreate, OfferOut, OfferSummaryOut
+from app.schemas.lead import (
+    LeadCreate,
+    LeadOut,
+    OfferCreate,
+    OfferOut,
+    OfferSummaryOut,
+    OwnerOfferOut,
+    OwnerOfferSummaryOut,
+)
 from app.core.deps import get_current_user
 
 router = APIRouter(tags=["leads"])
+
+
+def _load_active_car(session: Session, car_id: int) -> CarListing:
+    car = session.exec(select(CarListing).where(CarListing.id == car_id)).first()
+    if not car or car.status != CarStatus.active:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    return car
+
+
+def _accepted_offer_for_car(session: Session, car_id: int) -> Lead | None:
+    return session.exec(
+        select(Lead)
+        .where(
+            Lead.car_id == car_id,
+            Lead.channel == "offer",
+            Lead.amount_sar.is_not(None),
+            Lead.accepted_at.is_not(None),
+        )
+        .order_by(Lead.accepted_at.desc(), Lead.id.desc())
+    ).first()
+
+
+def _offer_count_for_car(session: Session, car_id: int) -> int:
+    total_count_result = session.exec(
+        select(func.count()).select_from(Lead).where(
+            Lead.car_id == car_id,
+            Lead.channel == "offer",
+            Lead.amount_sar.is_not(None),
+        )
+    ).one()
+    try:
+        return int(total_count_result)
+    except (TypeError, ValueError):
+        return int(total_count_result[0])
+
+
+def _top_offers_for_car(session: Session, car_id: int, limit: int = 5) -> list[Lead]:
+    return session.exec(
+        select(Lead)
+        .where(
+            Lead.car_id == car_id,
+            Lead.channel == "offer",
+            Lead.amount_sar.is_not(None),
+        )
+        .order_by(Lead.amount_sar.desc(), Lead.created_at.desc())
+        .limit(limit)
+    ).all()
+
+
+def _highest_offer_amount_for_car(session: Session, car_id: int) -> int | None:
+    offer = session.exec(
+        select(Lead)
+        .where(
+            Lead.car_id == car_id,
+            Lead.channel == "offer",
+            Lead.amount_sar.is_not(None),
+        )
+        .order_by(Lead.amount_sar.desc(), Lead.created_at.desc())
+    ).first()
+    return offer.amount_sar if offer and offer.amount_sar is not None else None
+
+
+def _offer_out(offer: Lead) -> OfferOut:
+    return OfferOut(
+        id=offer.id or 0,
+        amount_sar=offer.amount_sar or 0,
+        created_at=offer.created_at,
+        accepted_at=offer.accepted_at,
+    )
+
+
+def _owner_offer_out(offer: Lead, buyers: dict[int, User]) -> OwnerOfferOut:
+    buyer = buyers.get(offer.buyer_user_id or -1)
+    buyer_label = None
+    if buyer:
+        buyer_label = f"@{buyer.user_id}" if buyer.user_id else buyer.name or buyer.phone_e164
+    return OwnerOfferOut(
+        id=offer.id or 0,
+        amount_sar=offer.amount_sar or 0,
+        created_at=offer.created_at,
+        accepted_at=offer.accepted_at,
+        buyer_user_id=offer.buyer_user_id,
+        buyer_user_label=buyer_label,
+        phone_e164=offer.phone_e164,
+    )
 
 
 @router.post("/cars/{car_id}/leads", response_model=LeadOut)
@@ -17,9 +112,7 @@ def create_lead(
     payload: LeadCreate,
     session: Session = Depends(get_session),
 ):
-    car = session.exec(select(CarListing).where(CarListing.id == car_id)).first()
-    if not car or car.status != CarStatus.active:
-        raise HTTPException(status_code=404, detail="Listing not found")
+    car = _load_active_car(session, car_id)
 
     if payload.channel not in {"form", "whatsapp", "call"}:
         raise HTTPException(status_code=400, detail="Invalid channel")
@@ -49,20 +142,32 @@ def create_offer(
     car_id: int,
     payload: OfferCreate,
     session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
 ):
-    car = session.exec(select(CarListing).where(CarListing.id == car_id)).first()
-    if not car or car.status != CarStatus.active:
-        raise HTTPException(status_code=404, detail="Listing not found")
+    car = _load_active_car(session, car_id)
 
     if payload.amount_sar <= 0:
         raise HTTPException(status_code=400, detail="Invalid offer amount")
 
+    if user.id == car.owner_id:
+        raise HTTPException(status_code=400, detail="You cannot bid on your own listing")
+
+    if not user.phone_e164:
+        raise HTTPException(status_code=400, detail="A verified phone number is required to bid")
+
+    if _accepted_offer_for_car(session, car_id):
+        raise HTTPException(status_code=400, detail="Bidding is closed for this listing")
+
+    highest_offer = _highest_offer_amount_for_car(session, car_id)
+    if highest_offer is not None and payload.amount_sar <= highest_offer:
+        raise HTTPException(status_code=400, detail=f"Your bid must be higher than the current highest bid of {highest_offer} SAR")
+
     lead = Lead(
         car_id=car.id,
         owner_id=car.owner_id,
-        buyer_user_id=None,
-        phone_e164=payload.phone_e164,
-        message=payload.message,
+        buyer_user_id=user.id,
+        phone_e164=user.phone_e164,
+        message=None,
         amount_sar=payload.amount_sar,
         channel="offer",
     )
@@ -70,7 +175,7 @@ def create_offer(
     session.commit()
     session.refresh(lead)
 
-    return OfferOut(id=lead.id or 0, amount_sar=lead.amount_sar or 0, created_at=lead.created_at)
+    return _offer_out(lead)
 
 
 @router.get("/cars/{car_id}/offers", response_model=OfferSummaryOut)
@@ -78,21 +183,31 @@ def get_offers(
     car_id: int,
     session: Session = Depends(get_session),
 ):
-    car = session.exec(select(CarListing).where(CarListing.id == car_id)).first()
-    if not car or car.status != CarStatus.active:
-        raise HTTPException(status_code=404, detail="Listing not found")
+    _load_active_car(session, car_id)
 
-    total_count_result = session.exec(
-        select(func.count()).select_from(Lead).where(
-            Lead.car_id == car_id,
-            Lead.channel == "offer",
-            Lead.amount_sar.is_not(None),
-        )
-    ).one()
-    try:
-        offer_count = int(total_count_result)
-    except (TypeError, ValueError):
-        offer_count = int(total_count_result[0])
+    offer_count = _offer_count_for_car(session, car_id)
+    offers = _top_offers_for_car(session, car_id)
+    accepted_offer = _accepted_offer_for_car(session, car_id)
+    highest_offer = offers[0].amount_sar if offers else None
+
+    return OfferSummaryOut(
+        highest_offer_sar=highest_offer,
+        offer_count=offer_count,
+        bidding_open=accepted_offer is None,
+        accepted_offer=_offer_out(accepted_offer) if accepted_offer else None,
+        offers=[_offer_out(offer) for offer in offers],
+    )
+
+
+@router.get("/cars/{car_id}/offers/manage", response_model=OwnerOfferSummaryOut)
+def get_manage_offers(
+    car_id: int,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
+    car = _load_active_car(session, car_id)
+    if user.id != car.owner_id:
+        raise HTTPException(status_code=403, detail="Only the listing owner can manage offers")
 
     offers = session.exec(
         select(Lead)
@@ -102,23 +217,64 @@ def get_offers(
             Lead.amount_sar.is_not(None),
         )
         .order_by(Lead.amount_sar.desc(), Lead.created_at.desc())
-        .limit(5)
     ).all()
+    buyer_ids = sorted({offer.buyer_user_id for offer in offers if offer.buyer_user_id})
+    buyers = {}
+    if buyer_ids:
+        buyer_rows = session.exec(select(User).where(User.id.in_(buyer_ids))).all()
+        buyers = {buyer.id or 0: buyer for buyer in buyer_rows if buyer.id is not None}
 
+    accepted_offer = _accepted_offer_for_car(session, car_id)
     highest_offer = offers[0].amount_sar if offers else None
 
-    return OfferSummaryOut(
+    return OwnerOfferSummaryOut(
         highest_offer_sar=highest_offer,
-        offer_count=offer_count,
-        offers=[
-            OfferOut(
-                id=offer.id or 0,
-                amount_sar=offer.amount_sar or 0,
-                created_at=offer.created_at,
-            )
-            for offer in offers
-        ],
+        offer_count=len(offers),
+        bidding_open=accepted_offer is None,
+        accepted_offer=_owner_offer_out(accepted_offer, buyers) if accepted_offer else None,
+        offers=[_owner_offer_out(offer, buyers) for offer in offers],
     )
+
+
+@router.post("/cars/{car_id}/offers/{offer_id}/accept", response_model=OwnerOfferOut)
+def accept_offer(
+    car_id: int,
+    offer_id: int,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
+    car = _load_active_car(session, car_id)
+    if user.id != car.owner_id:
+        raise HTTPException(status_code=403, detail="Only the listing owner can accept offers")
+
+    offer = session.exec(
+        select(Lead).where(
+            Lead.id == offer_id,
+            Lead.car_id == car_id,
+            Lead.channel == "offer",
+            Lead.amount_sar.is_not(None),
+        )
+    ).first()
+    if not offer:
+        raise HTTPException(status_code=404, detail="Offer not found")
+
+    accepted_offer = _accepted_offer_for_car(session, car_id)
+    if accepted_offer and accepted_offer.id != offer.id:
+        raise HTTPException(status_code=400, detail="An offer has already been accepted for this listing")
+
+    if not offer.accepted_at:
+        offer.accepted_at = datetime.utcnow()
+        session.add(offer)
+        session.commit()
+        session.refresh(offer)
+
+    buyers = {}
+    if offer.buyer_user_id:
+        buyer = session.exec(select(User).where(User.id == offer.buyer_user_id)).first()
+        if buyer and buyer.id is not None:
+            buyers[buyer.id] = buyer
+
+    return _owner_offer_out(offer, buyers)
 
 
 @router.get("/seller/leads", response_model=list[LeadOut])

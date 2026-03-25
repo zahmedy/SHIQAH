@@ -42,8 +42,6 @@ export default function ChatPanel({ carId }: { carId: number }) {
     ? {
         loadChatFailed: "تعذر تحميل المحادثة.",
         sendMessageFailed: "تعذر إرسال الرسالة.",
-        conversationTitle: `محادثة السيارة #${carId}`,
-        conversationSubtitle: "تُحفظ الرسائل لكل إعلان وتعرض المعرّف العام لكل مرسل.",
         loginToChat: "سجل الدخول للمحادثة",
         loadingChat: "جارٍ تحميل المحادثة...",
         noMessages: "لا توجد رسائل بعد.",
@@ -56,8 +54,6 @@ export default function ChatPanel({ carId }: { carId: number }) {
     : {
         loadChatFailed: "Failed to load chat.",
         sendMessageFailed: "Failed to send message.",
-        conversationTitle: `Car #${carId} Conversation`,
-        conversationSubtitle: "Messages are saved per listing and show each sender's public user ID.",
         loginToChat: "Login to Chat",
         loadingChat: "Loading chat...",
         noMessages: "No messages yet.",
@@ -150,17 +146,13 @@ export default function ChatPanel({ carId }: { carId: number }) {
 
   return (
     <section className="chat-panel">
-      <div className="chat-header">
-        <div>
-          <p className="chat-title">{text.conversationTitle}</p>
-          <p className="chat-subtitle">{text.conversationSubtitle}</p>
-        </div>
-        {!hasSession && (
+      {!hasSession && (
+        <div className="chat-header">
           <Link href="/login" className="btn btn-secondary chat-login">
             {text.loginToChat}
           </Link>
-        )}
-      </div>
+        </div>
+      )}
 
       {error && <p className="notice error">{error}</p>}
       {loading && <p className="notice">{text.loadingChat}</p>}
