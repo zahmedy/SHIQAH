@@ -14,6 +14,7 @@ class Lead(SQLModel, table=True):
     name: Optional[str] = None
     phone_e164: Optional[str] = Field(default=None, index=True)
     message: Optional[str] = None
+    amount_sar: Optional[int] = Field(default=None, index=True)
 
     channel: str = Field(default="form", index=True)   # form / whatsapp / call
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)

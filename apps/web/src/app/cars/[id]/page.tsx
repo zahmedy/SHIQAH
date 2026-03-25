@@ -5,6 +5,7 @@ import ListingPhotoGallery from "@/components/ListingPhotoGallery";
 import { formatDateTime, formatDistance, formatPrice, translateValue, type Locale } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
 import ChatPanel from "./ChatPanel";
+import OfferForm from "./OfferForm";
 import OwnerActions from "./OwnerActions";
 
 type Photo = {
@@ -194,6 +195,10 @@ export default async function CarDetailPage({
             </a>
           )}
         </div>
+
+        <hr className="separator" />
+
+        <OfferForm carId={car.id} />
 
         <hr className="separator" />
 
