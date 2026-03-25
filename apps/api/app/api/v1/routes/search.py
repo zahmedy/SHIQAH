@@ -6,6 +6,7 @@ from sqlmodel import Session, select
 from app.db.session import get_session
 from app.models.user import User
 from app.services.opensearch import client, ensure_index
+from app.services.city_proximity import nearby_cities
 from app.core.config import settings
 
 router = APIRouter(prefix="/search", tags=["search"])
@@ -45,7 +46,8 @@ def search_cars(
         ) from exc
 
     filters: list[dict] = []
-    if city: filters.append({"term": {"city": city}})
+    if city:
+        filters.append({"term": {"city": city}})
     if make: filters.append({"term": {"make": make}})
     if model: filters.append({"term": {"model": model}})
     if transmission: filters.append({"term": {"transmission": transmission}})
@@ -67,11 +69,25 @@ def search_cars(
     if mileage_max is not None:
         filters.append({"range": {"mileage_km": {"lte": mileage_max}}})
     if lat is not None and lon is not None:
-        distance = f"{radius_km or 50}km"
+        distance_km = radius_km or 50
+        location_should: list[dict] = [
+            {
+                "geo_distance": {
+                    "distance": f"{distance_km}km",
+                    "location": {"lat": lat, "lon": lon},
+                }
+            }
+        ]
+
+        if not city:
+            city_matches = nearby_cities(lat, lon, distance_km)
+            if city_matches:
+                location_should.append({"terms": {"city": city_matches}})
+
         filters.append({
-            "geo_distance": {
-                "distance": distance,
-                "location": {"lat": lat, "lon": lon},
+            "bool": {
+                "should": location_should,
+                "minimum_should_match": 1,
             }
         })
 

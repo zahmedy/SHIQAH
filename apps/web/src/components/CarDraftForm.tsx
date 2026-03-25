@@ -255,6 +255,8 @@ export default function CarDraftForm({
   const [mainPhotoId, setMainPhotoId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [locationStatus, setLocationStatus] = useState("");
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeCarId = useMemo(
@@ -312,6 +314,13 @@ export default function CarDraftForm({
         cityLabel: "المدينة *",
         cityHelp: "اختر مدينة رئيسية أو اختر أخرى لإدخالها يدويًا.",
         otherCity: "اكتب مدينة أخرى",
+        useCurrentLocation: "استخدم موقعي",
+        updateCurrentLocation: "حدّث موقعي",
+        clearCurrentLocation: "مسح الموقع الدقيق",
+        locating: "جارٍ تحديد الموقع...",
+        geolocationUnsupported: "المتصفح لا يدعم تحديد الموقع.",
+        locationDenied: "تعذر الحصول على الموقع.",
+        locationSaved: "تم حفظ الموقع الدقيق لهذا الإعلان.",
         district: "الحي",
         make: "الشركة *",
         model: "الموديل *",
@@ -333,25 +342,22 @@ export default function CarDraftForm({
         titleLabel: "العنوان *",
         descriptionLabel: "الوصف *",
         photos: "الصور",
-        photosHelp: "أضف صورًا واضحة تعطي المشتري ثقة. ابدأ بالخارج والداخل والعداد وأي ملاحظات مهمة.",
-        autoSaveOnFirstPhotos: "سيتم حفظ الإعلان تلقائيًا عند إضافة أول مجموعة صور.",
-        addingPhotos: "جارٍ إضافة الصور...",
-        addMorePhotos: "أضف صورًا أخرى",
-        addPhotos: "أضف صورًا",
+        photosHelp: "أضف صورًا واضحة.",
+        autoSaveOnFirstPhotos: "سيتم الحفظ تلقائيًا.",
+        addingPhotos: "جارٍ الإضافة...",
+        addMorePhotos: "أضف صور",
+        addPhotos: "أضف صور",
         photosReady: (count: number) => `${count} صور جاهزة`,
         moreNeeded: (count: number) => `${count} أخرى مطلوبة`,
-        photosUploadingNow: "يتم الآن إضافة الصور التي اخترتها.",
-        choosePhotosAndSave: "اختر صورة أو أكثر ليتم حفظ الإعلان وإضافتها مباشرة.",
-        choosePhotos: "اختر صورة أو أكثر. ستتم إضافتها مباشرة.",
-        enoughPhotosToPublish: "لديك صور كافية للنشر.",
-        morePhotosToPublish: (count: number) => `أضف ${count} صورة إضافية على الأقل للنشر.`,
+        photosUploadingNow: "تتم إضافة الصور.",
+        choosePhotosAndSave: "اختر صورًا للإضافة.",
+        choosePhotos: "اختر صورًا للإضافة.",
         adding: "جارٍ الإضافة",
         mainPhoto: "الصورة الرئيسية",
         makeMain: "اجعلها رئيسية",
         removing: "جارٍ الحذف...",
         remove: "حذف",
         noPhotosYet: "لا توجد صور بعد.",
-        photoPerformanceNote: "الإعلانات التي تحتوي على صور واضحة ومتعددة تكون أكثر موثوقية.",
         photoViewer: "عارض الصور",
         closePhotoViewer: "إغلاق عارض الصور",
         previousPhoto: "الصورة السابقة",
@@ -412,6 +418,13 @@ export default function CarDraftForm({
         cityLabel: "City *",
         cityHelp: "Choose a major city or select Other to enter one manually.",
         otherCity: "Enter another city",
+        useCurrentLocation: "Use my location",
+        updateCurrentLocation: "Update location",
+        clearCurrentLocation: "Clear precise location",
+        locating: "Locating...",
+        geolocationUnsupported: "Geolocation not supported in this browser.",
+        locationDenied: "Unable to retrieve location.",
+        locationSaved: "Precise location saved for this listing.",
         district: "District",
         make: "Make *",
         model: "Model *",
@@ -433,25 +446,22 @@ export default function CarDraftForm({
         titleLabel: "Title (Arabic) *",
         descriptionLabel: "Description (Arabic) *",
         photos: "Photos",
-        photosHelp: "Add clear photos buyers can trust. Start with the outside, inside, dashboard, and anything important to note.",
-        autoSaveOnFirstPhotos: "Your listing will be saved automatically when you add the first photos.",
-        addingPhotos: "Adding photos...",
-        addMorePhotos: "Add More Photos",
+        photosHelp: "Add clear photos.",
+        autoSaveOnFirstPhotos: "Saves automatically.",
+        addingPhotos: "Adding...",
+        addMorePhotos: "Add Photos",
         addPhotos: "Add Photos",
         photosReady: (count: number) => `${count} photos ready`,
         moreNeeded: (count: number) => `${count} more needed`,
-        photosUploadingNow: "Your selected photos are being added now.",
-        choosePhotosAndSave: "Choose one or more photos to save the listing and add them right away.",
-        choosePhotos: "Choose one or more photos. They will be added right away.",
-        enoughPhotosToPublish: "You have enough photos to publish.",
-        morePhotosToPublish: (count: number) => `Add at least ${count} more photo${count === 1 ? "" : "s"} to publish.`,
+        photosUploadingNow: "Uploading photos.",
+        choosePhotosAndSave: "Choose photos to upload.",
+        choosePhotos: "Choose photos to upload.",
         adding: "Adding",
         mainPhoto: "Main photo",
         makeMain: "Make Main",
         removing: "Removing...",
         remove: "Remove",
         noPhotosYet: "No photos yet.",
-        photoPerformanceNote: "Listings with several clear photos perform better and are easier to trust.",
         photoViewer: "Photo viewer",
         closePhotoViewer: "Close photo viewer",
         previousPhoto: "Previous photo",
@@ -466,6 +476,7 @@ export default function CarDraftForm({
         editCreatedDraft: "Edit Created Draft",
       };
   const saveButtonLabel = isReviewLocked ? text.saveChanges : text.saveDraft;
+  const hasPreciseLocation = Boolean(form.latitude.trim() && form.longitude.trim());
   const viewerItems = useMemo<PhotoViewerItem[]>(
     () => [
       ...pendingPreviews.map((preview) => ({
@@ -1057,6 +1068,42 @@ export default function CarDraftForm({
     showNextPhoto();
   }
 
+  function handleUseCurrentLocation() {
+    setLocationStatus("");
+
+    if (!navigator.geolocation) {
+      setLocationStatus(text.geolocationUnsupported);
+      return;
+    }
+
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setForm((prev) => ({
+          ...prev,
+          latitude: position.coords.latitude.toFixed(6),
+          longitude: position.coords.longitude.toFixed(6),
+        }));
+        setLocationStatus(text.locationSaved);
+        setLocating(false);
+      },
+      (error) => {
+        setLocationStatus(error.message || text.locationDenied);
+        setLocating(false);
+      },
+      { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 },
+    );
+  }
+
+  function handleClearCurrentLocation() {
+    setForm((prev) => ({
+      ...prev,
+      latitude: "",
+      longitude: "",
+    }));
+    setLocationStatus("");
+  }
+
   async function setMainPhoto(photoId: number) {
     setUploadError("");
     setUploadSuccess("");
@@ -1149,6 +1196,36 @@ export default function CarDraftForm({
                 helperText={text.cityHelp}
                 otherPlaceholder={text.otherCity}
               />
+
+              <div className="form-grid">
+                <div className="inline-actions">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={handleUseCurrentLocation}
+                    disabled={locating}
+                  >
+                    {locating
+                      ? text.locating
+                      : hasPreciseLocation
+                        ? text.updateCurrentLocation
+                        : text.useCurrentLocation}
+                  </button>
+                  {hasPreciseLocation ? (
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={handleClearCurrentLocation}
+                      disabled={locating}
+                    >
+                      {text.clearCurrentLocation}
+                    </button>
+                  ) : null}
+                </div>
+                {locationStatus || hasPreciseLocation ? (
+                  <p className="helper-text">{locationStatus || text.locationSaved}</p>
+                ) : null}
+              </div>
 
               <div>
                 <label className="label" htmlFor="district">{text.district}</label>
@@ -1343,11 +1420,10 @@ export default function CarDraftForm({
 
             <section className="upload-panel">
               <h2 className="subheading">{text.photos}</h2>
-              <p className="car-meta">{text.photosHelp}</p>
-
-              {!activeCarId && mode === "create" ? (
-                <p className="helper-text">{text.autoSaveOnFirstPhotos}</p>
-              ) : null}
+              <p className="car-meta">
+                {text.photosHelp}
+                {!activeCarId && mode === "create" ? ` ${text.autoSaveOnFirstPhotos}` : ""}
+              </p>
 
               <input
                 ref={photoInputRef}
@@ -1382,12 +1458,6 @@ export default function CarDraftForm({
                       : text.choosePhotos}
                 </span>
               </div>
-
-              <p className="helper-text">
-                {hasEnoughPhotos
-                  ? text.enoughPhotosToPublish
-                  : text.morePhotosToPublish(remainingPhotos)}
-              </p>
 
               {uploadError && <p className="notice error">{uploadError}</p>}
               {uploadSuccess && <p className="notice success">{uploadSuccess}</p>}
@@ -1448,7 +1518,6 @@ export default function CarDraftForm({
               ) : (
                 <div className="upload-empty-state">
                   <p className="car-meta">{text.noPhotosYet}</p>
-                  <p className="helper-text">{text.photoPerformanceNote}</p>
                 </div>
               )}
             </section>
