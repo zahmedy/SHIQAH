@@ -501,6 +501,16 @@ a {
   opacity: 0;
   pointer-events: none;
   transition: opacity 150ms ease;
+  direction: ltr;
+  unicode-bidi: isolate;
+  line-height: 1;
+}
+
+.car-thumb-nav-icon {
+  width: 1rem;
+  height: 1rem;
+  display: block;
+  margin: 0 auto;
 }
 
 .car-thumb-nav-prev {
@@ -969,6 +979,9 @@ a {
   width: 2.4rem;
   height: 2.4rem;
   font-size: 1.5rem;
+  direction: ltr;
+  unicode-bidi: isolate;
+  line-height: 1;
 }
 
 .photo-viewer-prev {

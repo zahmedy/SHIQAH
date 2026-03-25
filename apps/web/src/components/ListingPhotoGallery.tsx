@@ -19,7 +19,6 @@ export default function ListingPhotoGallery({
   title: string;
 }) {
   const locale = useLocale();
-  const isArabic = locale === "ar";
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const activePhoto = viewerIndex !== null ? photos[viewerIndex] : null;
   const hasMultiplePhotos = photos.length > 1;
@@ -94,15 +93,6 @@ export default function ListingPhotoGallery({
     const clickOffset = event.clientX - bounds.left;
 
     if (clickOffset < bounds.width / 2) {
-      if (isArabic) {
-        showNextPhoto();
-        return;
-      }
-      showPreviousPhoto();
-      return;
-    }
-
-    if (isArabic) {
       showPreviousPhoto();
       return;
     }
@@ -141,11 +131,12 @@ export default function ListingPhotoGallery({
             {hasMultiplePhotos ? (
               <button
                 type="button"
-                className={`photo-viewer-nav ${isArabic ? "photo-viewer-next" : "photo-viewer-prev"}`}
+                className="photo-viewer-nav photo-viewer-prev"
                 onClick={showPreviousPhoto}
                 aria-label={text.previousPhoto}
+                dir="ltr"
               >
-                {isArabic ? "›" : "‹"}
+                ‹
               </button>
             ) : null}
             <img
@@ -157,11 +148,12 @@ export default function ListingPhotoGallery({
             {hasMultiplePhotos ? (
               <button
                 type="button"
-                className={`photo-viewer-nav ${isArabic ? "photo-viewer-prev" : "photo-viewer-next"}`}
+                className="photo-viewer-nav photo-viewer-next"
                 onClick={showNextPhoto}
                 aria-label={text.nextPhoto}
+                dir="ltr"
               >
-                {isArabic ? "‹" : "›"}
+                ›
               </button>
             ) : null}
             <p className="photo-viewer-caption">

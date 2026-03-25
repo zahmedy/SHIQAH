@@ -21,6 +21,25 @@ type HomeListingCardProps = {
   photos?: ListingPhoto[];
 };
 
+function ChevronIcon({ direction }: { direction: "left" | "right" }) {
+  return (
+    <svg
+      className="car-thumb-nav-icon"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d={direction === "left" ? "M12.5 4.5L7.5 10l5 5.5" : "M7.5 4.5l5 5.5-5 5.5"}
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export default function HomeListingCard({
   href,
   title,
@@ -66,16 +85,18 @@ export default function HomeListingCard({
               className="car-thumb-nav car-thumb-nav-prev"
               onClick={showPreviousPhoto}
               aria-label={locale === "ar" ? "الصورة السابقة" : "Previous photo"}
+              dir="ltr"
             >
-              ‹
+              <ChevronIcon direction="left" />
             </button>
             <button
               type="button"
               className="car-thumb-nav car-thumb-nav-next"
               onClick={showNextPhoto}
               aria-label={locale === "ar" ? "الصورة التالية" : "Next photo"}
+              dir="ltr"
             >
-              ›
+              <ChevronIcon direction="right" />
             </button>
             <p className="car-thumb-count" aria-live="polite">
               {photoIndex + 1}/{photos.length}

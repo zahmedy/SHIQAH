@@ -1061,15 +1061,6 @@ export default function CarDraftForm({
     const clickOffset = event.clientX - bounds.left;
 
     if (clickOffset < bounds.width / 2) {
-      if (isArabic) {
-        showNextPhoto();
-        return;
-      }
-      showPreviousPhoto();
-      return;
-    }
-
-    if (isArabic) {
       showPreviousPhoto();
       return;
     }
@@ -1546,11 +1537,12 @@ export default function CarDraftForm({
                   {viewerItems.length > 1 ? (
                     <button
                       type="button"
-                      className={`photo-viewer-nav ${isArabic ? "photo-viewer-next" : "photo-viewer-prev"}`}
+                      className="photo-viewer-nav photo-viewer-prev"
                       onClick={showPreviousPhoto}
                       aria-label={text.previousPhoto}
+                      dir="ltr"
                     >
-                      {isArabic ? "›" : "‹"}
+                      ‹
                     </button>
                   ) : null}
                   <img
@@ -1562,11 +1554,12 @@ export default function CarDraftForm({
                   {viewerItems.length > 1 ? (
                     <button
                       type="button"
-                      className={`photo-viewer-nav ${isArabic ? "photo-viewer-prev" : "photo-viewer-next"}`}
+                      className="photo-viewer-nav photo-viewer-next"
                       onClick={showNextPhoto}
                       aria-label={text.nextPhoto}
+                      dir="ltr"
                     >
-                      {isArabic ? "‹" : "›"}
+                      ›
                     </button>
                   ) : null}
                   <p className="photo-viewer-caption">
