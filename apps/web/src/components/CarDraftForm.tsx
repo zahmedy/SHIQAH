@@ -287,10 +287,12 @@ export default function CarDraftForm({
         listingSubmitted: "تم إرسال الإعلان.",
         submitListingFailed: "تعذر إرسال الإعلان.",
         saveBeforeDelete: "احفظ الإعلان قبل حذفه.",
-        deleteConfirm: "هل تريد حذف هذا الإعلان؟ سيتم حذف الإعلان والصور والرسائل المرتبطة به.",
-        draftDeleted: "تم حذف المسودة.",
-        listingDeleted: "تم حذف الإعلان.",
-        deleteFailed: "تعذر حذف الإعلان.",
+        archiveConfirm: "أرشفة هذا الإعلان؟ سيتم إخفاؤه من الصفحة العامة والبحث ويمكنك إعادته لاحقًا.",
+        permanentDeleteConfirm: "حذف الإعلان نهائيًا؟ سيتم حذف الإعلان والصور والرسائل والعروض المرتبطة به نهائيًا.",
+        draftDeleted: "تم حذف المسودة نهائيًا.",
+        listingArchived: "تمت أرشفة الإعلان.",
+        listingDeleted: "تم حذف الإعلان نهائيًا.",
+        deleteFailed: "تعذر إتمام العملية.",
         selectPhotosFirst: "اختر صورة واحدة أو أكثر أولًا.",
         imagesOnly: "الملفات المسموحة هي الصور فقط.",
         createDraftBeforeUploadFailed: "تعذر إنشاء مسودة قبل رفع الصور.",
@@ -367,8 +369,10 @@ export default function CarDraftForm({
         submitting: "جارٍ الإرسال...",
         saveAndSubmit: "حفظ وإرسال",
         deleting: "جارٍ الحذف...",
-        deleteDraft: "حذف المسودة",
-        deleteListing: "حذف الإعلان",
+        archiving: "جارٍ الأرشفة...",
+        archiveListing: "أرشفة الإعلان",
+        deleteDraft: "حذف نهائي",
+        deleteListing: "حذف نهائي",
         backToMyCars: "العودة إلى الملف الشخصي",
         editCreatedDraft: "تعديل المسودة التي تم إنشاؤها",
       }
@@ -392,10 +396,12 @@ export default function CarDraftForm({
         listingSubmitted: "Listing submitted.",
         submitListingFailed: "Failed to submit listing.",
         saveBeforeDelete: "Save the listing before deleting it.",
-        deleteConfirm: "Delete this listing? This will remove the listing, photos, and related messages.",
-        draftDeleted: "Draft deleted.",
-        listingDeleted: "Listing deleted.",
-        deleteFailed: "Failed to delete listing.",
+        archiveConfirm: "Archive this listing? It will be hidden from the public page and search, and you can restore it later.",
+        permanentDeleteConfirm: "Delete this listing permanently? This will permanently remove the listing, photos, messages, and offers.",
+        draftDeleted: "Draft permanently deleted.",
+        listingArchived: "Listing archived.",
+        listingDeleted: "Listing permanently deleted.",
+        deleteFailed: "Failed to complete the action.",
         selectPhotosFirst: "Select one or more photos first.",
         imagesOnly: "Only image files are allowed.",
         createDraftBeforeUploadFailed: "Failed to create draft before upload.",
@@ -472,8 +478,10 @@ export default function CarDraftForm({
         submitting: "Submitting...",
         saveAndSubmit: "Save & Submit",
         deleting: "Deleting...",
-        deleteDraft: "Delete Draft",
-        deleteListing: "Delete Listing",
+        archiving: "Archiving...",
+        archiveListing: "Archive Listing",
+        deleteDraft: "Delete Permanently",
+        deleteListing: "Delete Permanently",
         backToMyCars: "Back to Profile",
         editCreatedDraft: "Edit Created Draft",
       };
@@ -781,15 +789,15 @@ export default function CarDraftForm({
       return;
     }
 
-    const confirmed = window.confirm(text.deleteConfirm);
+    const confirmed = window.confirm(text.archiveConfirm);
     if (!confirmed) {
       return;
     }
 
     setDeleting(true);
     try {
-      const res = await fetch(`${API_BASE}/v1/cars/${activeCarId}`, {
-        method: "DELETE",
+      const res = await fetch(`${API_BASE}/v1/cars/${activeCarId}/archive`, {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -804,7 +812,7 @@ export default function CarDraftForm({
         throw new Error(await parseApiError(res));
       }
 
-      redirectToMyCars("success", status === "draft" ? text.draftDeleted : text.listingDeleted);
+      redirectToMyCars("success", text.listingArchived);
     } catch (err) {
       setError(err instanceof Error ? err.message : text.deleteFailed);
     } finally {
@@ -1589,12 +1597,12 @@ export default function CarDraftForm({
               ) : null}
               {activeCarId ? (
                 <button
-                  className="btn btn-danger"
+                  className="btn btn-secondary"
                   type="button"
                   disabled={deleting || saving || loading}
                   onClick={() => void handleDeleteListing()}
                 >
-                  {deleting ? text.deleting : status === "draft" ? text.deleteDraft : text.deleteListing}
+                  {deleting ? text.archiving : text.archiveListing}
                 </button>
               ) : null}
               <Link href="/my-cars" className="btn btn-secondary">{text.backToMyCars}</Link>

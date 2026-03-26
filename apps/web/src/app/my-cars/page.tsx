@@ -629,11 +629,11 @@ export default function MyCarsPage() {
                     ) : null}
 
                     <div className="profile-card-actions">
-                      {(car.status === "draft" || car.status === "pending_review" || car.status === "rejected" || car.status === "active") && (
-                        <Link href={`/my-cars/${car.id}/edit`} className="btn btn-secondary">
-                          {car.status === "rejected" ? text.fixAndResubmit : text.editListing}
-                        </Link>
-                      )}
+                  {(car.status === "draft" || car.status === "pending_review" || car.status === "rejected" || car.status === "active" || car.status === "expired") && (
+                    <Link href={`/my-cars/${car.id}/edit`} className="btn btn-secondary">
+                      {car.status === "rejected" ? text.fixAndResubmit : text.editListing}
+                    </Link>
+                  )}
 
                       {car.status === "draft" && (
                         <button

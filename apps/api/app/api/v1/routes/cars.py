@@ -118,8 +118,8 @@ def update_car(
         raise HTTPException(status_code=404, detail="Not found")
     ensure_owner(car, user)
 
-    if car.status not in (CarStatus.draft, CarStatus.pending_review, CarStatus.rejected, CarStatus.active):
-        raise HTTPException(status_code=400, detail="Only draft/pending/rejected/active can be edited")
+    if car.status not in (CarStatus.draft, CarStatus.pending_review, CarStatus.rejected, CarStatus.active, CarStatus.expired):
+        raise HTTPException(status_code=400, detail="Only draft/pending/rejected/active/inactive can be edited")
 
     data = payload.model_dump(exclude_unset=True)
     if "year" in data:
@@ -186,8 +186,8 @@ def submit_car(
         raise HTTPException(status_code=404, detail="Not found")
     ensure_owner(car, user)
 
-    if car.status != CarStatus.draft:
-        raise HTTPException(status_code=400, detail="Only draft can be submitted")
+    if car.status not in (CarStatus.draft, CarStatus.expired):
+        raise HTTPException(status_code=400, detail="Only draft or inactive listings can be submitted")
 
     # MVP publish gates (tighten later)
     if not car.title_ar or not car.title_ar.strip():
@@ -221,8 +221,33 @@ def submit_car(
     return to_car_out(car, photos=photos_map.get(car.id, []))
 
 
-@router.delete("/cars/{car_id}")
-def delete_owner_car(
+@router.post("/cars/{car_id}/archive", response_model=CarOut)
+def archive_owner_car(
+    car_id: int,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
+    car = session.exec(select(CarListing).where(CarListing.id == car_id)).first()
+    if not car:
+        raise HTTPException(status_code=404, detail="Not found")
+    ensure_owner(car, user)
+
+    if car.status == CarStatus.expired:
+        photos_map = _load_photos_map(session, [car.id])
+        return to_car_out(car, photos=photos_map.get(car.id, []))
+
+    car.status = CarStatus.expired
+    car.updated_at = datetime.utcnow()
+    session.add(car)
+    session.commit()
+    session.refresh(car)
+    delete_car(str(car_id))
+    photos_map = _load_photos_map(session, [car.id])
+    return to_car_out(car, photos=photos_map.get(car.id, []))
+
+
+@router.delete("/cars/{car_id}/permanent")
+def permanently_delete_owner_car(
     car_id: int,
     session: Session = Depends(get_session),
     user: User = Depends(get_current_user),
