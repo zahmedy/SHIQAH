@@ -119,14 +119,17 @@ def _photo_count(session: Session, car_id: int) -> int:
 
 
 def auto_review_listing(session: Session, car: CarListing) -> CarListing:
+    if not car.title_ar.strip():
+        car.title_ar = f"{car.make} {car.model} {car.year} للبيع"
+
     content = f"{car.title_ar}\n{car.description_ar}".lower()
 
-    if not car.title_ar.strip() or not car.description_ar.strip():
+    if not car.description_ar.strip():
         return reject_listing(
             session,
             car,
             review_source=AUTO_REVIEW_SOURCE,
-            review_reason="Missing title or description.",
+            review_reason="Missing description.",
         )
 
     if len(car.description_ar.strip()) < 20:
@@ -151,14 +154,6 @@ def auto_review_listing(session: Session, car: CarListing) -> CarListing:
             car,
             review_source=AUTO_REVIEW_SOURCE,
             review_reason="External contact info is not allowed in the listing text.",
-        )
-
-    if car.price_sar <= 0:
-        return reject_listing(
-            session,
-            car,
-            review_source=AUTO_REVIEW_SOURCE,
-            review_reason="Invalid price.",
         )
 
     return approve_listing(

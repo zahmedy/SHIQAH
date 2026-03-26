@@ -22,6 +22,10 @@ def ensure_owner(car: CarListing, user: User):
         raise HTTPException(status_code=403, detail="Not your listing")
 
 
+def default_listing_title(make: str, model: str, year: int) -> str:
+    return f"{make} {model} {year} للبيع"
+
+
 def _load_photos_map(session: Session, car_ids: list[int]) -> dict[int, list[CarPhoto]]:
     if not car_ids:
         return {}
@@ -62,9 +66,11 @@ def create_car(
     session: Session = Depends(get_session),
     user: User = Depends(get_current_user),
 ):
+    title = (payload.title_ar or "").strip() or default_listing_title(payload.make, payload.model, payload.year)
+
     if payload.year < 1980 or payload.year > datetime.utcnow().year + 1:
         raise HTTPException(status_code=400, detail="Invalid year")
-    if payload.price_sar <= 0:
+    if payload.price_sar is not None and payload.price_sar <= 0:
         raise HTTPException(status_code=400, detail="Invalid price")
     if (payload.latitude is None) != (payload.longitude is None):
         raise HTTPException(status_code=400, detail="Latitude and longitude must be provided together")
@@ -76,7 +82,8 @@ def create_car(
     car = CarListing(
         owner_id=user.id,
         status=CarStatus.draft,
-        **payload.model_dump(),
+        **payload.model_dump(exclude={"title_ar"}),
+        title_ar=title,
     )
     session.add(car)
     session.commit()
@@ -131,6 +138,12 @@ def update_car(
         if next_lon is not None and not (-180 <= next_lon <= 180):
             raise HTTPException(status_code=400, detail="Invalid longitude")
 
+    next_make = data.get("make", car.make)
+    next_model = data.get("model", car.model)
+    next_year = data.get("year", car.year)
+    if "title_ar" in data:
+        data["title_ar"] = (data["title_ar"] or "").strip() or default_listing_title(next_make, next_model, next_year)
+
     for k, v in data.items():
         setattr(car, k, v)
     if car.status == CarStatus.rejected:
@@ -177,11 +190,10 @@ def submit_car(
         raise HTTPException(status_code=400, detail="Only draft can be submitted")
 
     # MVP publish gates (tighten later)
-    if not car.title_ar or not car.description_ar:
-        raise HTTPException(status_code=400, detail="Missing title/description")
-    if car.price_sar <= 0:
-        raise HTTPException(status_code=400, detail="Invalid price")
-
+    if not car.title_ar or not car.title_ar.strip():
+        car.title_ar = default_listing_title(car.make, car.model, car.year)
+    if not car.description_ar:
+        raise HTTPException(status_code=400, detail="Missing description")
     # sqlmodel may return a scalar int or a row-like object depending on backend/version.
     photo_count_result = session.exec(
         select(func.count()).select_from(CarMedia).where(CarMedia.car_id == car.id)

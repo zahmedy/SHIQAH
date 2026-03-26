@@ -114,11 +114,11 @@ def search_cars(
     if sort == "newest":
         body["sort"] = [{"published_at": {"order": "desc"}}]
     elif sort == "price_asc":
-        body["sort"] = [{"price_sar": {"order": "asc"}}]
+        body["sort"] = [{"price_sar": {"order": "asc", "missing": "_last"}}]
     elif sort == "price_desc":
-        body["sort"] = [{"price_sar": {"order": "desc"}}]
+        body["sort"] = [{"price_sar": {"order": "desc", "missing": "_last"}}]
     elif sort == "mileage_asc":
-        body["sort"] = [{"mileage_km": {"order": "asc"}}]
+        body["sort"] = [{"mileage_km": {"order": "asc", "missing": "_last"}}]
 
     try:
         res = c.search(index=settings.OPENSEARCH_INDEX, body=body)

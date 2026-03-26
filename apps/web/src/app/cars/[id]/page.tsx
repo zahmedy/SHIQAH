@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { apiGet } from "@/lib/api";
 import ListingPhotoGallery from "@/components/ListingPhotoGallery";
-import { formatDateTime, formatDistance, formatPrice, translateValue, type Locale } from "@/lib/locale";
+import { formatDateTime, formatDistance, formatListingPrice, translateValue, type Locale } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
 import ChatPanel from "./ChatPanel";
 import OfferForm from "./OfferForm";
@@ -23,7 +23,7 @@ type Listing = {
   make: string;
   model: string;
   year: number;
-  price_sar: number;
+  price_sar?: number | null;
   mileage_km?: number;
   title_ar: string;
   description_ar: string;
@@ -113,7 +113,7 @@ export default async function CarDetailPage({
           <h1 className="listing-title">{car.title_ar}</h1>
           <div className="listing-price-row">
             <p className="car-price-meta">{sellerAndTime(locale, data.seller.user_id, data.seller.name, car.published_at)}</p>
-            <p className="car-price">{formatPrice(car.price_sar, locale)}</p>
+            <p className="car-price">{formatListingPrice(car.price_sar, locale)}</p>
           </div>
           <OwnerActions ownerId={car.owner_id} carId={car.id} />
         </header>

@@ -41,7 +41,7 @@ class CarListing(SQLModel, table=True):
     model: str = Field(index=True)                # "Camry"
     year: int = Field(index=True)
 
-    price_sar: int = Field(index=True)
+    price_sar: Optional[int] = Field(default=None, index=True)
     mileage_km: Optional[int] = Field(default=None, index=True)
 
     body_type: Optional[str] = Field(default=None, index=True)      # sedan/suv/pickup

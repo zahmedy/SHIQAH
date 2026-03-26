@@ -4,8 +4,8 @@ import { apiGet } from "@/lib/api";
 import CityField from "@/components/CityField";
 import NearbySearch from "@/components/NearbySearch";
 import {
+  formatListingPrice,
   formatMileage,
-  formatPrice,
   formatRelativeHours,
   type Locale,
 } from "@/lib/locale";
@@ -20,7 +20,7 @@ type SearchItem = {
   make: string;
   model: string;
   year: number;
-  price_sar: number;
+  price_sar?: number | null;
   mileage_km?: number;
   title_ar: string;
   published_at?: string;
@@ -161,7 +161,7 @@ export default async function SearchPage({
                       <p className="car-meta">{car.make} {car.model} • {car.year}</p>
                       <p className="car-meta">{formatMileage(car.mileage_km, locale)}</p>
                       <div className="car-footer-row">
-                        <p className="car-price">{formatPrice(car.price_sar, locale)}</p>
+                        <p className="car-price">{formatListingPrice(car.price_sar, locale)}</p>
                         <p className="car-footer-meta">{locationUserAndTime(locale, car.city, car.district, car.seller_user_id, car.published_at)}</p>
                       </div>
                     </div>

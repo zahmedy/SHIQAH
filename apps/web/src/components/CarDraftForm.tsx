@@ -29,7 +29,7 @@ type CarPayload = {
   make: string;
   model: string;
   year: number;
-  price_sar: number;
+  price_sar?: number | null;
   mileage_km?: number;
   body_type?: string;
   transmission?: string;
@@ -168,7 +168,7 @@ function buildPayload(form: FormState, locale: Locale): BuildPayloadResult {
   const description = form.description_ar.trim();
   const isArabic = locale === "ar";
 
-  if (!city || !make || !model || !title || !description) {
+  if (!city || !make || !model || !description) {
     return { ok: false, error: isArabic ? "يرجى تعبئة جميع الحقول المطلوبة." : "Please fill all required fields." };
   }
 
@@ -178,9 +178,9 @@ function buildPayload(form: FormState, locale: Locale): BuildPayloadResult {
     return { ok: false, error: isArabic ? `يجب أن تكون السنة بين 1980 و ${maxYear}.` : `Year must be between 1980 and ${maxYear}.` };
   }
 
-  const price = Number(form.price_sar);
-  if (!Number.isInteger(price) || price <= 0) {
-    return { ok: false, error: isArabic ? "يجب أن يكون السعر رقمًا صحيحًا موجبًا." : "Price must be a positive integer." };
+  const price = parseOptionalNumber(form.price_sar);
+  if (form.price_sar.trim() && (price === undefined || price <= 0)) {
+    return { ok: false, error: isArabic ? "إذا أدخلت سعرًا، فيجب أن يكون رقمًا صحيحًا موجبًا." : "If provided, price must be a positive integer." };
   }
 
   const mileage = parseOptionalNumber(form.mileage_km);
@@ -211,7 +211,7 @@ function buildPayload(form: FormState, locale: Locale): BuildPayloadResult {
     make,
     model,
     year,
-    price_sar: price,
+    price_sar: form.price_sar.trim() ? price : null,
     mileage_km: mileage,
     body_type: form.body_type.trim() || undefined,
     transmission: form.transmission.trim() || undefined,
@@ -219,7 +219,7 @@ function buildPayload(form: FormState, locale: Locale): BuildPayloadResult {
     drivetrain: form.drivetrain.trim() || undefined,
     condition: form.condition.trim() || undefined,
     color: form.color.trim() || undefined,
-    title_ar: title,
+    title_ar: title || `${make} ${model} ${year} للبيع`,
     description_ar: description,
   };
 
@@ -304,7 +304,7 @@ export default function CarDraftForm({
         saveBeforeMainPhoto: "احفظ الإعلان قبل تغيير الصورة الرئيسية.",
         mainPhotoUpdated: "تم تحديث الصورة الرئيسية.",
         updateMainPhotoFailed: "تعذر تحديث الصورة الرئيسية.",
-        createDraftTitle: "إنشاء مسودة",
+        createDraftTitle: "إنشاء إعلان",
         editListingTitle: (id?: number) => `تعديل الإعلان #${id ?? ""}`,
         formNote: "أدخل تفاصيل الإعلان، واحفظه كمسودة في أي وقت، ثم أرسله عندما تصبح جاهزًا.",
         currentStatus: "الحالة الحالية",
@@ -325,7 +325,7 @@ export default function CarDraftForm({
         make: "الشركة *",
         model: "الموديل *",
         year: "السنة *",
-        price: "السعر (ر.س) *",
+        price: "السعر (ر.س)",
         mileage: "الممشى (كم)",
         bodyType: "نوع الهيكل",
         selectBodyType: "اختر نوع الهيكل",
@@ -339,7 +339,8 @@ export default function CarDraftForm({
         selectCondition: "اختر الحالة",
         color: "اللون",
         selectColor: "اختر اللون",
-        titleLabel: "العنوان *",
+        titleLabel: "العنوان",
+        titleHelp: "إذا تركته فارغًا، سيتم إنشاء عنوان تلقائيًا من الشركة والموديل والسنة.",
         descriptionLabel: "الوصف *",
         photos: "الصور",
         photosHelp: "أضف صورًا واضحة.",
@@ -368,7 +369,7 @@ export default function CarDraftForm({
         deleting: "جارٍ الحذف...",
         deleteDraft: "حذف المسودة",
         deleteListing: "حذف الإعلان",
-        backToMyCars: "العودة إلى سياراتي",
+        backToMyCars: "العودة إلى الملف الشخصي",
         editCreatedDraft: "تعديل المسودة التي تم إنشاؤها",
       }
     : {
@@ -408,7 +409,7 @@ export default function CarDraftForm({
         saveBeforeMainPhoto: "Save the listing before changing the main photo.",
         mainPhotoUpdated: "Main photo updated.",
         updateMainPhotoFailed: "Failed to update main photo.",
-        createDraftTitle: "Create Draft",
+        createDraftTitle: "Create Post",
         editListingTitle: (id?: number) => `Edit Listing #${id ?? ""}`,
         formNote: "Fill in the listing details, save a draft at any time, and submit when you're ready.",
         currentStatus: "Current status",
@@ -429,7 +430,7 @@ export default function CarDraftForm({
         make: "Make *",
         model: "Model *",
         year: "Year *",
-        price: "Price (SAR) *",
+        price: "Price (SAR)",
         mileage: "Mileage (KM)",
         bodyType: "Body Type",
         selectBodyType: "Select body type",
@@ -443,7 +444,8 @@ export default function CarDraftForm({
         selectCondition: "Select condition",
         color: "Color",
         selectColor: "Select color",
-        titleLabel: "Title (Arabic) *",
+        titleLabel: "Title",
+        titleHelp: "If left blank, a title will be generated automatically from make, model, and year.",
         descriptionLabel: "Description (Arabic) *",
         photos: "Photos",
         photosHelp: "Add clear photos.",
@@ -472,7 +474,7 @@ export default function CarDraftForm({
         deleting: "Deleting...",
         deleteDraft: "Delete Draft",
         deleteListing: "Delete Listing",
-        backToMyCars: "Back to My Cars",
+        backToMyCars: "Back to Profile",
         editCreatedDraft: "Edit Created Draft",
       };
   const saveButtonLabel = isReviewLocked ? text.saveChanges : text.saveDraft;
@@ -1405,6 +1407,7 @@ export default function CarDraftForm({
                 value={form.title_ar}
                 onChange={(e) => setForm((prev) => ({ ...prev, title_ar: e.target.value }))}
               />
+              <p className="helper-text">{text.titleHelp}</p>
             </div>
 
             <div>

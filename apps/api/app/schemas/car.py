@@ -18,7 +18,7 @@ class CarCreate(BaseModel):
     model: str
     year: int
 
-    price_sar: int
+    price_sar: Optional[int] = None
     mileage_km: Optional[int] = None
 
     body_type: Optional[str] = None
@@ -28,7 +28,7 @@ class CarCreate(BaseModel):
     condition: Optional[str] = None
     color: Optional[str] = None
 
-    title_ar: str
+    title_ar: Optional[str] = None
     description_ar: str
 
 
@@ -70,7 +70,7 @@ class CarOut(BaseModel):
     model: str
     year: int
 
-    price_sar: int
+    price_sar: Optional[int]
     mileage_km: Optional[int]
 
     body_type: Optional[str]

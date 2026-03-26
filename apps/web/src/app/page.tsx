@@ -1,6 +1,6 @@
 import { apiGet } from "@/lib/api";
 import HomeListingCard from "@/components/HomeListingCard";
-import { formatMileage, formatPrice, formatRelativeHours, type Locale } from "@/lib/locale";
+import { formatListingPrice, formatMileage, formatRelativeHours, type Locale } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
 
 type HomeListing = {
@@ -12,7 +12,7 @@ type HomeListing = {
   make: string;
   model: string;
   year: number;
-  price_sar: number;
+  price_sar?: number | null;
   mileage_km?: number;
   title_ar: string;
   published_at?: string;
@@ -69,7 +69,7 @@ export default async function HomePage() {
                 model={car.model}
                 year={car.year}
                 mileageText={formatMileage(car.mileage_km, locale)}
-                priceText={formatPrice(car.price_sar, locale)}
+                priceText={formatListingPrice(car.price_sar, locale)}
                 metaText={locationUserAndTime(locale, car.city, car.district, car.seller_user_id, car.published_at)}
                 photos={car.photos}
               />
