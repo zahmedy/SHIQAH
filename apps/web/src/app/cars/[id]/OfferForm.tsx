@@ -58,6 +58,7 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
   const [viewerId, setViewerId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [acceptingId, setAcceptingId] = useState<number | null>(null);
+  const [unacceptingId, setUnacceptingId] = useState<number | null>(null);
   const [confirmAmount, setConfirmAmount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<OfferSummary | null>(null);
@@ -68,50 +69,53 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
 
   const text = isArabic
     ? {
-        title: "المزايدة",
-        ownerTitle: "إدارة العروض",
-        highestOffer: "أعلى عرض",
-        noOffers: "لا توجد عروض بعد",
-        bidCount: (count: number) => `${count} عرض`,
-        recentBids: "أحدث العروض",
-        amount: "قيمة العرض",
-        signIn: "سجّل الدخول للمزايدة",
-        signInHint: "يتم استخدام رقمك المسجل تلقائيًا عند تقديم العرض.",
-        minBid: (amountSar: number) => `يجب أن يكون العرض أعلى من ${formatPrice(amountSar, locale)}.`,
-        warningTitle: "تنبيه مهم قبل تقديم العرض",
-        warningBody: "إذا اعتبر مالك السيارة هذا العرض عرضًا وهميًا ولم تكتمل عملية الشراء، سيتم تقييد حسابك من المزايدة لمدة شهر. وإذا تكرر ذلك مرة أخرى فسيتم حظر الحساب نهائيًا.",
-        confirmBid: "أوافق وأقدّم العرض",
+        title: "السوم",
+        ownerTitle: "السومات",
+        highestOffer: "أعلى سومة",
+        noOffers: "لا يوجد",
+        bidCount: (count: number) => `${count} سومة`,
+        recentBids: "آخر السومات",
+        amount: "سومتك",
+        signIn: "سجّل دخولك عشان تسوم",
+        signInHint: "بنستخدم رقمك المسجّل تلقائي إذا حطّيت سومة.",
+        minBid: (amountSar: number) => `لازم تكون السومة أعلى من ${formatPrice(amountSar, locale)}.`,
+        warningTitle: "تنبيه قبل السومة",
+        warningBody: "إذا اعتبر صاحب السيارة إن هذي سومة وهمية وما تم الشراء، بيتوقف حسابك عن السوم لمدة شهر. وإذا تكررت مرة ثانية، ينحظر الحساب نهائيًا.",
+        confirmBid: "أوافق وأحط السومة",
         cancelBid: "إلغاء",
-        confirmAmount: "قيمة العرض",
-        closedHint: "تم إغلاق المزايدة لهذا الإعلان بعد قبول عرض.",
-        ownerHint: "بعد القبول سيتم إغلاق المزايدة.",
-        ownerNoOffers: "لا توجد عروض لإدارتها بعد.",
-        bidder: "المزايد",
-        accept: "قبول العرض",
+        confirmAmount: "قيمة السومة",
+        closedHint: "السوم مقفول على هالإعلان بعد قبول سومة.",
+        ownerHint: "إذا قبلت سومة، يتقفل السوم.",
+        ownerNoOffers: "ما فيه سومات للحين.",
+        bidder: "صاحب السومة",
+        accept: "قبول السومة",
         accepting: "جارٍ القبول...",
-        accepted: "تم قبول هذا العرض.",
-        acceptedSummary: "تم قبول عرض لهذه السيارة.",
-        acceptedContactTitle: "التواصل مع صاحب العرض المقبول",
-        bidderPhone: "رقم المزايد",
-        callBidder: "اتصل بالمزايد",
-        whatsappBidder: "واتساب المزايد",
-        submit: "قدّم عرضك",
+        accepted: "مقبولة",
+        acceptedSummary: "تم قبول سومة على هالسيارة.",
+        unaccept: "إلغاء القبول",
+        unaccepting: "جارٍ الإلغاء...",
+        unacceptedSuccess: "تم إلغاء قبول السومة وفتح السوم من جديد.",
+        acceptedContactTitle: "تواصل مع صاحب السومة المقبولة",
+        bidderPhone: "رقم صاحب السومة",
+        callBidder: "اتصل عليه",
+        whatsappBidder: "كلّمه واتساب",
+        submit: "حط سومتك",
         submitting: "جارٍ الإرسال...",
-        loading: "جارٍ تحميل العروض...",
+        loading: "جارٍ تحميل السومات...",
         missingApi: "متغير NEXT_PUBLIC_API_BASE غير موجود.",
-        invalidAmount: "أدخل قيمة عرض صحيحة.",
-        lowerThanHighest: (amountSar: number) => `يجب أن يكون العرض أعلى من ${formatPrice(amountSar, locale)}.`,
-        success: "تم تسجيل العرض.",
-        acceptedSuccess: "تم قبول العرض وإغلاق المزايدة.",
-        loginRequired: "يجب تسجيل الدخول أولًا لتقديم عرض.",
-        failed: "تعذر إرسال العرض.",
-        acceptFailed: "تعذر قبول العرض.",
+        invalidAmount: "حط قيمة صحيحة.",
+        lowerThanHighest: (amountSar: number) => `لازم تكون السومة أعلى من ${formatPrice(amountSar, locale)}.`,
+        success: "تم تسجيل السومة.",
+        acceptedSuccess: "تم قبول السومة وإقفال السوم.",
+        loginRequired: "لازم تسجّل دخولك أول قبل ما تسوم.",
+        failed: "ما قدرنا نرسل السومة.",
+        acceptFailed: "ما قدرنا نقبل السومة.",
       }
     : {
         title: "Bidding",
-        ownerTitle: "Offer Management",
+        ownerTitle: "Offers",
         highestOffer: "Highest Offer",
-        noOffers: "No offers yet",
+        noOffers: "None",
         bidCount: (count: number) => `${count} bids`,
         recentBids: "Recent Offers",
         amount: "Your bid",
@@ -131,6 +135,9 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
         accepting: "Accepting...",
         accepted: "Accepted",
         acceptedSummary: "An offer has been accepted for this listing.",
+        unaccept: "Unaccept Offer",
+        unaccepting: "Reopening...",
+        unacceptedSuccess: "Offer acceptance removed and bidding reopened.",
         acceptedContactTitle: "Contact Accepted Bidder",
         bidderPhone: "Bidder phone",
         callBidder: "Call Bidder",
@@ -393,16 +400,62 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
     }
   }
 
+  async function handleUnaccept(offerId: number) {
+    if (!API_BASE || !token) {
+      setError(text.loginRequired);
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+    setUnacceptingId(offerId);
+    try {
+      const res = await fetch(`${API_BASE}/v1/cars/${carId}/offers/${offerId}/unaccept`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const contentType = res.headers.get("content-type") || "";
+        const payload = contentType.includes("application/json") ? await res.json() : await res.text();
+        const detail = typeof payload === "string" ? payload : payload?.detail;
+        throw new Error(detail || text.acceptFailed);
+      }
+
+      setSuccess(text.unacceptedSuccess);
+      await Promise.all([loadOffers(), (async () => {
+        const manageRes = await fetch(`${API_BASE}/v1/cars/${carId}/offers/manage`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          cache: "no-store",
+        });
+        if (manageRes.ok) {
+          const data = (await manageRes.json()) as OwnerOfferSummary;
+          setOwnerSummary(data);
+        }
+      })()]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : text.acceptFailed);
+    } finally {
+      setUnacceptingId(null);
+    }
+  }
+
   return (
     <section className="offer-panel">
       <h3 className="subheading">{isOwner ? text.ownerTitle : text.title}</h3>
-      <div className="offer-summary spaced-top-sm">
-        <p className="offer-summary-label">{text.highestOffer}</p>
-        <p className="offer-summary-value">
-          {currentSummary?.highest_offer_sar ? formatPrice(currentSummary.highest_offer_sar, locale) : text.noOffers}
-        </p>
-        <p className="offer-summary-count">{text.bidCount(currentSummary?.offer_count ?? 0)}</p>
-      </div>
+      {currentSummary?.offer_count ? (
+        <div className="offer-summary spaced-top-sm">
+          <p className="offer-summary-label">{text.highestOffer}</p>
+          <p className="offer-summary-value">
+            {currentSummary?.highest_offer_sar ? formatPrice(currentSummary.highest_offer_sar, locale) : text.noOffers}
+          </p>
+          <p className="offer-summary-count">{text.bidCount(currentSummary?.offer_count ?? 0)}</p>
+        </div>
+      ) : null}
 
       {acceptedOffer ? (
         <p className="notice success spaced-top-sm">
@@ -429,6 +482,16 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
               </div>
             </>
           ) : null}
+          <div className="contact-actions">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={unacceptingId === acceptedOwnerOffer.id}
+              onClick={() => void handleUnaccept(acceptedOwnerOffer.id)}
+            >
+              {unacceptingId === acceptedOwnerOffer.id ? text.unaccepting : text.unaccept}
+            </button>
+          </div>
         </div>
       ) : null}
 

@@ -40,13 +40,13 @@ export default function ChatPanel({ carId }: { carId: number }) {
   const [sending, setSending] = useState(false);
   const text = locale === "ar"
     ? {
-        loadChatFailed: "تعذر تحميل المحادثة.",
-        sendMessageFailed: "تعذر إرسال الرسالة.",
-        loginToChat: "سجل الدخول للمحادثة",
+        loadChatFailed: "ما قدرنا نحمّل الرسائل.",
+        sendMessageFailed: "ما قدرنا نرسل الرسالة.",
+        loginToChat: "سجّل دخولك للمحادثة",
         loadingChat: "جارٍ تحميل المحادثة...",
-        noMessages: "لا توجد رسائل بعد.",
+        noMessages: "ما فيه رسائل للحين.",
         typeMessage: "اكتب رسالتك...",
-        loginToStart: "سجل الدخول لبدء المحادثة",
+        loginToStart: "سجّل دخولك وابدأ المراسلة",
         sending: "جارٍ الإرسال...",
         send: "إرسال",
         user: "مستخدم",

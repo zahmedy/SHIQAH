@@ -92,10 +92,10 @@ export default async function SearchPage({
   return (
     <main className="page shell">
       <section className="hero hero-mini">
-        <h1>{isArabic ? "ابحث عن سيارات" : "Search Cars"}</h1>
+        <h1>{isArabic ? "دوّر على سيارة" : "Search Cars"}</h1>
         <p>
           {isArabic
-            ? "صفِّ الإعلانات حسب المدينة أو الشركة أو الموديل أو الكلمات المفتاحية في العنوان والوصف."
+            ? "فلتر حسب المدينة أو الشركة أو الموديل أو أي كلمة في العنوان والوصف."
             : "Filter by city, make, model, or keywords in Arabic title/description."}
         </p>
       </section>
@@ -108,7 +108,7 @@ export default async function SearchPage({
             {params.lon ? <input type="hidden" name="lon" value={params.lon} /> : null}
             {params.radius_km ? <input type="hidden" name="radius_km" value={params.radius_km} /> : null}
             <div>
-              <label className="label" htmlFor="q">{isArabic ? "كلمة مفتاحية" : "Keyword"}</label>
+              <label className="label" htmlFor="q">{isArabic ? "كلمة" : "Keyword"}</label>
               <input id="q" name="q" defaultValue={params.q ?? ""} placeholder="كامري" className="input" />
             </div>
 
@@ -118,8 +118,8 @@ export default async function SearchPage({
               name="city"
               defaultValue={params.city ?? ""}
               blankLabel={isArabic ? "أي مدينة" : "Any city"}
-              helperText={isArabic ? "اختر مدينة رئيسية أو اختر أخرى للبحث في مدينة مخصصة." : "Pick a major city or choose Other to search a custom city."}
-              otherPlaceholder={isArabic ? "اكتب مدينة أخرى" : "Enter another city"}
+              helperText={isArabic ? "اختر مدينة من القائمة أو اكتب مدينة ثانية." : "Pick a major city or choose Other to search a custom city."}
+              otherPlaceholder={isArabic ? "اكتب مدينة ثانية" : "Enter another city"}
             />
 
             <div>
@@ -132,19 +132,19 @@ export default async function SearchPage({
               <input id="model" name="model" defaultValue={params.model ?? ""} placeholder="Camry" className="input" />
             </div>
 
-            <button type="submit" className="btn btn-primary">{isArabic ? "تطبيق الفلاتر" : "Apply Filters"}</button>
+            <button type="submit" className="btn btn-primary">{isArabic ? "طبّق الفلترة" : "Apply Filters"}</button>
           </form>
         </aside>
 
         <section>
           <div className="panel panel-compact">
-            <strong>{data.total}</strong> {isArabic ? "إعلانًا" : "listings found"}
+            <strong>{data.total}</strong> {isArabic ? "نتيجة" : "listings found"}
           </div>
 
           {fetchError ? (
             <div className="notice error">{fetchError}</div>
           ) : data.items.length === 0 ? (
-            <div className="notice">{isArabic ? "لم يتم العثور على إعلانات مطابقة." : "No listings matched your filters."}</div>
+            <div className="notice">{isArabic ? "ما لقينا نتائج مطابقة." : "No listings matched your filters."}</div>
           ) : (
             <div className="listing-grid">
               {data.items.map((car) => {

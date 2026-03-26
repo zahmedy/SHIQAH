@@ -55,7 +55,7 @@ export default function TopbarCreate() {
 
   return (
     <Link href={href} className="nav-link">
-      {locale === "ar" ? "أضف إعلانًا" : "Create"}
+      {locale === "ar" ? "أضف إعلان" : "Create"}
     </Link>
   );
 }

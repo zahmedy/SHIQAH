@@ -24,9 +24,9 @@ export default function TopbarUser() {
   const [ready, setReady] = useState(false);
   const text = locale === "ar"
     ? {
-        loggedIn: "تم تسجيل الدخول",
-        login: "تسجيل الدخول",
-        logout: "تسجيل الخروج",
+        loggedIn: "مسجّل",
+        login: "دخول",
+        logout: "خروج",
       }
     : {
         loggedIn: "Logged in",

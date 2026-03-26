@@ -90,15 +90,15 @@ export default async function CarDetailPage({
   try {
     data = await apiGet<PublicCarResponse>(`/v1/public/cars/${id}`);
   } catch (err) {
-    fetchError = err instanceof Error ? err.message : isArabic ? "تعذر تحميل الإعلان." : "Failed to load listing.";
+    fetchError = err instanceof Error ? err.message : isArabic ? "ما قدرنا نحمّل الإعلان." : "Failed to load listing.";
   }
 
   if (!data) {
     return (
       <main className="page shell">
-        <div className="notice error">{fetchError || (isArabic ? "الإعلان غير موجود." : "Listing not found.")}</div>
+        <div className="notice error">{fetchError || (isArabic ? "الإعلان مو موجود." : "Listing not found.")}</div>
         <div className="spaced-top">
-          <Link href="/search" className="btn btn-secondary">{isArabic ? "العودة إلى البحث" : "Back to search"}</Link>
+          <Link href="/search" className="btn btn-secondary">{isArabic ? "ارجع للبحث" : "Back to search"}</Link>
         </div>
       </main>
     );
@@ -121,7 +121,7 @@ export default async function CarDetailPage({
         {car.photos?.length ? (
           <ListingPhotoGallery photos={car.photos} title={car.title_ar} />
         ) : (
-          <div className="notice spaced-top-sm">{isArabic ? "لا توجد صور بعد." : "No photos yet."}</div>
+          <div className="notice spaced-top-sm">{isArabic ? "ما فيه صور للحين." : "No photos yet."}</div>
         )}
 
         <div className="specs">
@@ -178,20 +178,20 @@ export default async function CarDetailPage({
       </section>
 
       <aside className="panel">
-        <h2 className="subheading">{isArabic ? "التواصل مع البائع" : "Contact Seller"}</h2>
+        <h2 className="subheading">{isArabic ? "تواصل مع صاحب السيارة" : "Contact Seller"}</h2>
         {sellerLabel(data.seller.user_id, data.seller.name) ? (
           <p className="car-meta">{sellerLabel(data.seller.user_id, data.seller.name)}</p>
         ) : null}
         <div className="contact-actions">
           {data.contact.call_phone_e164 && (
             <a href={`tel:${data.contact.call_phone_e164}`} className="btn btn-secondary">
-              {isArabic ? "اتصل بالبائع" : "Call Seller"}
+              {isArabic ? "اتصل عليه" : "Call Seller"}
             </a>
           )}
 
           {data.contact.whatsapp_url && (
             <a href={data.contact.whatsapp_url} target="_blank" rel="noreferrer" className="btn btn-secondary">
-              {isArabic ? "افتح واتساب" : "Open WhatsApp"}
+              {isArabic ? "كلّمه واتساب" : "Open WhatsApp"}
             </a>
           )}
         </div>
@@ -202,7 +202,7 @@ export default async function CarDetailPage({
 
         <hr className="separator" />
 
-        <h3 className="subheading">{isArabic ? "المحادثة" : "Chat"}</h3>
+        <h3 className="subheading">{isArabic ? "الرسائل" : "Chat"}</h3>
         <ChatPanel carId={car.id} />
       </aside>
     </main>

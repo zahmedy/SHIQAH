@@ -52,11 +52,11 @@ export default async function HomePage() {
 
   return (
     <main className="page shell">
-      <h1 className="section-title">{isArabic ? "أحدث الإعلانات" : "Latest Listings"}</h1>
+      <h1 className="section-title">{isArabic ? "أحدث السيارات" : "Latest Listings"}</h1>
       {fetchError ? (
         <div className="notice error">{fetchError}</div>
       ) : listings.length === 0 ? (
-        <div className="notice">{isArabic ? "لا توجد إعلانات متاحة بعد." : "No listings available yet."}</div>
+        <div className="notice">{isArabic ? "ما فيه إعلانات للحين." : "No listings available yet."}</div>
       ) : (
         <section className="listing-grid">
           {listings.map((car) => {

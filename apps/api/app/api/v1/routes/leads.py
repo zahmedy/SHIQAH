@@ -277,6 +277,44 @@ def accept_offer(
     return _owner_offer_out(offer, buyers)
 
 
+@router.post("/cars/{car_id}/offers/{offer_id}/unaccept", response_model=OwnerOfferOut)
+def unaccept_offer(
+    car_id: int,
+    offer_id: int,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
+    car = _load_active_car(session, car_id)
+    if user.id != car.owner_id:
+        raise HTTPException(status_code=403, detail="Only the listing owner can unaccept offers")
+
+    offer = session.exec(
+        select(Lead).where(
+            Lead.id == offer_id,
+            Lead.car_id == car_id,
+            Lead.channel == "offer",
+            Lead.amount_sar.is_not(None),
+        )
+    ).first()
+    if not offer:
+        raise HTTPException(status_code=404, detail="Offer not found")
+    if not offer.accepted_at:
+        raise HTTPException(status_code=400, detail="Offer is not currently accepted")
+
+    offer.accepted_at = None
+    session.add(offer)
+    session.commit()
+    session.refresh(offer)
+
+    buyers = {}
+    if offer.buyer_user_id:
+        buyer = session.exec(select(User).where(User.id == offer.buyer_user_id)).first()
+        if buyer and buyer.id is not None:
+            buyers[buyer.id] = buyer
+
+    return _owner_offer_out(offer, buyers)
+
+
 @router.get("/seller/leads", response_model=list[LeadOut])
 def my_leads(
     session: Session = Depends(get_session),

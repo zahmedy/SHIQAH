@@ -18,13 +18,13 @@ export default function NearbySearch({ initialRadiusKm }: { initialRadiusKm: num
   const text = locale === "ar"
     ? {
         distance: "المسافة",
-        useMyLocation: "استخدم موقعي",
-        clearLocation: "مسح الموقع",
-        geolocationUnsupported: "المتصفح لا يدعم تحديد الموقع.",
-        requestingLocation: "جارٍ طلب الموقع...",
-        unableToRetrieveLocation: "تعذر الحصول على الموقع.",
-        showingWithin: (distance: number) => `يتم عرض الإعلانات ضمن ${formatDistance(distance, locale)}.`,
-        filteringWithin: (distance: number) => `يتم تصفية الإعلانات ضمن ${formatDistance(distance, locale)}.`,
+        useMyLocation: "حدّد موقعي",
+        clearLocation: "امسح الموقع",
+        geolocationUnsupported: "المتصفح ما يدعم تحديد الموقع.",
+        requestingLocation: "جارٍ تحديد موقعك...",
+        unableToRetrieveLocation: "ما قدرنا نحدد موقعك.",
+        showingWithin: (distance: number) => `نطلع لك الإعلانات القريبة ضمن ${formatDistance(distance, locale)}.`,
+        filteringWithin: (distance: number) => `نعرض لك الإعلانات القريبة ضمن ${formatDistance(distance, locale)}.`,
       }
     : {
         distance: "Distance",
