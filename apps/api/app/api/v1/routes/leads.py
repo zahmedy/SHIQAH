@@ -16,9 +16,11 @@ from app.schemas.lead import (
     OwnerOfferOut,
     OwnerOfferSummaryOut,
 )
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_optional_current_user
 
 router = APIRouter(tags=["leads"])
+PUBLIC_OFFER_CHANNELS = {"offer", "offer_public"}
+ALL_OFFER_CHANNELS = {"offer", "offer_public", "offer_private"}
 
 
 def _load_active_car(session: Session, car_id: int) -> CarListing:
@@ -33,7 +35,7 @@ def _accepted_offer_for_car(session: Session, car_id: int) -> Lead | None:
         select(Lead)
         .where(
             Lead.car_id == car_id,
-            Lead.channel == "offer",
+            Lead.channel.in_(ALL_OFFER_CHANNELS),
             Lead.amount_sar.is_not(None),
             Lead.accepted_at.is_not(None),
         )
@@ -45,7 +47,7 @@ def _offer_count_for_car(session: Session, car_id: int) -> int:
     total_count_result = session.exec(
         select(func.count()).select_from(Lead).where(
             Lead.car_id == car_id,
-            Lead.channel == "offer",
+            Lead.channel.in_(PUBLIC_OFFER_CHANNELS),
             Lead.amount_sar.is_not(None),
         )
     ).one()
@@ -60,10 +62,24 @@ def _top_offers_for_car(session: Session, car_id: int, limit: int = 5) -> list[L
         select(Lead)
         .where(
             Lead.car_id == car_id,
-            Lead.channel == "offer",
+            Lead.channel.in_(PUBLIC_OFFER_CHANNELS),
             Lead.amount_sar.is_not(None),
         )
         .order_by(Lead.amount_sar.desc(), Lead.created_at.desc())
+        .limit(limit)
+    ).all()
+
+
+def _viewer_private_offers_for_car(session: Session, car_id: int, viewer_id: int, limit: int = 5) -> list[Lead]:
+    return session.exec(
+        select(Lead)
+        .where(
+            Lead.car_id == car_id,
+            Lead.channel == "offer_private",
+            Lead.buyer_user_id == viewer_id,
+            Lead.amount_sar.is_not(None),
+        )
+        .order_by(Lead.created_at.desc(), Lead.id.desc())
         .limit(limit)
     ).all()
 
@@ -73,12 +89,16 @@ def _highest_offer_amount_for_car(session: Session, car_id: int) -> int | None:
         select(Lead)
         .where(
             Lead.car_id == car_id,
-            Lead.channel == "offer",
+            Lead.channel.in_(PUBLIC_OFFER_CHANNELS),
             Lead.amount_sar.is_not(None),
         )
         .order_by(Lead.amount_sar.desc(), Lead.created_at.desc())
     ).first()
     return offer.amount_sar if offer and offer.amount_sar is not None else None
+
+
+def _offer_visibility(offer: Lead) -> str:
+    return "private" if offer.channel == "offer_private" else "public"
 
 
 def _offer_out(offer: Lead) -> OfferOut:
@@ -87,6 +107,7 @@ def _offer_out(offer: Lead) -> OfferOut:
         amount_sar=offer.amount_sar or 0,
         created_at=offer.created_at,
         accepted_at=offer.accepted_at,
+        visibility=_offer_visibility(offer),
     )
 
 
@@ -100,6 +121,7 @@ def _owner_offer_out(offer: Lead, buyers: dict[int, User]) -> OwnerOfferOut:
         amount_sar=offer.amount_sar or 0,
         created_at=offer.created_at,
         accepted_at=offer.accepted_at,
+        visibility=_offer_visibility(offer),
         buyer_user_id=offer.buyer_user_id,
         buyer_user_label=buyer_label,
         phone_e164=offer.phone_e164,
@@ -145,6 +167,8 @@ def create_offer(
     user: User = Depends(get_current_user),
 ):
     car = _load_active_car(session, car_id)
+    if payload.visibility not in {"public", "private"}:
+        raise HTTPException(status_code=400, detail="Invalid offer type")
 
     if payload.amount_sar <= 0:
         raise HTTPException(status_code=400, detail="Invalid offer amount")
@@ -158,9 +182,12 @@ def create_offer(
     if _accepted_offer_for_car(session, car_id):
         raise HTTPException(status_code=400, detail="Bidding is closed for this listing")
 
-    highest_offer = _highest_offer_amount_for_car(session, car_id)
-    if highest_offer is not None and payload.amount_sar <= highest_offer:
-        raise HTTPException(status_code=400, detail=f"Your bid must be higher than the current highest bid of {highest_offer} SAR")
+    if payload.visibility == "public":
+        highest_offer = _highest_offer_amount_for_car(session, car_id)
+        if highest_offer is not None and payload.amount_sar <= highest_offer:
+            raise HTTPException(status_code=400, detail=f"Your bid must be higher than the current highest bid of {highest_offer} SAR")
+
+    offer_channel = "offer_public" if payload.visibility == "public" else "offer_private"
 
     lead = Lead(
         car_id=car.id,
@@ -169,7 +196,7 @@ def create_offer(
         phone_e164=user.phone_e164,
         message=None,
         amount_sar=payload.amount_sar,
-        channel="offer",
+        channel=offer_channel,
     )
     session.add(lead)
     session.commit()
@@ -182,19 +209,37 @@ def create_offer(
 def get_offers(
     car_id: int,
     session: Session = Depends(get_session),
+    user: User | None = Depends(get_optional_current_user),
 ):
     _load_active_car(session, car_id)
 
     offer_count = _offer_count_for_car(session, car_id)
-    offers = _top_offers_for_car(session, car_id)
     accepted_offer = _accepted_offer_for_car(session, car_id)
-    highest_offer = offers[0].amount_sar if offers else None
+    highest_offer = _highest_offer_amount_for_car(session, car_id)
+    offers = _top_offers_for_car(session, car_id)
+    if user:
+        private_offers = _viewer_private_offers_for_car(session, car_id, user.id or 0)
+        offers = sorted(
+            [*offers, *private_offers],
+            key=lambda offer: (
+                -(offer.amount_sar or 0),
+                -(offer.created_at.timestamp() if offer.created_at else 0),
+                -(offer.id or 0),
+            ),
+        )[:10]
+    can_view_accepted_offer = (
+        accepted_offer is not None
+        and (
+            accepted_offer.channel in PUBLIC_OFFER_CHANNELS
+            or (user is not None and user.id == accepted_offer.buyer_user_id)
+        )
+    )
 
     return OfferSummaryOut(
         highest_offer_sar=highest_offer,
         offer_count=offer_count,
         bidding_open=accepted_offer is None,
-        accepted_offer=_offer_out(accepted_offer) if accepted_offer else None,
+        accepted_offer=_offer_out(accepted_offer) if can_view_accepted_offer and accepted_offer else None,
         offers=[_offer_out(offer) for offer in offers],
     )
 
@@ -213,7 +258,7 @@ def get_manage_offers(
         select(Lead)
         .where(
             Lead.car_id == car_id,
-            Lead.channel == "offer",
+            Lead.channel.in_(ALL_OFFER_CHANNELS),
             Lead.amount_sar.is_not(None),
         )
         .order_by(Lead.amount_sar.desc(), Lead.created_at.desc())
@@ -251,7 +296,7 @@ def accept_offer(
         select(Lead).where(
             Lead.id == offer_id,
             Lead.car_id == car_id,
-            Lead.channel == "offer",
+            Lead.channel.in_(ALL_OFFER_CHANNELS),
             Lead.amount_sar.is_not(None),
         )
     ).first()
@@ -292,7 +337,7 @@ def unaccept_offer(
         select(Lead).where(
             Lead.id == offer_id,
             Lead.car_id == car_id,
-            Lead.channel == "offer",
+            Lead.channel.in_(ALL_OFFER_CHANNELS),
             Lead.amount_sar.is_not(None),
         )
     ).first()

@@ -879,6 +879,20 @@ a {
 .offer-list-body {
   display: grid;
   gap: 0.18rem;
+  min-width: 0;
+}
+
+.offer-list-side {
+  display: grid;
+  justify-items: end;
+  gap: 0.45rem;
+  flex: 0 0 auto;
+}
+
+.offer-list-meta {
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-align: end;
 }
 
 .offer-list-badge {

@@ -14,6 +14,7 @@ type OfferEntry = {
   amount_sar: number;
   created_at: string;
   accepted_at: string | null;
+  visibility: "public" | "private";
 };
 
 type OfferSummary = {
@@ -60,6 +61,7 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
   const [acceptingId, setAcceptingId] = useState<number | null>(null);
   const [unacceptingId, setUnacceptingId] = useState<number | null>(null);
   const [confirmAmount, setConfirmAmount] = useState<number | null>(null);
+  const [confirmVisibility, setConfirmVisibility] = useState<"public" | "private" | null>(null);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<OfferSummary | null>(null);
   const [ownerSummary, setOwnerSummary] = useState<OwnerOfferSummary | null>(null);
@@ -69,24 +71,31 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
 
   const text = isArabic
     ? {
-        title: "السوم",
-        ownerTitle: "السومات",
+        title: "السوم والعرض",
+        ownerTitle: "العروض",
         highestOffer: "أعلى سومة",
         noOffers: "لا يوجد",
         bidCount: (count: number) => `${count} سومة`,
         recentBids: "آخر السومات",
         amount: "سومتك",
-        signIn: "سجّل دخولك عشان تسوم",
-        signInHint: "بنستخدم رقمك المسجّل تلقائي إذا حطّيت سومة.",
-        minBid: (amountSar: number) => `لازم تكون السومة أعلى من ${formatPrice(amountSar, locale)}.`,
+        signIn: "سجّل دخولك عشان تسوم أو ترسل عرض",
+        signInHint: "بنستخدم رقمك المسجّل تلقائي.",
+        minBid: (amountSar: number) => `في السوم العلني لازم تكون السومة أعلى من ${formatPrice(amountSar, locale)}.`,
+        publicHint: "السوم العلني يطلع للجميع ويرفع أعلى سومة.",
+        privateHint: "العرض الخاص يوصلك لصاحب السيارة فقط.",
+        publicBid: "سوم علني",
+        privateOffer: "عرض خاص",
+        publicBadge: "علني",
+        privateBadge: "خاص",
         warningTitle: "تنبيه قبل السومة",
         warningBody: "إذا اعتبر صاحب السيارة إن هذي سومة وهمية وما تم الشراء، بيتوقف حسابك عن السوم لمدة شهر. وإذا تكررت مرة ثانية، ينحظر الحساب نهائيًا.",
         confirmBid: "أوافق وأحط السومة",
         cancelBid: "إلغاء",
         confirmAmount: "قيمة السومة",
-        closedHint: "السوم مقفول على هالإعلان بعد قبول سومة.",
-        ownerHint: "إذا قبلت سومة، يتقفل السوم.",
-        ownerNoOffers: "ما فيه سومات للحين.",
+        confirmType: "نوع العرض",
+        closedHint: "العروض مقفولة على هالإعلان بعد قبول سومة أو عرض.",
+        ownerHint: "السومات العلنية والعروض الخاصة كلها تظهر هنا.",
+        ownerNoOffers: "ما فيه عروض للحين.",
         bidder: "صاحب السومة",
         accept: "قبول السومة",
         accepting: "جارٍ القبول...",
@@ -101,34 +110,42 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
         whatsappBidder: "كلّمه واتساب",
         submit: "حط سومتك",
         submitting: "جارٍ الإرسال...",
-        loading: "جارٍ تحميل السومات...",
+        loading: "جارٍ تحميل العروض...",
         missingApi: "متغير NEXT_PUBLIC_API_BASE غير موجود.",
         invalidAmount: "حط قيمة صحيحة.",
         lowerThanHighest: (amountSar: number) => `لازم تكون السومة أعلى من ${formatPrice(amountSar, locale)}.`,
         success: "تم تسجيل السومة.",
+        privateSuccess: "تم إرسال العرض الخاص.",
         acceptedSuccess: "تم قبول السومة وإقفال السوم.",
-        loginRequired: "لازم تسجّل دخولك أول قبل ما تسوم.",
+        loginRequired: "لازم تسجّل دخولك أول قبل ما تسوم أو ترسل عرض.",
         failed: "ما قدرنا نرسل السومة.",
         acceptFailed: "ما قدرنا نقبل السومة.",
       }
     : {
-        title: "Bidding",
+        title: "Offers & Bids",
         ownerTitle: "Offers",
         highestOffer: "Highest Offer",
         noOffers: "None",
         bidCount: (count: number) => `${count} bids`,
         recentBids: "Recent Offers",
         amount: "Your bid",
-        signIn: "Sign in to bid",
+        signIn: "Sign in to bid or send an offer",
         signInHint: "Your saved account phone number will be used automatically.",
-        minBid: (amountSar: number) => `Your bid must be higher than ${formatPrice(amountSar, locale)}.`,
+        minBid: (amountSar: number) => `For a public bid, your amount must be higher than ${formatPrice(amountSar, locale)}.`,
+        publicHint: "Public bids are visible to everyone and raise the current highest bid.",
+        privateHint: "Private offers are shared only with the listing owner.",
+        publicBid: "Public Bid",
+        privateOffer: "Private Offer",
+        publicBadge: "Public",
+        privateBadge: "Private",
         warningTitle: "Important warning before bidding",
         warningBody: "If the listing owner reports this as a false bid and the purchase is not completed, your account will be blocked from bidding for one month. If it happens again, the account will be banned.",
         confirmBid: "Accept and Place Bid",
         cancelBid: "Cancel",
         confirmAmount: "Bid amount",
+        confirmType: "Offer type",
         closedHint: "Bidding is closed for this listing after an offer was accepted.",
-        ownerHint: "Once accepted, bidding is closed.",
+        ownerHint: "Public bids and private offers both appear here.",
         ownerNoOffers: "No offers to manage yet.",
         bidder: "Bidder",
         accept: "Accept Offer",
@@ -149,6 +166,7 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
         invalidAmount: "Enter a valid offer amount.",
         lowerThanHighest: (amountSar: number) => `Your bid must be higher than ${formatPrice(amountSar, locale)}.`,
         success: "Bid placed.",
+        privateSuccess: "Private offer sent.",
         acceptedSuccess: "Offer accepted and bidding closed.",
         loginRequired: "You must sign in before placing a bid.",
         failed: "Failed to send offer.",
@@ -216,7 +234,12 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
     setLoading(true);
     setError("");
     try {
+      const headers: HeadersInit = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
       const res = await fetch(`${API_BASE}/v1/cars/${carId}/offers`, {
+        headers,
         cache: "no-store",
       });
 
@@ -239,11 +262,12 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
   useEffect(() => {
     void loadOffers();
   // carId/API_BASE are stable for this page lifecycle.
-  }, [carId]);
+  }, [carId, token]);
 
   useEffect(() => {
     if (acceptedOffer) {
       setConfirmAmount(null);
+      setConfirmVisibility(null);
     }
   }, [acceptedOffer]);
 
@@ -279,7 +303,7 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
     void loadOwnerOffers();
   }, [carId, isOwner, text.failed, token]);
 
-  async function submitBid(nextAmount: number) {
+  async function submitBid(nextAmount: number, nextVisibility: "public" | "private") {
     setError("");
     setSuccess("");
 
@@ -308,6 +332,7 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
         },
         body: JSON.stringify({
           amount_sar: Math.trunc(nextAmount),
+          visibility: nextVisibility,
         }),
       });
 
@@ -320,7 +345,8 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
 
       setAmount("");
       setConfirmAmount(null);
-      setSuccess(text.success);
+      setConfirmVisibility(null);
+      setSuccess(nextVisibility === "private" ? text.privateSuccess : text.success);
       void loadOffers();
       if (isOwner) {
         setOwnerSummary(null);
@@ -332,8 +358,7 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
     }
   }
 
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
+  function startOffer(nextVisibility: "public" | "private") {
     setError("");
     setSuccess("");
 
@@ -343,7 +368,7 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
       return;
     }
 
-    if (parsedAmount < minimumBid) {
+    if (nextVisibility === "public" && parsedAmount < minimumBid) {
       setError(text.lowerThanHighest(minimumBid - 1));
       return;
     }
@@ -354,6 +379,12 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
     }
 
     setConfirmAmount(Math.trunc(parsedAmount));
+    setConfirmVisibility(nextVisibility);
+  }
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    startOffer("public");
   }
 
   async function handleAccept(offerId: number) {
@@ -504,25 +535,28 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
             <div key={offer.id} className="offer-list-item">
               <div className="offer-list-body">
                 <strong>{formatPrice(offer.amount_sar, locale)}</strong>
+                {offer.visibility === "private" ? <span>{text.privateBadge}</span> : null}
                 {isOwner && isOwnerOfferEntry(offer) ? (
                   <span>{text.bidder}: {offer.buyer_user_label || offer.phone_e164 || `#${offer.buyer_user_id ?? offer.id}`}</span>
                 ) : null}
-                <span>{formatDateTime(offer.created_at, locale)}</span>
               </div>
-              {isOwner ? (
-                offer.accepted_at ? (
-                  <span className="offer-list-badge">{text.accepted}</span>
-                ) : biddingOpen ? (
-                  <button
-                    type="button"
-                    className="btn btn-secondary offer-list-action"
-                    disabled={acceptingId === offer.id}
-                    onClick={() => void handleAccept(offer.id)}
-                  >
-                    {acceptingId === offer.id ? text.accepting : text.accept}
-                  </button>
-                ) : null
-              ) : null}
+              <div className="offer-list-side">
+                <span className="offer-list-meta">{formatDateTime(offer.created_at, locale)}</span>
+                {isOwner ? (
+                  offer.accepted_at ? (
+                    <span className="offer-list-badge">{text.accepted}</span>
+                  ) : biddingOpen ? (
+                    <button
+                      type="button"
+                      className="btn btn-secondary offer-list-action"
+                      disabled={acceptingId === offer.id}
+                      onClick={() => void handleAccept(offer.id)}
+                    >
+                      {acceptingId === offer.id ? text.accepting : text.accept}
+                    </button>
+                  ) : null
+                ) : null}
+              </div>
             </div>
           ))}
         </div>
@@ -530,7 +564,7 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
         <p className="helper-text spaced-top-sm">{text.ownerNoOffers}</p>
       ) : null}
 
-      {isOwner ? null : acceptedOffer ? (
+      {isOwner ? null : !biddingOpen ? (
         <p className="helper-text spaced-top-sm">{text.closedHint}</p>
       ) : token ? (
         <form className="filters spaced-top-sm" onSubmit={handleSubmit}>
@@ -548,18 +582,21 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
           </div>
 
           <p className="helper-text">{text.minBid(minimumBid - 1)}</p>
-          <p className="helper-text">{text.signInHint}</p>
 
-          <button type="submit" className="btn btn-primary" disabled={submitting}>
-            {submitting ? text.submitting : text.submit}
-          </button>
+          <div className="contact-actions">
+            <button type="button" className="btn btn-secondary" disabled={submitting} onClick={() => startOffer("private")}>
+              {submitting && confirmVisibility === "private" ? text.submitting : text.privateOffer}
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
+              {submitting && confirmVisibility === "public" ? text.submitting : text.publicBid}
+            </button>
+          </div>
 
           {error ? <p className="notice error">{error}</p> : null}
           {success ? <p className="notice success">{success}</p> : null}
         </form>
       ) : (
         <div className="filters spaced-top-sm">
-          <p className="helper-text">{text.signInHint}</p>
           <Link href="/login" className="btn btn-primary">
             {text.signIn}
           </Link>
@@ -584,6 +621,9 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
             <p className="offer-confirm-amount">
               {text.confirmAmount}: {formatPrice(confirmAmount, locale)}
             </p>
+            <p className="offer-confirm-copy">
+              {text.confirmType}: {confirmVisibility === "private" ? text.privateOffer : text.publicBid}
+            </p>
             <p className="offer-confirm-copy">{text.warningBody}</p>
             <div className="offer-confirm-actions">
               <button
@@ -598,7 +638,11 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
                 type="button"
                 className="btn btn-primary"
                 disabled={submitting}
-                onClick={() => void submitBid(confirmAmount)}
+                onClick={() => {
+                  if (confirmVisibility) {
+                    void submitBid(confirmAmount, confirmVisibility);
+                  }
+                }}
               >
                 {submitting ? text.submitting : text.confirmBid}
               </button>

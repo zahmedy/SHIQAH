@@ -27,6 +27,7 @@ class LeadOut(BaseModel):
 
 class OfferCreate(BaseModel):
     amount_sar: int
+    visibility: str = "public"
 
 
 class OfferOut(BaseModel):
@@ -34,6 +35,7 @@ class OfferOut(BaseModel):
     amount_sar: int
     created_at: datetime
     accepted_at: Optional[datetime] = None
+    visibility: str = "public"
 
 
 class OfferSummaryOut(BaseModel):
@@ -49,6 +51,7 @@ class OwnerOfferOut(BaseModel):
     amount_sar: int
     created_at: datetime
     accepted_at: Optional[datetime] = None
+    visibility: str = "public"
     buyer_user_id: Optional[int] = None
     buyer_user_label: Optional[str] = None
     phone_e164: Optional[str] = None
