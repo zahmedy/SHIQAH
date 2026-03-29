@@ -103,7 +103,7 @@ export default function MyCarsPage() {
         attentionListings: "تحتاج متابعة",
         adminBadge: "مشرف",
         publicUserId: "اسم المستخدم العام",
-        userIdHelp: "من 3 إلى 32 حرفًا: `a-z` و `0-9` و `.` و `_` و `-`",
+        userIdHelp: "من 3 إلى 32 حرفًا: `a-z` او `0-9` او `.` او `_` او `-`",
         phone: "الهاتف",
         accountId: (currentUserId: string | null) => `معرّف حسابك الحالي: ${currentUserId ? `@${currentUserId}` : "مو مضبوط للحين"}`,
         saving: "جارٍ الحفظ...",
