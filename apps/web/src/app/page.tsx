@@ -52,7 +52,22 @@ export default async function HomePage() {
 
   return (
     <main className="page shell">
-      <h1 className="section-title">{isArabic ? "أحدث السيارات" : "Latest Listings"}</h1>
+      <section className="home-hero">
+        <span className="home-hero-badge">
+          {isArabic ? "سوق سيارات السعودية" : "Saudi Arabia's Car Marketplace"}
+        </span>
+        <h1 className="home-hero-title">
+          {isArabic ? "بيع واشترِ سيارتك بكل ثقة" : "Buy & Sell Cars with Confidence"}
+        </h1>
+        <p className="home-hero-sub">
+          {isArabic
+            ? "آلاف الإعلانات من بائعين موثوقين في جميع أنحاء المملكة"
+            : "Thousands of listings from verified sellers across the Kingdom"}
+        </p>
+      </section>
+
+      <h2 className="section-title">{isArabic ? "أحدث السيارات" : "Latest Listings"}</h2>
+
       {fetchError ? (
         <div className="notice error">{fetchError}</div>
       ) : listings.length === 0 ? (
