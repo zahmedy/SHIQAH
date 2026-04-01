@@ -138,6 +138,15 @@ const COLOR_OPTIONS = [
 
 const DRAFT_PLACEHOLDER = "__garaj_draft_placeholder__";
 const DRAFT_PLACEHOLDER_YEAR = new Date().getUTCFullYear();
+const DISALLOWED_REVIEW_TERMS = [
+  "wa.me",
+  "whatsapp",
+  "http://",
+  "https://",
+  "instagram",
+  "snapchat",
+  "telegram",
+] as const;
 
 function field(value?: string | number | null): string {
   if (value === undefined || value === null) return "";
@@ -236,49 +245,6 @@ function fromLoadedField(value?: string | number | null): string {
   return nextValue === DRAFT_PLACEHOLDER ? "" : nextValue;
 }
 
-function buildUploadDraftPayload(form: FormState): CarPayload {
-  const city = form.city.trim() || DRAFT_PLACEHOLDER;
-  const make = form.make.trim() || DRAFT_PLACEHOLDER;
-  const model = form.model.trim() || DRAFT_PLACEHOLDER;
-  const year = Number(form.year);
-  const validYear =
-    Number.isInteger(year) && year >= 1980 && year <= new Date().getUTCFullYear() + 1
-      ? year
-      : DRAFT_PLACEHOLDER_YEAR;
-
-  const price = parseOptionalNumber(form.price_sar);
-  const mileage = parseOptionalNumber(form.mileage_km);
-  const latitude = parseOptionalFloat(form.latitude);
-  const longitude = parseOptionalFloat(form.longitude);
-  const hasValidCoordinates =
-    latitude !== undefined &&
-    longitude !== undefined &&
-    latitude >= -90 &&
-    latitude <= 90 &&
-    longitude >= -180 &&
-    longitude <= 180;
-
-  return {
-    city,
-    district: form.district.trim() || undefined,
-    latitude: hasValidCoordinates ? latitude : undefined,
-    longitude: hasValidCoordinates ? longitude : undefined,
-    make,
-    model,
-    year: validYear,
-    price_sar: form.price_sar.trim() && price && price > 0 ? price : null,
-    mileage_km: form.mileage_km.trim() && mileage !== undefined && mileage >= 0 ? mileage : undefined,
-    body_type: form.body_type.trim() || undefined,
-    transmission: form.transmission.trim() || undefined,
-    fuel_type: form.fuel_type.trim() || undefined,
-    drivetrain: form.drivetrain.trim() || undefined,
-    condition: form.condition.trim() || undefined,
-    color: form.color.trim() || undefined,
-    title_ar: undefined,
-    description_ar: form.description_ar.trim() || DRAFT_PLACEHOLDER,
-  };
-}
-
 export default function CarDraftForm({
   mode,
   carId,
@@ -316,8 +282,6 @@ export default function CarDraftForm({
     () => (mode === "edit" ? (carId ?? null) : createdId),
     [mode, carId, createdId],
   );
-  const remainingPhotos = Math.max(0, 4 - photos.length);
-  const hasEnoughPhotos = photos.length >= 4;
   const isReviewLocked = status === "active" || status === "pending_review";
   const isArchived = status === "expired";
   const text = isArabic
@@ -400,16 +364,17 @@ export default function CarDraftForm({
         descriptionLabel: "الوصف *",
         photos: "الصور",
         photosHelp: "أضف صورًا واضحة.",
-        autoSaveOnFirstPhotos: "سيتم الحفظ تلقائيًا.",
+        autoSaveOnFirstPhotos: "سيتم رفعها بعد حفظ الإعلان.",
         addingPhotos: "جارٍ الإضافة...",
         addMorePhotos: "أضف صور",
         addPhotos: "أضف صور",
         photosReady: (count: number) => `${count} صور جاهزة`,
         moreNeeded: (count: number) => `${count} أخرى مطلوبة`,
         photosUploadingNow: "تتم إضافة الصور.",
-        choosePhotosAndSave: "اختر صورًا للإضافة.",
+        choosePhotosAndSave: "اختر صورًا الآن وسيتم رفعها بعد الحفظ.",
         choosePhotos: "اختر صورًا للإضافة.",
         adding: "جارٍ الإضافة",
+        readyToUpload: "جاهزة للرفع",
         mainPhoto: "الصورة الرئيسية",
         makeMain: "اجعلها رئيسية",
         removing: "جارٍ الحذف...",
@@ -429,6 +394,8 @@ export default function CarDraftForm({
         deleteListing: "حذف نهائي",
         backToMyCars: "العودة إلى الملف الشخصي",
         editCreatedDraft: "تعديل المسودة التي تم إنشاؤها",
+        descriptionTooShort: "الوصف قصير جدًا للموافقة. اكتب وصفًا أوضح.",
+        disallowedContactInfo: "احذف معلومات التواصل الخارجية من نص الإعلان.",
       }
     : {
         saveChanges: "Save Changes",
@@ -509,16 +476,17 @@ export default function CarDraftForm({
         descriptionLabel: "Description (Arabic) *",
         photos: "Photos",
         photosHelp: "Add clear photos.",
-        autoSaveOnFirstPhotos: "Saves automatically.",
+        autoSaveOnFirstPhotos: "They will upload after you save.",
         addingPhotos: "Adding...",
         addMorePhotos: "Add Photos",
         addPhotos: "Add Photos",
         photosReady: (count: number) => `${count} photos ready`,
         moreNeeded: (count: number) => `${count} more needed`,
         photosUploadingNow: "Uploading photos.",
-        choosePhotosAndSave: "Choose photos to upload.",
+        choosePhotosAndSave: "Choose photos now and they will upload after save.",
         choosePhotos: "Choose photos to upload.",
         adding: "Adding",
+        readyToUpload: "Ready to upload",
         mainPhoto: "Main photo",
         makeMain: "Make Main",
         removing: "Removing...",
@@ -538,10 +506,15 @@ export default function CarDraftForm({
         deleteListing: "Delete Permanently",
         backToMyCars: "Back to Profile",
         editCreatedDraft: "Edit Created Draft",
+        descriptionTooShort: "Description is too short for approval. Add more detail.",
+        disallowedContactInfo: "Remove external contact info from the listing text.",
       };
   const saveButtonLabel = isReviewLocked ? text.saveChanges : text.saveDraft;
   const hasPreciseLocation = Boolean(form.latitude.trim() && form.longitude.trim());
   const localizedReviewReason = translateReviewReason(locale, reviewReason);
+  const totalPhotoCount = photos.length + pendingPreviews.length;
+  const remainingPhotos = Math.max(0, 4 - totalPhotoCount);
+  const hasEnoughPhotos = totalPhotoCount >= 4;
   const viewerItems = useMemo<PhotoViewerItem[]>(
     () => [
       ...pendingPreviews.map((preview) => ({
@@ -676,6 +649,24 @@ export default function CarDraftForm({
     router.refresh();
   }
 
+  function validateSubmissionBeforeCreateOrSubmit(): string | null {
+    const description = form.description_ar.trim();
+    if (description.length < 20) {
+      return text.descriptionTooShort;
+    }
+
+    if (totalPhotoCount < 4) {
+      return translateApiMessage(locale, "At least 4 photos required");
+    }
+
+    const content = `${form.title_ar}\n${description}`.toLowerCase();
+    if (DISALLOWED_REVIEW_TERMS.some((term) => content.includes(term))) {
+      return text.disallowedContactInfo;
+    }
+
+    return null;
+  }
+
   async function persistDraft(token: string): Promise<CarOut> {
     const result = buildPayload(form, locale);
     if (result.ok === false) {
@@ -758,6 +749,13 @@ export default function CarDraftForm({
     setSaving(true);
     try {
       const saved = await persistDraft(token);
+      if (pendingPreviews.length > 0 && selectedFiles.length > 0) {
+        const uploadResult = await uploadSelectedPhotos(saved.id, selectedFiles, pendingPreviews);
+        if (uploadResult.failedCount > 0) {
+          setError(text.photosAddFailed(uploadResult.failedCount));
+          return;
+        }
+      }
 
       if (saved.status === "active" || saved.status === "pending_review") {
         redirectToMyCars("success", text.changesSaved);
@@ -788,9 +786,27 @@ export default function CarDraftForm({
       return;
     }
 
+    const submissionError = validateSubmissionBeforeCreateOrSubmit();
+    if (submissionError) {
+      setError(submissionError);
+      return;
+    }
+
     setSaving(true);
     try {
       const saved = await persistDraft(token);
+
+      if (pendingPreviews.length > 0 && selectedFiles.length > 0) {
+        const uploadResult = await uploadSelectedPhotos(saved.id, selectedFiles, pendingPreviews);
+        if (uploadResult.failedCount > 0) {
+          setError(text.photosAddFailed(uploadResult.failedCount));
+          return;
+        }
+        if (uploadResult.totalPhotos < 4) {
+          setError(translateApiMessage(locale, "At least 4 photos required"));
+          return;
+        }
+      }
 
       if (saved.status === "active") {
         redirectToMyCars("success", text.listingUpdated);
@@ -880,71 +896,45 @@ export default function CarDraftForm({
     }
   }
 
-  async function uploadSelectedPhotos(filesToUpload?: File[], previewsToClear?: PendingPhotoPreview[]) {
+  async function uploadSelectedPhotos(
+    targetCarIdOverride?: number,
+    filesToUpload?: File[],
+    previewsToClear?: PendingPhotoPreview[],
+  ): Promise<{ uploadedCount: number; failedCount: number; totalPhotos: number }> {
     setUploadError("");
     setUploadSuccess("");
 
     if (!API_BASE) {
       setUploadError(text.missingApiBase);
-      return;
+      return { uploadedCount: 0, failedCount: 0, totalPhotos: photos.length };
     }
 
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
       setNeedsLogin(true);
       setUploadError(text.loginRequired);
-      return;
+      return { uploadedCount: 0, failedCount: 0, totalPhotos: photos.length };
     }
 
     const files = filesToUpload ?? selectedFiles;
     if (files.length === 0) {
       setUploadError(text.selectPhotosFirst);
-      return;
+      return { uploadedCount: 0, failedCount: 0, totalPhotos: photos.length };
     }
 
     const imageFiles = files.filter((file) => file.type.startsWith("image/"));
     if (imageFiles.length === 0) {
       setUploadError(text.imagesOnly);
-      return;
+      return { uploadedCount: 0, failedCount: 0, totalPhotos: photos.length };
     }
 
     setUploading(true);
 
-    let targetCarId = activeCarId;
-    let createdForUpload = false;
-
+    const targetCarId = targetCarIdOverride ?? activeCarId;
     if (!targetCarId) {
-      try {
-        const draftRes = await fetch(`${API_BASE}/v1/cars`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(buildUploadDraftPayload(form)),
-        });
-
-        if (draftRes.status === 401 || draftRes.status === 403) {
-          setNeedsLogin(true);
-          throw new Error(text.sessionExpired);
-        }
-
-        if (!draftRes.ok) {
-          throw new Error(await parseApiError(draftRes));
-        }
-
-        const draft = (await draftRes.json()) as CarOut;
-        setStatus(draft.status);
-        setReviewReason(draft.review_reason || "");
-        setPhotos(draft.photos || []);
-        setCreatedId(draft.id);
-        targetCarId = draft.id;
-        createdForUpload = true;
-      } catch (err) {
-        setUploadError(err instanceof Error ? translateApiMessage(locale, err.message) : text.createDraftBeforeUploadFailed);
-        setUploading(false);
-        return;
-      }
+      setUploadError(text.createDraftBeforeUploadFailed);
+      setUploading(false);
+      return { uploadedCount: 0, failedCount: 0, totalPhotos: photos.length };
     }
 
     let uploadedCount = 0;
@@ -1020,14 +1010,8 @@ export default function CarDraftForm({
     }
 
     setPhotos(nextPhotos);
-    setSelectedFiles([]);
-
     if (uploadedCount > 0) {
-      setUploadSuccess(
-        createdForUpload
-          ? text.photosAddedSavedFirst(uploadedCount)
-          : text.photosAdded(uploadedCount),
-      );
+      setUploadSuccess(text.photosAdded(uploadedCount));
     }
     if (failedCount > 0) {
       setUploadError(text.photosAddFailed(failedCount));
@@ -1041,20 +1025,32 @@ export default function CarDraftForm({
         current.filter((preview) => !previewsToClear.some((item) => item.id === preview.id)),
       );
     }
+    setSelectedFiles((current) =>
+      current.filter((file) => !files.includes(file)),
+    );
 
     setUploading(false);
+    return { uploadedCount, failedCount, totalPhotos: nextPhotos.length };
   }
 
   function handlePhotoSelection(files: FileList | null) {
     const nextFiles = Array.from(files || []);
-    setSelectedFiles(nextFiles);
 
     if (nextFiles.length === 0) {
       return;
     }
 
-    const previews = nextFiles
-      .filter((file) => file.type.startsWith("image/"))
+    const imageFiles = nextFiles.filter((file) => file.type.startsWith("image/"));
+    if (imageFiles.length === 0) {
+      setUploadError(text.imagesOnly);
+      return;
+    }
+
+    setUploadError("");
+    setUploadSuccess("");
+    setSelectedFiles((current) => [...current, ...imageFiles]);
+
+    const previews = imageFiles
       .map((file, index) => ({
         id: `${file.name}-${file.size}-${index}-${Date.now()}`,
         fileName: file.name,
@@ -1065,7 +1061,9 @@ export default function CarDraftForm({
       setPendingPreviews((current) => [...current, ...previews]);
     }
 
-    void uploadSelectedPhotos(nextFiles, previews);
+    if (activeCarId) {
+      void uploadSelectedPhotos(activeCarId, imageFiles, previews);
+    }
   }
 
   async function removePhoto(photoId: number) {
@@ -1539,10 +1537,10 @@ export default function CarDraftForm({
                   onClick={() => photoInputRef.current?.click()}
                   disabled={uploading}
                 >
-                  {uploading ? text.addingPhotos : photos.length > 0 ? text.addMorePhotos : text.addPhotos}
+                  {uploading ? text.addingPhotos : totalPhotoCount > 0 ? text.addMorePhotos : text.addPhotos}
                 </button>
                 <span className={`status-pill ${hasEnoughPhotos ? "status-active" : "status-pending-review"}`}>
-                  {hasEnoughPhotos ? text.photosReady(photos.length) : text.moreNeeded(remainingPhotos)}
+                  {hasEnoughPhotos ? text.photosReady(totalPhotoCount) : text.moreNeeded(remainingPhotos)}
                 </span>
                 <span className="helper-text">
                   {uploading
@@ -1569,7 +1567,7 @@ export default function CarDraftForm({
                       </button>
                       <div className="upload-photo-meta">
                         <span className="upload-photo-order">{preview.fileName}</span>
-                        <span className="status-pill status-draft">{text.adding}</span>
+                        <span className="status-pill status-draft">{uploading && activeCarId ? text.adding : text.readyToUpload}</span>
                       </div>
                     </article>
                   ))}
