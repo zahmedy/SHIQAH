@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import CityField from "@/components/CityField";
 import MakeModelField from "@/components/MakeModelField";
 import { useLocale } from "@/components/LocaleProvider";
-import { translateReviewReason, translateStatus, translateValue, type Locale } from "@/lib/locale";
+import { translateApiMessage, translateReviewReason, translateStatus, translateValue, type Locale } from "@/lib/locale";
 import { findNearestCity } from "@/shared/cities";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
@@ -162,7 +162,7 @@ async function parseApiError(res: Response): Promise<string> {
   const contentType = res.headers.get("content-type") || "";
   const payload = contentType.includes("application/json") ? await res.json() : await res.text();
   const detail = typeof payload === "string" ? payload : payload?.detail;
-  return detail || `Failed with status ${res.status}`;
+  return translateApiMessage("en", detail || `Failed with status ${res.status}`);
 }
 
 function buildPayload(form: FormState, locale: Locale): BuildPayloadResult {
@@ -622,8 +622,8 @@ export default function CarDraftForm({
           title_ar: fromLoadedField(car.title_ar),
           description_ar: fromLoadedField(car.description_ar),
         });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : text.loadDraftFailed);
+    } catch (err) {
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.loadDraftFailed);
       } finally {
         setLoading(false);
       }
@@ -766,7 +766,7 @@ export default function CarDraftForm({
 
       redirectToMyCars("success", text.draftSaved);
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.saveDraftFailed);
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.saveDraftFailed);
     } finally {
       setSaving(false);
     }
@@ -823,7 +823,7 @@ export default function CarDraftForm({
 
       redirectToMyCars("success", text.listingSubmitted);
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.submitListingFailed);
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.submitListingFailed);
     } finally {
       setSaving(false);
     }
@@ -874,7 +874,7 @@ export default function CarDraftForm({
 
       redirectToMyCars("success", isArchived ? text.listingDeleted : text.listingArchived);
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.deleteFailed);
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.deleteFailed);
     } finally {
       setDeleting(false);
     }
@@ -941,7 +941,7 @@ export default function CarDraftForm({
         targetCarId = draft.id;
         createdForUpload = true;
       } catch (err) {
-        setUploadError(err instanceof Error ? err.message : text.createDraftBeforeUploadFailed);
+        setUploadError(err instanceof Error ? translateApiMessage(locale, err.message) : text.createDraftBeforeUploadFailed);
         setUploading(false);
         return;
       }
@@ -1117,7 +1117,7 @@ export default function CarDraftForm({
       });
       setUploadSuccess(text.photoRemoved);
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : text.removePhotoFailed);
+      setUploadError(err instanceof Error ? translateApiMessage(locale, err.message) : text.removePhotoFailed);
     } finally {
       setRemovingPhotoId(null);
     }
@@ -1251,7 +1251,7 @@ export default function CarDraftForm({
       });
       setUploadSuccess(text.mainPhotoUpdated);
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : text.updateMainPhotoFailed);
+      setUploadError(err instanceof Error ? translateApiMessage(locale, err.message) : text.updateMainPhotoFailed);
     } finally {
       setMainPhotoId(null);
     }

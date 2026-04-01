@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { useLocale } from "@/components/LocaleProvider";
-import { formatClockTime } from "@/lib/locale";
+import { formatClockTime, translateApiMessage } from "@/lib/locale";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const TOKEN_KEY = "garaj_access_token";
@@ -26,7 +26,7 @@ async function parseApiError(res: Response): Promise<string> {
   const contentType = res.headers.get("content-type") || "";
   const payload = contentType.includes("application/json") ? await res.json() : await res.text();
   const detail = typeof payload === "string" ? payload : payload?.detail;
-  return detail || `Failed with status ${res.status}`;
+  return translateApiMessage("en", detail || `Failed with status ${res.status}`);
 }
 
 export default function ChatPanel({ carId }: { carId: number }) {
@@ -98,7 +98,7 @@ export default function ChatPanel({ carId }: { carId: number }) {
         setMeId(me.id);
         setMessages(chat);
       } catch (err) {
-        setError(err instanceof Error ? err.message : text.loadChatFailed);
+        setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.loadChatFailed);
       } finally {
         setLoading(false);
       }
@@ -138,7 +138,7 @@ export default function ChatPanel({ carId }: { carId: number }) {
       setMessages((prev) => [...prev, created]);
       setDraft("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.sendMessageFailed);
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.sendMessageFailed);
     } finally {
       setSending(false);
     }

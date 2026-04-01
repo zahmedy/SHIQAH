@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
 import { useLocale } from "@/components/LocaleProvider";
-import { formatDateTime, formatPrice } from "@/lib/locale";
+import { formatDateTime, formatPrice, translateApiMessage } from "@/lib/locale";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const TOKEN_KEY = "garaj_access_token";
@@ -247,13 +247,13 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
         const contentType = res.headers.get("content-type") || "";
         const payload = contentType.includes("application/json") ? await res.json() : await res.text();
         const detail = typeof payload === "string" ? payload : payload?.detail;
-        throw new Error(detail || text.failed);
+        throw new Error(translateApiMessage(locale, detail || text.failed));
       }
 
       const data = (await res.json()) as OfferSummary;
       setSummary(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.failed);
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.failed);
     } finally {
       setLoading(false);
     }
@@ -290,13 +290,13 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
           const contentType = res.headers.get("content-type") || "";
           const payload = contentType.includes("application/json") ? await res.json() : await res.text();
           const detail = typeof payload === "string" ? payload : payload?.detail;
-          throw new Error(detail || text.failed);
+          throw new Error(translateApiMessage(locale, detail || text.failed));
         }
 
         const data = (await res.json()) as OwnerOfferSummary;
         setOwnerSummary(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : text.failed);
+        setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.failed);
       }
     }
 
@@ -340,7 +340,7 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
         const contentType = res.headers.get("content-type") || "";
         const payload = contentType.includes("application/json") ? await res.json() : await res.text();
         const detail = typeof payload === "string" ? payload : payload?.detail;
-        throw new Error(detail || text.failed);
+        throw new Error(translateApiMessage(locale, detail || text.failed));
       }
 
       setAmount("");
@@ -352,7 +352,7 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
         setOwnerSummary(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.failed);
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.failed);
     } finally {
       setSubmitting(false);
     }
@@ -408,7 +408,7 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
         const contentType = res.headers.get("content-type") || "";
         const payload = contentType.includes("application/json") ? await res.json() : await res.text();
         const detail = typeof payload === "string" ? payload : payload?.detail;
-        throw new Error(detail || text.acceptFailed);
+        throw new Error(translateApiMessage(locale, detail || text.acceptFailed));
       }
 
       setSuccess(text.acceptedSuccess);
@@ -425,7 +425,7 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
         }
       })()]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.acceptFailed);
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.acceptFailed);
     } finally {
       setAcceptingId(null);
     }
@@ -452,7 +452,7 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
         const contentType = res.headers.get("content-type") || "";
         const payload = contentType.includes("application/json") ? await res.json() : await res.text();
         const detail = typeof payload === "string" ? payload : payload?.detail;
-        throw new Error(detail || text.acceptFailed);
+        throw new Error(translateApiMessage(locale, detail || text.acceptFailed));
       }
 
       setSuccess(text.unacceptedSuccess);
@@ -469,7 +469,7 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
         }
       })()]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.acceptFailed);
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.acceptFailed);
     } finally {
       setUnacceptingId(null);
     }

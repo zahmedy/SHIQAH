@@ -8,6 +8,7 @@ import {
   formatListingPrice,
   formatMileage,
   formatShortDate,
+  translateApiMessage,
   translateReviewReason,
   translateStatus,
 } from "@/lib/locale";
@@ -53,7 +54,7 @@ async function parseApiError(res: Response): Promise<string> {
   const contentType = res.headers.get("content-type") || "";
   const payload = contentType.includes("application/json") ? await res.json() : await res.text();
   const detail = typeof payload === "string" ? payload : payload?.detail;
-  return detail || `Failed with status ${res.status}`;
+  return translateApiMessage("en", detail || `Failed with status ${res.status}`);
 }
 
 export default function MyCarsPage() {
@@ -254,7 +255,7 @@ export default function MyCarsPage() {
       const data = (await res.json()) as MyCar[];
       setCars(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.loadListingsFailed);
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.loadListingsFailed);
     } finally {
       setLoading(false);
     }
@@ -326,7 +327,7 @@ export default function MyCarsPage() {
       setCars((prev) => prev.map((car) => (car.id === carId ? { ...car, status: "pending_review" } : car)));
       setSuccess(text.submitSuccess(carId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.submitFailed);
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.submitFailed);
     } finally {
       setSubmittingId(null);
     }
@@ -380,7 +381,7 @@ export default function MyCarsPage() {
       setSuccess(text.userIdUpdated(updatedMe.user_id || ""));
       window.dispatchEvent(new Event("garaj-auth-changed"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.userIdUpdateFailed);
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.userIdUpdateFailed);
     } finally {
       setSavingUserId(false);
     }
@@ -418,7 +419,7 @@ export default function MyCarsPage() {
       setCars((prev) => prev.map((car) => (car.id === carId ? { ...car, status: "active" } : car)));
       setSuccess(text.approveSuccess(carId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.approveFailed);
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.approveFailed);
     } finally {
       setAdminActionId(null);
     }
@@ -465,7 +466,7 @@ export default function MyCarsPage() {
       );
       setSuccess(text.rejectSuccess(carId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.rejectFailed);
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.rejectFailed);
     } finally {
       setAdminActionId(null);
     }

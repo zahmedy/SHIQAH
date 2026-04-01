@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 
 import { useLocale } from "@/components/LocaleProvider";
+import { translateApiMessage } from "@/lib/locale";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const NAME_KEY = "garaj_user_name";
@@ -99,7 +100,7 @@ export default function LoginPage() {
 
       if (!res.ok) {
         const detail = await res.text();
-        throw new Error(detail || `Failed with status ${res.status}`);
+        throw new Error(translateApiMessage(locale, detail || `Failed with status ${res.status}`));
       }
 
       const data = (await res.json()) as OTPRequestResponse;
@@ -107,7 +108,7 @@ export default function LoginPage() {
       setStep("verify");
       setSuccess(text.otpRequested);
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.requestOtpFailed);
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.requestOtpFailed);
     } finally {
       setLoading(false);
     }
@@ -151,7 +152,7 @@ export default function LoginPage() {
         const contentType = res.headers.get("content-type") ?? "";
         const payload = contentType.includes("application/json") ? await res.json() : await res.text();
         const detail = typeof payload === "string" ? payload : payload?.detail;
-        throw new Error(detail || `Failed with status ${res.status}`);
+        throw new Error(translateApiMessage(locale, detail || `Failed with status ${res.status}`));
       }
 
       const data = (await res.json()) as VerifyResponse;
@@ -162,7 +163,7 @@ export default function LoginPage() {
       window.dispatchEvent(new Event("garaj-auth-changed"));
       window.location.replace("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.verifyOtpFailed);
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.verifyOtpFailed);
     } finally {
       setLoading(false);
     }
