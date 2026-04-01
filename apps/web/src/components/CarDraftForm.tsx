@@ -680,8 +680,9 @@ export default function CarDraftForm({
       throw new Error(result.error);
     }
 
-    const url = mode === "create" ? `${API_BASE}/v1/cars` : `${API_BASE}/v1/cars/${carId}`;
-    const method = mode === "create" ? "POST" : "PATCH";
+    const draftId = mode === "edit" ? carId : createdId;
+    const url = draftId ? `${API_BASE}/v1/cars/${draftId}` : `${API_BASE}/v1/cars`;
+    const method = draftId ? "PATCH" : "POST";
     const res = await fetch(url, {
       method,
       headers: {
@@ -1660,14 +1661,14 @@ export default function CarDraftForm({
             ) : null}
 
             <div className="auth-actions">
-              <button className="btn btn-secondary" type="submit" disabled={saving || loading}>
+              <button className="btn btn-secondary" type="submit" disabled={saving || loading || uploading}>
                 {saving ? text.saving : saveButtonLabel}
               </button>
               {!isReviewLocked ? (
                 <button
                   className="btn btn-primary"
                   type="button"
-                  disabled={saving || loading}
+                  disabled={saving || loading || uploading}
                   onClick={() => void handleSubmitForReview()}
                 >
                   {saving ? text.submitting : text.saveAndSubmit}
@@ -1677,18 +1678,13 @@ export default function CarDraftForm({
                 <button
                   className="btn btn-secondary"
                   type="button"
-                  disabled={deleting || saving || loading}
+                  disabled={deleting || saving || loading || uploading}
                   onClick={() => void handleDeleteListing()}
                 >
                   {deleting ? text.archiving : text.archiveListing}
                 </button>
               ) : null}
               <Link href="/my-cars" className="btn btn-secondary">{text.backToMyCars}</Link>
-              {createdId ? (
-                <Link href={`/my-cars/${createdId}/edit`} className="btn btn-secondary">
-                  {text.editCreatedDraft}
-                </Link>
-              ) : null}
             </div>
 
             {success && <p className="notice success">{success}</p>}
