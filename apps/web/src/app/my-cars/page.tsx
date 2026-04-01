@@ -8,6 +8,7 @@ import {
   formatListingPrice,
   formatMileage,
   formatShortDate,
+  translateReviewReason,
   translateStatus,
 } from "@/lib/locale";
 
@@ -624,7 +625,7 @@ export default function MyCarsPage() {
 
                     {car.review_reason ? (
                       <p className="car-meta card-note">
-                        {text.review}: {car.review_reason}
+                        {text.review}: {translateReviewReason(locale, car.review_reason)}
                       </p>
                     ) : null}
 

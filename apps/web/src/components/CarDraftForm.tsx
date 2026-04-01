@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import CityField from "@/components/CityField";
 import MakeModelField from "@/components/MakeModelField";
 import { useLocale } from "@/components/LocaleProvider";
-import { translateStatus, translateValue, type Locale } from "@/lib/locale";
+import { translateReviewReason, translateStatus, translateValue, type Locale } from "@/lib/locale";
 import { findNearestCity } from "@/shared/cities";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
@@ -319,6 +319,7 @@ export default function CarDraftForm({
   const remainingPhotos = Math.max(0, 4 - photos.length);
   const hasEnoughPhotos = photos.length >= 4;
   const isReviewLocked = status === "active" || status === "pending_review";
+  const isArchived = status === "expired";
   const text = isArabic
     ? {
         saveChanges: "حفظ التغييرات",
@@ -540,6 +541,7 @@ export default function CarDraftForm({
       };
   const saveButtonLabel = isReviewLocked ? text.saveChanges : text.saveDraft;
   const hasPreciseLocation = Boolean(form.latitude.trim() && form.longitude.trim());
+  const localizedReviewReason = translateReviewReason(locale, reviewReason);
   const viewerItems = useMemo<PhotoViewerItem[]>(
     () => [
       ...pendingPreviews.map((preview) => ({
@@ -813,7 +815,9 @@ export default function CarDraftForm({
       }
 
       if (submitted.status === "rejected") {
-        redirectToMyCars("error", submitted.review_reason || text.listingRejected);
+        setStatus(submitted.status);
+        setReviewReason(submitted.review_reason || "");
+        setError(translateReviewReason(locale, submitted.review_reason) || text.listingRejected);
         return;
       }
 
@@ -845,15 +849,15 @@ export default function CarDraftForm({
       return;
     }
 
-    const confirmed = window.confirm(text.archiveConfirm);
+    const confirmed = window.confirm(isArchived ? text.permanentDeleteConfirm : text.archiveConfirm);
     if (!confirmed) {
       return;
     }
 
     setDeleting(true);
     try {
-      const res = await fetch(`${API_BASE}/v1/cars/${activeCarId}/archive`, {
-        method: "POST",
+      const res = await fetch(`${API_BASE}/v1/cars/${activeCarId}${isArchived ? "/permanent" : "/archive"}`, {
+        method: isArchived ? "DELETE" : "POST",
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -868,7 +872,7 @@ export default function CarDraftForm({
         throw new Error(await parseApiError(res));
       }
 
-      redirectToMyCars("success", text.listingArchived);
+      redirectToMyCars("success", isArchived ? text.listingDeleted : text.listingArchived);
     } catch (err) {
       setError(err instanceof Error ? err.message : text.deleteFailed);
     } finally {
@@ -1269,7 +1273,7 @@ export default function CarDraftForm({
 
         {status === "rejected" && reviewReason ? (
           <p className="notice error">
-            {text.rejected}: {reviewReason}
+            {text.rejected}: {localizedReviewReason}
           </p>
         ) : null}
 
@@ -1676,12 +1680,12 @@ export default function CarDraftForm({
               ) : null}
               {activeCarId ? (
                 <button
-                  className="btn btn-secondary"
+                  className={`btn ${isArchived ? "btn-danger" : "btn-secondary"}`}
                   type="button"
                   disabled={deleting || saving || loading || uploading}
                   onClick={() => void handleDeleteListing()}
                 >
-                  {deleting ? text.archiving : text.archiveListing}
+                  {deleting ? (isArchived ? text.deleting : text.archiving) : (isArchived ? text.deleteListing : text.archiveListing)}
                 </button>
               ) : null}
               <Link href="/my-cars" className="btn btn-secondary">{text.backToMyCars}</Link>

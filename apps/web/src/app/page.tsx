@@ -57,12 +57,12 @@ export default async function HomePage() {
           {isArabic ? "سوق سيارات السعودية" : "Saudi Arabia's Car Marketplace"}
         </span>
         <h1 className="home-hero-title">
-          {isArabic ? "بيع واشترِ سيارتك بكل ثقة" : "Buy & Sell Cars with Confidence"}
+          {isArabic ? "بيع واشترِ سيارتك" : "Buy & Sell Cars"}
         </h1>
         <p className="home-hero-sub">
           {isArabic
-            ? "آلاف الإعلانات من بائعين موثوقين في جميع أنحاء المملكة"
-            : "Thousands of listings from verified sellers across the Kingdom"}
+            ? "آلاف الإعلانات من جميع أنحاء المملكة"
+            : "Thousands of listings from across the Kingdom"}
         </p>
       </section>
 
