@@ -1517,7 +1517,8 @@ a {
 }
 
 .chat-messages {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.6rem;
   max-height: 260px;
   overflow-y: auto;
@@ -1528,7 +1529,8 @@ a {
 }
 
 .chat-bubble {
-  max-width: 80%;
+  width: fit-content;
+  max-width: min(80%, 32rem);
   padding: 0.65rem 0.8rem;
   border-radius: 14px;
   border: 1px solid var(--line);

@@ -202,7 +202,7 @@ export default async function CarDetailPage({
 
         <hr className="separator" />
 
-        <h3 className="subheading">{isArabic ? "الرسائل" : "Chat"}</h3>
+        <h3 className="subheading">{isArabic ? "التعليقات" : "Comments"}</h3>
         <ChatPanel carId={car.id} />
       </aside>
     </main>

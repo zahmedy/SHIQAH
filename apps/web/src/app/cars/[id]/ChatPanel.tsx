@@ -40,27 +40,27 @@ export default function ChatPanel({ carId }: { carId: number }) {
   const [sending, setSending] = useState(false);
   const text = locale === "ar"
     ? {
-        loadChatFailed: "ما قدرنا نحمّل الرسائل.",
-        sendMessageFailed: "ما قدرنا نرسل الرسالة.",
-        loginToChat: "سجّل دخولك للمحادثة",
-        loadingChat: "جارٍ تحميل المحادثة...",
-        noMessages: "ما فيه رسائل للحين.",
-        typeMessage: "اكتب رسالتك...",
-        loginToStart: "سجّل دخولك وابدأ المراسلة",
+        loadChatFailed: "ما قدرنا نحمّل التعليقات.",
+        sendMessageFailed: "ما قدرنا نضيف التعليق.",
+        loginToChat: "سجّل دخولك للتعليق",
+        loadingChat: "جارٍ تحميل التعليقات...",
+        noMessages: "ما فيه تعليقات للحين.",
+        typeMessage: "اكتب تعليقك...",
+        loginToStart: "سجّل دخولك وابدأ التعليق",
         sending: "جارٍ الإرسال...",
-        send: "إرسال",
+        send: "أضف تعليق",
         user: "مستخدم",
       }
     : {
-        loadChatFailed: "Failed to load chat.",
-        sendMessageFailed: "Failed to send message.",
-        loginToChat: "Login to Chat",
-        loadingChat: "Loading chat...",
-        noMessages: "No messages yet.",
-        typeMessage: "Type your message...",
-        loginToStart: "Login to start chatting",
+        loadChatFailed: "Failed to load comments.",
+        sendMessageFailed: "Failed to post comment.",
+        loginToChat: "Login to Comment",
+        loadingChat: "Loading comments...",
+        noMessages: "No comments yet.",
+        typeMessage: "Write your comment...",
+        loginToStart: "Login to start commenting",
         sending: "Sending...",
-        send: "Send",
+        send: "Add Comment",
         user: "User",
       };
 
