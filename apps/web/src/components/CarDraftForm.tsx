@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 
 import CityField from "@/components/CityField";
+import MakeModelField from "@/components/MakeModelField";
 import { useLocale } from "@/components/LocaleProvider";
 import { translateStatus, translateValue, type Locale } from "@/lib/locale";
+import { findNearestCity } from "@/shared/cities";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const TOKEN_KEY = "garaj_access_token";
@@ -134,6 +136,9 @@ const COLOR_OPTIONS = [
   "Gold",
 ];
 
+const DRAFT_PLACEHOLDER = "__garaj_draft_placeholder__";
+const DRAFT_PLACEHOLDER_YEAR = new Date().getUTCFullYear();
+
 function field(value?: string | number | null): string {
   if (value === undefined || value === null) return "";
   return String(value);
@@ -224,6 +229,54 @@ function buildPayload(form: FormState, locale: Locale): BuildPayloadResult {
   };
 
   return { ok: true, payload };
+}
+
+function fromLoadedField(value?: string | number | null): string {
+  const nextValue = field(value);
+  return nextValue === DRAFT_PLACEHOLDER ? "" : nextValue;
+}
+
+function buildUploadDraftPayload(form: FormState): CarPayload {
+  const city = form.city.trim() || DRAFT_PLACEHOLDER;
+  const make = form.make.trim() || DRAFT_PLACEHOLDER;
+  const model = form.model.trim() || DRAFT_PLACEHOLDER;
+  const year = Number(form.year);
+  const validYear =
+    Number.isInteger(year) && year >= 1980 && year <= new Date().getUTCFullYear() + 1
+      ? year
+      : DRAFT_PLACEHOLDER_YEAR;
+
+  const price = parseOptionalNumber(form.price_sar);
+  const mileage = parseOptionalNumber(form.mileage_km);
+  const latitude = parseOptionalFloat(form.latitude);
+  const longitude = parseOptionalFloat(form.longitude);
+  const hasValidCoordinates =
+    latitude !== undefined &&
+    longitude !== undefined &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180;
+
+  return {
+    city,
+    district: form.district.trim() || undefined,
+    latitude: hasValidCoordinates ? latitude : undefined,
+    longitude: hasValidCoordinates ? longitude : undefined,
+    make,
+    model,
+    year: validYear,
+    price_sar: form.price_sar.trim() && price && price > 0 ? price : null,
+    mileage_km: form.mileage_km.trim() && mileage !== undefined && mileage >= 0 ? mileage : undefined,
+    body_type: form.body_type.trim() || undefined,
+    transmission: form.transmission.trim() || undefined,
+    fuel_type: form.fuel_type.trim() || undefined,
+    drivetrain: form.drivetrain.trim() || undefined,
+    condition: form.condition.trim() || undefined,
+    color: form.color.trim() || undefined,
+    title_ar: undefined,
+    description_ar: form.description_ar.trim() || DRAFT_PLACEHOLDER,
+  };
 }
 
 export default function CarDraftForm({
@@ -547,23 +600,25 @@ export default function CarDraftForm({
         setReviewReason(car.review_reason || "");
         setPhotos(car.photos || []);
         setForm({
-          city: field(car.city),
-          district: field(car.district),
-          latitude: field(car.latitude),
-          longitude: field(car.longitude),
-          make: field(car.make),
-          model: field(car.model),
-          year: field(car.year),
-          price_sar: field(car.price_sar),
-          mileage_km: field(car.mileage_km),
-          body_type: field(car.body_type),
-          transmission: field(car.transmission),
-          fuel_type: field(car.fuel_type),
-          drivetrain: field(car.drivetrain),
-          condition: field(car.condition),
-          color: field(car.color),
-          title_ar: field(car.title_ar),
-          description_ar: field(car.description_ar),
+          city: fromLoadedField(car.city),
+          district: fromLoadedField(car.district),
+          latitude: fromLoadedField(car.latitude),
+          longitude: fromLoadedField(car.longitude),
+          make: fromLoadedField(car.make),
+          model: fromLoadedField(car.model),
+          year: car.year === DRAFT_PLACEHOLDER_YEAR && car.make === DRAFT_PLACEHOLDER && car.model === DRAFT_PLACEHOLDER
+            ? ""
+            : field(car.year),
+          price_sar: fromLoadedField(car.price_sar),
+          mileage_km: fromLoadedField(car.mileage_km),
+          body_type: fromLoadedField(car.body_type),
+          transmission: fromLoadedField(car.transmission),
+          fuel_type: fromLoadedField(car.fuel_type),
+          drivetrain: fromLoadedField(car.drivetrain),
+          condition: fromLoadedField(car.condition),
+          color: fromLoadedField(car.color),
+          title_ar: fromLoadedField(car.title_ar),
+          description_ar: fromLoadedField(car.description_ar),
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : text.loadDraftFailed);
@@ -855,7 +910,29 @@ export default function CarDraftForm({
 
     if (!targetCarId) {
       try {
-        const draft = await persistDraft(token);
+        const draftRes = await fetch(`${API_BASE}/v1/cars`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(buildUploadDraftPayload(form)),
+        });
+
+        if (draftRes.status === 401 || draftRes.status === 403) {
+          setNeedsLogin(true);
+          throw new Error(text.sessionExpired);
+        }
+
+        if (!draftRes.ok) {
+          throw new Error(await parseApiError(draftRes));
+        }
+
+        const draft = (await draftRes.json()) as CarOut;
+        setStatus(draft.status);
+        setReviewReason(draft.review_reason || "");
+        setPhotos(draft.photos || []);
+        setCreatedId(draft.id);
         targetCarId = draft.id;
         createdForUpload = true;
       } catch (err) {
@@ -1089,10 +1166,13 @@ export default function CarDraftForm({
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        const { latitude, longitude } = position.coords;
+        const nearestCity = findNearestCity(latitude, longitude);
         setForm((prev) => ({
           ...prev,
-          latitude: position.coords.latitude.toFixed(6),
-          longitude: position.coords.longitude.toFixed(6),
+          latitude: latitude.toFixed(6),
+          longitude: longitude.toFixed(6),
+          ...(nearestCity && !prev.city.trim() ? { city: nearestCity } : {}),
         }));
         setLocationStatus(text.locationSaved);
         setLocating(false);
@@ -1247,37 +1327,35 @@ export default function CarDraftForm({
                 />
               </div>
 
-              <div>
-                <label className="label" htmlFor="make">{text.make}</label>
-                <input
-                  id="make"
-                  className="input"
-                  value={form.make}
-                  onChange={(e) => setForm((prev) => ({ ...prev, make: e.target.value }))}
-                />
-              </div>
-
-              <div>
-                <label className="label" htmlFor="model">{text.model}</label>
-                <input
-                  id="model"
-                  className="input"
-                  value={form.model}
-                  onChange={(e) => setForm((prev) => ({ ...prev, model: e.target.value }))}
-                />
-              </div>
+              <MakeModelField
+                makeValue={form.make}
+                modelValue={form.model}
+                onMakeChange={(v) => setForm((prev) => ({ ...prev, make: v, model: "" }))}
+                onModelChange={(v) => setForm((prev) => ({ ...prev, model: v }))}
+                makeLabel={text.make}
+                modelLabel={text.model}
+              />
 
               <div>
                 <label className="label" htmlFor="year">{text.year}</label>
                 <input
                   id="year"
                   className="input"
-                  type="number"
-                  min={1980}
-                  max={new Date().getUTCFullYear() + 1}
+                  list="year-options"
+                  inputMode="numeric"
+                  placeholder={String(new Date().getUTCFullYear())}
                   value={form.year}
                   onChange={(e) => setForm((prev) => ({ ...prev, year: e.target.value }))}
+                  autoComplete="off"
                 />
+                <datalist id="year-options">
+                  {Array.from(
+                    { length: new Date().getUTCFullYear() + 2 - 1980 },
+                    (_, i) => new Date().getUTCFullYear() + 1 - i,
+                  ).map((yr) => (
+                    <option key={yr} value={yr} />
+                  ))}
+                </datalist>
               </div>
 
               <div>
