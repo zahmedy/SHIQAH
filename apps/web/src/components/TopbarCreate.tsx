@@ -54,8 +54,8 @@ export default function TopbarCreate() {
   }, []);
 
   return (
-    <Link href={href} className="nav-link">
-      {locale === "ar" ? "أضف إعلان" : "Create"}
+    <Link href={href} className="btn btn-primary topbar-create-btn">
+      {locale === "ar" ? "+ أضف إعلان" : "+ Create"}
     </Link>
   );
 }

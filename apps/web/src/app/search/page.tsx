@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { apiGet } from "@/lib/api";
 import CityField from "@/components/CityField";
+import MakeModelField from "@/components/MakeModelField";
 import NearbySearch from "@/components/NearbySearch";
 import {
   formatListingPrice,
@@ -122,15 +123,10 @@ export default async function SearchPage({
               otherPlaceholder={isArabic ? "اكتب مدينة ثانية" : "Enter another city"}
             />
 
-            <div>
-              <label className="label" htmlFor="make">{isArabic ? "الشركة" : "Make"}</label>
-              <input id="make" name="make" defaultValue={params.make ?? ""} placeholder="Toyota" className="input" />
-            </div>
-
-            <div>
-              <label className="label" htmlFor="model">{isArabic ? "الموديل" : "Model"}</label>
-              <input id="model" name="model" defaultValue={params.model ?? ""} placeholder="Camry" className="input" />
-            </div>
+            <MakeModelField
+              defaultMake={params.make ?? ""}
+              defaultModel={params.model ?? ""}
+            />
 
             <button type="submit" className="btn btn-primary">{isArabic ? "طبّق الفلترة" : "Apply Filters"}</button>
           </form>
