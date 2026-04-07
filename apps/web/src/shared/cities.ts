@@ -1,46 +1,49 @@
 export const OTHER_CITY_VALUE = "__other__";
 
 export const MAJOR_CITIES = [
-  "Riyadh",
-  "Jeddah",
-  "Makkah",
-  "Madinah",
-  "Dammam",
-  "Khobar",
-  "Dhahran",
-  "Taif",
-  "Abha",
-  "Khamis Mushait",
-  "Jazan",
-  "Tabuk",
-  "Buraidah",
-  "Hail",
-  "Najran",
-  "Jubail",
-  "Al Ahsa",
-  "Yanbu",
+  "New York",
+  "Los Angeles",
+  "Chicago",
+  "Houston",
+  "Phoenix",
+  "Philadelphia",
+  "San Antonio",
+  "San Diego",
+  "Dallas",
+  "Austin",
+  "Jacksonville",
+  "Columbus",
+  "Charlotte",
+  "Indianapolis",
+  "Seattle",
+  "Denver",
+  "Boston",
+  "Miami",
+  "Atlanta",
+  "Washington",
 ];
 
-// Approximate city centre coordinates (WGS-84)
 const CITY_COORDS: Record<string, [number, number]> = {
-  Riyadh:          [24.6877, 46.7219],
-  Jeddah:          [21.4858, 39.1925],
-  Makkah:          [21.4225, 39.8262],
-  Madinah:         [24.5247, 39.5692],
-  Dammam:          [26.4207, 50.0888],
-  Khobar:          [26.2172, 50.1971],
-  Dhahran:         [26.2967, 50.1538],
-  Taif:            [21.2854, 40.4152],
-  Abha:            [18.2164, 42.5053],
-  "Khamis Mushait":[18.2993, 42.7237],
-  Jazan:           [16.8892, 42.5611],
-  Tabuk:           [28.3838, 36.5550],
-  Buraidah:        [26.3260, 43.9750],
-  Hail:            [27.5114, 41.6905],
-  Najran:          [17.4924, 44.1277],
-  Jubail:          [27.0046, 49.6605],
-  "Al Ahsa":       [25.3713, 49.5870],
-  Yanbu:           [24.0895, 38.0618],
+  "New York": [40.7128, -74.0060],
+  "Los Angeles": [34.0522, -118.2437],
+  Chicago: [41.8781, -87.6298],
+  Houston: [29.7604, -95.3698],
+  Phoenix: [33.4484, -112.0740],
+  Philadelphia: [39.9526, -75.1652],
+  "San Antonio": [29.4241, -98.4936],
+  "San Diego": [32.7157, -117.1611],
+  Dallas: [32.7767, -96.7970],
+  Austin: [30.2672, -97.7431],
+  Jacksonville: [30.3322, -81.6557],
+  Columbus: [39.9612, -82.9988],
+  Charlotte: [35.2271, -80.8431],
+  Indianapolis: [39.7684, -86.1581],
+  Seattle: [47.6062, -122.3321],
+  Denver: [39.7392, -104.9903],
+  Boston: [42.3601, -71.0589],
+  Miami: [25.7617, -80.1918],
+  Atlanta: [33.7490, -84.3880],
+  Washington: [38.9072, -77.0369],
 };
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -55,10 +58,6 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-/**
- * Returns the nearest major city to the given coordinates, or null if all
- * cities are farther than `maxKm` (default 400 km).
- */
 export function findNearestCity(lat: number, lon: number, maxKm = 400): string | null {
   let nearest: string | null = null;
   let nearestDist = Infinity;

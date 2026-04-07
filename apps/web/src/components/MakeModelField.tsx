@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { useLocale } from "@/components/LocaleProvider";
 import { CAR_MAKES, findMake, getLogoUrl, type CarMake } from "@/shared/carMakes";
 
 // ── Two usage modes ──────────────────────────────────────────────────────
@@ -59,9 +58,6 @@ function BrandLogo({ domain, name }: { domain: string; name: string }) {
 }
 
 export default function MakeModelField(props: MakeModelFieldProps) {
-  const locale = useLocale();
-  const isArabic = locale === "ar";
-
   const isControlled = props.makeValue !== undefined;
 
   // Internal state used only in uncontrolled mode
@@ -81,11 +77,7 @@ export default function MakeModelField(props: MakeModelFieldProps) {
   const models = makeData?.models ?? [];
 
   const filteredMakes: (CarMake & { logoUrl: string })[] = query.trim()
-    ? CAR_MAKES.filter(
-        (m) =>
-          m.name.toLowerCase().includes(query.toLowerCase()) ||
-          m.nameAr.includes(query),
-      ).map((m) => ({ ...m, logoUrl: getLogoUrl(m.domain) }))
+    ? CAR_MAKES.filter((m) => m.name.toLowerCase().includes(query.toLowerCase())).map((m) => ({ ...m, logoUrl: getLogoUrl(m.domain) }))
     : CAR_MAKES.map((m) => ({ ...m, logoUrl: getLogoUrl(m.domain) }));
 
   useEffect(() => {
@@ -137,9 +129,7 @@ export default function MakeModelField(props: MakeModelFieldProps) {
     }
   }
 
-  const defaultLabels = isArabic
-    ? { make: "الشركة", model: "الموديل", anyMake: "أي شركة", anyModel: "أي موديل", search: "ابحث عن شركة..." }
-    : { make: "Make", model: "Model", anyMake: "Any make", anyModel: "Any model", search: "Search makes..." };
+  const defaultLabels = { make: "Make", model: "Model", anyMake: "Any make", anyModel: "Any model", search: "Search makes..." };
 
   const makeLabel = props.makeLabel ?? defaultLabels.make;
   const modelLabel = props.modelLabel ?? defaultLabels.model;
@@ -227,13 +217,12 @@ export default function MakeModelField(props: MakeModelFieldProps) {
                 >
                   <BrandLogo domain={make.domain} name={make.name} />
                   <span className="make-option-name">{make.name}</span>
-                  {isArabic && <span className="make-option-name-ar">{make.nameAr}</span>}
                 </button>
               ))}
 
               {filteredMakes.length === 0 && (
                 <p className="make-no-results">
-                  {isArabic ? "ما فيه نتائج" : "No results"}
+                  No results
                 </p>
               )}
             </div>
@@ -257,7 +246,7 @@ export default function MakeModelField(props: MakeModelFieldProps) {
             onChange={(e) => setModel(e.target.value)}
           >
             {!isControlled && <option value="">{defaultLabels.anyModel}</option>}
-            {isControlled && <option value="">— {isArabic ? "اختر الموديل" : "Select model"} —</option>}
+            {isControlled && <option value="">— Select model —</option>}
             {models.map((model) => (
               <option key={model} value={model}>
                 {model}
@@ -271,7 +260,7 @@ export default function MakeModelField(props: MakeModelFieldProps) {
             className="input"
             value={selectedModel}
             onChange={(e) => setModel(e.target.value)}
-            placeholder={isArabic ? "مثل: كامري" : "e.g. Camry"}
+            placeholder="e.g. Camry"
           />
         )}
       </div>

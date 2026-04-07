@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useLocale } from "@/components/LocaleProvider";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
-const TOKEN_KEY = "garaj_access_token";
+const TOKEN_KEY = "autointel_access_token";
 
 type OwnerActionsProps = {
   ownerId: number;
@@ -53,7 +53,7 @@ export default function OwnerActions({ ownerId, carId }: OwnerActionsProps) {
   return (
     <div className="spaced-top-sm">
       <Link href={`/my-cars/${carId}/edit`} className="btn btn-primary">
-        {locale === "ar" ? "تعديل الإعلان / رفع الصور" : "Edit Listing / Upload Photos"}
+        Edit Listing / Upload Photos
       </Link>
     </div>
   );

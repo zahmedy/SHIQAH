@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
@@ -30,11 +32,11 @@ def public_car_detail(car_id: int, session: Session = Depends(get_session)):
     out = CarOut(**data)
 
     seller_phone = seller.phone_e164 if seller else None
-    whatsapp_text = f"السلام عليكم، مهتم بالسيارة رقم {car.id} - {car.make} {car.model} {car.year}"
+    whatsapp_text = f"Hello, I'm interested in listing #{car.id}: {car.make} {car.model} {car.year}."
     whatsapp_url = None
     if seller_phone:
         phone = seller_phone.replace("+", "")
-        whatsapp_url = f"https://wa.me/{phone}?text={whatsapp_text}"
+        whatsapp_url = f"https://wa.me/{phone}?text={quote(whatsapp_text)}"
 
     return {
         "listing": out.model_dump(),

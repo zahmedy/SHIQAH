@@ -15,27 +15,16 @@ export default function NearbySearch({ initialRadiusKm }: { initialRadiusKm: num
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<string>("");
   const [radiusKm, setRadiusKm] = useState<number>(initialRadiusKm);
-  const text = locale === "ar"
-    ? {
-        distance: "المسافة",
-        useMyLocation: "حدّد موقعي",
-        clearLocation: "امسح الموقع",
-        geolocationUnsupported: "المتصفح ما يدعم تحديد الموقع.",
-        requestingLocation: "جارٍ تحديد موقعك...",
-        unableToRetrieveLocation: "ما قدرنا نحدد موقعك.",
-        showingWithin: (distance: number) => `نطلع لك الإعلانات القريبة ضمن ${formatDistance(distance, locale)}.`,
-        filteringWithin: (distance: number) => `نعرض لك الإعلانات القريبة ضمن ${formatDistance(distance, locale)}.`,
-      }
-    : {
-        distance: "Distance",
-        useMyLocation: "Use my location",
-        clearLocation: "Clear location",
-        geolocationUnsupported: "Geolocation not supported in this browser.",
-        requestingLocation: "Requesting location...",
-        unableToRetrieveLocation: "Unable to retrieve location.",
-        showingWithin: (distance: number) => `Showing listings within ${formatDistance(distance, locale)}.`,
-        filteringWithin: (distance: number) => `Filtering listings within ${formatDistance(distance, locale)}.`,
-      };
+  const text = {
+    distance: "Distance",
+    useMyLocation: "Use my location",
+    clearLocation: "Clear location",
+    geolocationUnsupported: "Geolocation not supported in this browser.",
+    requestingLocation: "Requesting location...",
+    unableToRetrieveLocation: "Unable to retrieve location.",
+    showingWithin: (distance: number) => `Showing listings within ${formatDistance(distance, locale)}.`,
+    filteringWithin: (distance: number) => `Filtering listings within ${formatDistance(distance, locale)}.`,
+  };
 
   const isActive = useMemo(() => {
     return Boolean(searchParams.get("lat") && searchParams.get("lon"));

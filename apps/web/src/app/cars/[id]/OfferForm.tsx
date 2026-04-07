@@ -7,7 +7,7 @@ import { useLocale } from "@/components/LocaleProvider";
 import { formatDateTime, formatPrice, translateApiMessage } from "@/lib/locale";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
-const TOKEN_KEY = "garaj_access_token";
+const TOKEN_KEY = "autointel_access_token";
 
 type OfferEntry = {
   id: number;
@@ -53,7 +53,6 @@ function buildWhatsappUrl(phone: string, message: string) {
 
 export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: number }) {
   const locale = useLocale();
-  const isArabic = locale === "ar";
   const [amount, setAmount] = useState("");
   const [token, setToken] = useState("");
   const [viewerId, setViewerId] = useState<number | null>(null);
@@ -69,109 +68,57 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
   const [success, setSuccess] = useState("");
   const isOwner = viewerId === ownerId;
 
-  const text = isArabic
-    ? {
-        title: "السوم والعرض",
-        ownerTitle: "العروض",
-        highestOffer: "أعلى سومة",
-        noOffers: "لا يوجد",
-        bidCount: (count: number) => `${count} سومة`,
-        recentBids: "آخر السومات",
-        amount: "سومتك",
-        signIn: "سجّل دخولك عشان تسوم أو ترسل عرض",
-        signInHint: "بنستخدم رقمك المسجّل تلقائي.",
-        minBid: (amountSar: number) => `في السوم العلني لازم تكون السومة أعلى من ${formatPrice(amountSar, locale)}.`,
-        publicHint: "السوم العلني يطلع للجميع ويرفع أعلى سومة.",
-        privateHint: "العرض الخاص يوصلك لصاحب السيارة فقط.",
-        publicBid: "سوم علني",
-        privateOffer: "عرض خاص",
-        publicBadge: "علني",
-        privateBadge: "خاص",
-        warningTitle: "تنبيه قبل السومة",
-        warningBody: "إذا اعتبر صاحب السيارة إن هذي سومة وهمية وما تم الشراء، بيتوقف حسابك عن السوم لمدة شهر. وإذا تكررت مرة ثانية، ينحظر الحساب نهائيًا.",
-        confirmBid: "أوافق وأحط السومة",
-        cancelBid: "إلغاء",
-        confirmAmount: "قيمة السومة",
-        confirmType: "نوع العرض",
-        closedHint: "العروض مقفولة على هالإعلان بعد قبول سومة أو عرض.",
-        ownerHint: "السومات العلنية والعروض الخاصة كلها تظهر هنا.",
-        ownerNoOffers: "ما فيه عروض للحين.",
-        bidder: "صاحب السومة",
-        accept: "قبول السومة",
-        accepting: "جارٍ القبول...",
-        accepted: "مقبولة",
-        acceptedSummary: "تم قبول سومة على هالسيارة.",
-        unaccept: "إلغاء القبول",
-        unaccepting: "جارٍ الإلغاء...",
-        unacceptedSuccess: "تم إلغاء قبول السومة وفتح السوم من جديد.",
-        acceptedContactTitle: "تواصل مع صاحب السومة المقبولة",
-        bidderPhone: "رقم صاحب السومة",
-        callBidder: "اتصل عليه",
-        whatsappBidder: "كلّمه واتساب",
-        submit: "حط سومتك",
-        submitting: "جارٍ الإرسال...",
-        loading: "جارٍ تحميل العروض...",
-        missingApi: "متغير NEXT_PUBLIC_API_BASE غير موجود.",
-        invalidAmount: "حط قيمة صحيحة.",
-        lowerThanHighest: (amountSar: number) => `لازم تكون السومة أعلى من ${formatPrice(amountSar, locale)}.`,
-        success: "تم تسجيل السومة.",
-        privateSuccess: "تم إرسال العرض الخاص.",
-        acceptedSuccess: "تم قبول السومة وإقفال السوم.",
-        loginRequired: "لازم تسجّل دخولك أول قبل ما تسوم أو ترسل عرض.",
-        failed: "ما قدرنا نرسل السومة.",
-        acceptFailed: "ما قدرنا نقبل السومة.",
-      }
-    : {
-        title: "Offers & Bids",
-        ownerTitle: "Offers",
-        highestOffer: "Highest Offer",
-        noOffers: "None",
-        bidCount: (count: number) => `${count} bids`,
-        recentBids: "Recent Offers",
-        amount: "Your bid",
-        signIn: "Sign in to bid or send an offer",
-        signInHint: "Your saved account phone number will be used automatically.",
-        minBid: (amountSar: number) => `For a public bid, your amount must be higher than ${formatPrice(amountSar, locale)}.`,
-        publicHint: "Public bids are visible to everyone and raise the current highest bid.",
-        privateHint: "Private offers are shared only with the listing owner.",
-        publicBid: "Public Bid",
-        privateOffer: "Private Offer",
-        publicBadge: "Public",
-        privateBadge: "Private",
-        warningTitle: "Important warning before bidding",
-        warningBody: "If the listing owner reports this as a false bid and the purchase is not completed, your account will be blocked from bidding for one month. If it happens again, the account will be banned.",
-        confirmBid: "Accept and Place Bid",
-        cancelBid: "Cancel",
-        confirmAmount: "Bid amount",
-        confirmType: "Offer type",
-        closedHint: "Bidding is closed for this listing after an offer was accepted.",
-        ownerHint: "Public bids and private offers both appear here.",
-        ownerNoOffers: "No offers to manage yet.",
-        bidder: "Bidder",
-        accept: "Accept Offer",
-        accepting: "Accepting...",
-        accepted: "Accepted",
-        acceptedSummary: "An offer has been accepted for this listing.",
-        unaccept: "Unaccept Offer",
-        unaccepting: "Reopening...",
-        unacceptedSuccess: "Offer acceptance removed and bidding reopened.",
-        acceptedContactTitle: "Contact Accepted Bidder",
-        bidderPhone: "Bidder phone",
-        callBidder: "Call Bidder",
-        whatsappBidder: "WhatsApp Bidder",
-        submit: "Place Bid",
-        submitting: "Sending...",
-        loading: "Loading offers...",
-        missingApi: "NEXT_PUBLIC_API_BASE is missing.",
-        invalidAmount: "Enter a valid offer amount.",
-        lowerThanHighest: (amountSar: number) => `Your bid must be higher than ${formatPrice(amountSar, locale)}.`,
-        success: "Bid placed.",
-        privateSuccess: "Private offer sent.",
-        acceptedSuccess: "Offer accepted and bidding closed.",
-        loginRequired: "You must sign in before placing a bid.",
-        failed: "Failed to send offer.",
-        acceptFailed: "Failed to accept offer.",
-      };
+  const text = {
+    title: "Offers & Bids",
+    ownerTitle: "Offers",
+    highestOffer: "Highest Offer",
+    noOffers: "None",
+    bidCount: (count: number) => `${count} bids`,
+    recentBids: "Recent Offers",
+    amount: "Your bid",
+    signIn: "Sign in to bid or send an offer",
+    signInHint: "Your saved account phone number will be used automatically.",
+    minBid: (amountSar: number) => `For a public bid, your amount must be higher than ${formatPrice(amountSar, locale)}.`,
+    publicHint: "Public bids are visible to everyone and raise the current highest bid.",
+    privateHint: "Private offers are shared only with the listing owner.",
+    publicBid: "Public Bid",
+    privateOffer: "Private Offer",
+    publicBadge: "Public",
+    privateBadge: "Private",
+    warningTitle: "Important warning before bidding",
+    warningBody: "If the listing owner reports this as a false bid and the purchase is not completed, your account will be blocked from bidding for one month. If it happens again, the account will be banned.",
+    confirmBid: "Accept and Place Bid",
+    cancelBid: "Cancel",
+    confirmAmount: "Bid amount",
+    confirmType: "Offer type",
+    closedHint: "Bidding is closed for this listing after an offer was accepted.",
+    ownerHint: "Public bids and private offers both appear here.",
+    ownerNoOffers: "No offers to manage yet.",
+    bidder: "Bidder",
+    accept: "Accept Offer",
+    accepting: "Accepting...",
+    accepted: "Accepted",
+    acceptedSummary: "An offer has been accepted for this listing.",
+    unaccept: "Unaccept Offer",
+    unaccepting: "Reopening...",
+    unacceptedSuccess: "Offer acceptance removed and bidding reopened.",
+    acceptedContactTitle: "Contact Accepted Bidder",
+    bidderPhone: "Bidder phone",
+    callBidder: "Call Bidder",
+    whatsappBidder: "WhatsApp Bidder",
+    submit: "Place Bid",
+    submitting: "Sending...",
+    loading: "Loading offers...",
+    missingApi: "NEXT_PUBLIC_API_BASE is missing.",
+    invalidAmount: "Enter a valid offer amount.",
+    lowerThanHighest: (amountSar: number) => `Your bid must be higher than ${formatPrice(amountSar, locale)}.`,
+    success: "Bid placed.",
+    privateSuccess: "Private offer sent.",
+    acceptedSuccess: "Offer accepted and bidding closed.",
+    loginRequired: "You must sign in before placing a bid.",
+    failed: "Failed to send offer.",
+    acceptFailed: "Failed to accept offer.",
+  };
 
   const currentSummary = isOwner && ownerSummary ? ownerSummary : summary;
   const acceptedOffer = currentSummary?.accepted_offer ?? null;
@@ -183,9 +130,7 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
   const acceptedBidderWhatsapp = acceptedBidderPhone
     ? buildWhatsappUrl(
         acceptedBidderPhone,
-        isArabic
-          ? `السلام عليكم، بخصوص العرض المقبول على السيارة رقم ${carId}`
-          : `Hello, regarding your accepted offer on listing #${carId}`,
+        `Hello, regarding your accepted offer on listing #${carId}`,
       )
     : null;
 
@@ -216,10 +161,10 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
     }
 
     void syncAuth();
-    window.addEventListener("garaj-auth-changed", syncAuth);
+    window.addEventListener("autointel-auth-changed", syncAuth);
     window.addEventListener("focus", syncAuth);
     return () => {
-      window.removeEventListener("garaj-auth-changed", syncAuth);
+      window.removeEventListener("autointel-auth-changed", syncAuth);
       window.removeEventListener("focus", syncAuth);
     };
   }, []);

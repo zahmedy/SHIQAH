@@ -2,7 +2,6 @@
 
 import { ChangeEvent, useEffect, useState } from "react";
 
-import { useLocale } from "@/components/LocaleProvider";
 import { getCitySelectValue, isMajorCity, MAJOR_CITIES, OTHER_CITY_VALUE } from "@/shared/cities";
 
 type CityFieldProps = {
@@ -28,7 +27,6 @@ export default function CityField({
   otherPlaceholder = "Enter another city",
   onChange,
 }: CityFieldProps) {
-  const locale = useLocale();
   const isControlled = value !== undefined;
   const [internalValue, setInternalValue] = useState(defaultValue);
   const [otherMode, setOtherMode] = useState(() => getCitySelectValue(isControlled ? value : defaultValue) === OTHER_CITY_VALUE);
@@ -36,11 +34,9 @@ export default function CityField({
   const cityValue = isControlled ? (value ?? "") : internalValue;
   const selectValue = otherMode ? OTHER_CITY_VALUE : getCitySelectValue(cityValue);
   const showOtherInput = selectValue === OTHER_CITY_VALUE;
-  const resolvedBlankLabel = blankLabel === "Select city" && locale === "ar" ? "اختر المدينة" : blankLabel;
-  const resolvedOtherPlaceholder = otherPlaceholder === "Enter another city" && locale === "ar"
-    ? "اكتب مدينة أخرى"
-    : otherPlaceholder;
-  const otherLabel = locale === "ar" ? "أخرى" : "Other";
+  const resolvedBlankLabel = blankLabel;
+  const resolvedOtherPlaceholder = otherPlaceholder;
+  const otherLabel = "Other";
 
   useEffect(() => {
     const nextSelectValue = getCitySelectValue(cityValue);

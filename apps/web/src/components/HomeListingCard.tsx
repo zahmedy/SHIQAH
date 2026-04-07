@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { useLocale } from "@/components/LocaleProvider";
-
 type ListingPhoto = {
   public_url: string;
 };
@@ -51,7 +49,6 @@ export default function HomeListingCard({
   metaText,
   photos = [],
 }: HomeListingCardProps) {
-  const locale = useLocale();
   const [photoIndex, setPhotoIndex] = useState(0);
   const hasMultiplePhotos = photos.length > 1;
   const activePhoto = photos[photoIndex]?.public_url ?? "";
@@ -84,7 +81,7 @@ export default function HomeListingCard({
               type="button"
               className="car-thumb-nav car-thumb-nav-prev"
               onClick={showPreviousPhoto}
-              aria-label={locale === "ar" ? "الصورة السابقة" : "Previous photo"}
+              aria-label="Previous photo"
               dir="ltr"
             >
               <ChevronIcon direction="left" />
@@ -93,7 +90,7 @@ export default function HomeListingCard({
               type="button"
               className="car-thumb-nav car-thumb-nav-next"
               onClick={showNextPhoto}
-              aria-label={locale === "ar" ? "الصورة التالية" : "Next photo"}
+              aria-label="Next photo"
               dir="ltr"
             >
               <ChevronIcon direction="right" />

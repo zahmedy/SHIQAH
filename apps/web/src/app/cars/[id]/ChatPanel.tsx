@@ -7,7 +7,7 @@ import { useLocale } from "@/components/LocaleProvider";
 import { formatClockTime, translateApiMessage } from "@/lib/locale";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
-const TOKEN_KEY = "garaj_access_token";
+const TOKEN_KEY = "autointel_access_token";
 
 type Message = {
   id: number;
@@ -38,31 +38,18 @@ export default function ChatPanel({ carId }: { carId: number }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
-  const text = locale === "ar"
-    ? {
-        loadChatFailed: "ما قدرنا نحمّل التعليقات.",
-        sendMessageFailed: "ما قدرنا نضيف التعليق.",
-        loginToChat: "سجّل دخولك للتعليق",
-        loadingChat: "جارٍ تحميل التعليقات...",
-        noMessages: "ما فيه تعليقات للحين.",
-        typeMessage: "اكتب تعليقك...",
-        loginToStart: "سجّل دخولك وابدأ التعليق",
-        sending: "جارٍ الإرسال...",
-        send: "أضف تعليق",
-        user: "مستخدم",
-      }
-    : {
-        loadChatFailed: "Failed to load comments.",
-        sendMessageFailed: "Failed to post comment.",
-        loginToChat: "Login to Comment",
-        loadingChat: "Loading comments...",
-        noMessages: "No comments yet.",
-        typeMessage: "Write your comment...",
-        loginToStart: "Login to start commenting",
-        sending: "Sending...",
-        send: "Add Comment",
-        user: "User",
-      };
+  const text = {
+    loadChatFailed: "Failed to load comments.",
+    sendMessageFailed: "Failed to post comment.",
+    loginToChat: "Login to Comment",
+    loadingChat: "Loading comments...",
+    noMessages: "No comments yet.",
+    typeMessage: "Write your comment...",
+    loginToStart: "Login to start commenting",
+    sending: "Sending...",
+    send: "Add Comment",
+    user: "User",
+  };
 
   useEffect(() => {
     const token = localStorage.getItem(TOKEN_KEY);

@@ -3,13 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { useLocale } from "@/components/LocaleProvider";
-
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
-const TOKEN_KEY = "garaj_access_token";
+const TOKEN_KEY = "autointel_access_token";
 
 export default function TopbarCreate() {
-  const locale = useLocale();
   const [href, setHref] = useState("/login");
 
   useEffect(() => {
@@ -45,17 +42,17 @@ export default function TopbarCreate() {
     }
 
     void load();
-    window.addEventListener("garaj-auth-changed", handleAuthChange);
+    window.addEventListener("autointel-auth-changed", handleAuthChange);
     window.addEventListener("focus", handleAuthChange);
     return () => {
-      window.removeEventListener("garaj-auth-changed", handleAuthChange);
+      window.removeEventListener("autointel-auth-changed", handleAuthChange);
       window.removeEventListener("focus", handleAuthChange);
     };
   }, []);
 
   return (
     <Link href={href} className="btn btn-primary topbar-create-btn">
-      {locale === "ar" ? "+ أضف إعلان" : "+ Create"}
+      + Create
     </Link>
   );
 }

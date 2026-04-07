@@ -16,7 +16,7 @@ from app.api.v1.routes.leads import router as leads_router
 from app.api.v1.routes.chat import router as chat_router
 
 
-app = FastAPI(title="GARAJ API", version="0.1.0")
+app = FastAPI(title="AutoIntel API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,

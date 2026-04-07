@@ -66,7 +66,6 @@ export default async function SearchPage({
 }) {
   const params = await searchParams;
   const locale = await getServerLocale();
-  const isArabic = locale === "ar";
   const radiusKm = Number(params.radius_km);
   const initialRadiusKm = Number.isFinite(radiusKm) && radiusKm >= 1 && radiusKm <= 500 ? radiusKm : 50;
 
@@ -87,18 +86,14 @@ export default async function SearchPage({
   try {
     data = await apiGet<SearchResponse>(path);
   } catch (err) {
-    fetchError = err instanceof Error ? err.message : isArabic ? "تعذر تحميل نتائج البحث." : "Failed to load search results.";
+    fetchError = err instanceof Error ? err.message : "Failed to load search results.";
   }
 
   return (
     <main className="page shell">
       <section className="hero hero-mini">
-        <h1>{isArabic ? "دوّر على سيارة" : "Search Cars"}</h1>
-        <p>
-          {isArabic
-            ? "فلتر حسب المدينة أو الشركة أو الموديل أو أي كلمة في العنوان والوصف."
-            : "Filter by city, make, model, or keywords in Arabic title/description."}
-        </p>
+        <h1>Search Cars</h1>
+        <p>Filter by city, make, model, or keywords in title/description.</p>
       </section>
 
       <section className="search-grid">
@@ -109,18 +104,18 @@ export default async function SearchPage({
             {params.lon ? <input type="hidden" name="lon" value={params.lon} /> : null}
             {params.radius_km ? <input type="hidden" name="radius_km" value={params.radius_km} /> : null}
             <div>
-              <label className="label" htmlFor="q">{isArabic ? "كلمة" : "Keyword"}</label>
-              <input id="q" name="q" defaultValue={params.q ?? ""} placeholder="كامري" className="input" />
+              <label className="label" htmlFor="q">Keyword</label>
+              <input id="q" name="q" defaultValue={params.q ?? ""} placeholder="Camry" className="input" />
             </div>
 
             <CityField
               id="city"
-              label={isArabic ? "المدينة" : "City"}
+              label="City"
               name="city"
               defaultValue={params.city ?? ""}
-              blankLabel={isArabic ? "أي مدينة" : "Any city"}
-              helperText={isArabic ? "اختر مدينة من القائمة أو اكتب مدينة ثانية." : "Pick a major city or choose Other to search a custom city."}
-              otherPlaceholder={isArabic ? "اكتب مدينة ثانية" : "Enter another city"}
+              blankLabel="Any city"
+              helperText="Pick a major U.S. city or choose Other to search a custom city."
+              otherPlaceholder="Enter another city"
             />
 
             <MakeModelField
@@ -128,19 +123,19 @@ export default async function SearchPage({
               defaultModel={params.model ?? ""}
             />
 
-            <button type="submit" className="btn btn-primary">{isArabic ? "طبّق الفلترة" : "Apply Filters"}</button>
+            <button type="submit" className="btn btn-primary">Apply Filters</button>
           </form>
         </aside>
 
         <section>
           <div className="panel panel-compact">
-            <strong>{data.total}</strong> {isArabic ? "نتيجة" : "listings found"}
+            <strong>{data.total}</strong> listings found
           </div>
 
           {fetchError ? (
             <div className="notice error">{fetchError}</div>
           ) : data.items.length === 0 ? (
-            <div className="notice">{isArabic ? "ما لقينا نتائج مطابقة." : "No listings matched your filters."}</div>
+            <div className="notice">No listings matched your filters.</div>
           ) : (
             <div className="listing-grid">
               {data.items.map((car) => {

@@ -3,11 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { useLocale } from "@/components/LocaleProvider";
-
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
-const TOKEN_KEY = "garaj_access_token";
-const NAME_KEY = "garaj_user_name";
+const TOKEN_KEY = "autointel_access_token";
+const NAME_KEY = "autointel_user_name";
 
 type MeResponse = {
   id: number;
@@ -19,20 +17,13 @@ type MeResponse = {
 };
 
 export default function TopbarUser() {
-  const locale = useLocale();
   const [label, setLabel] = useState<string>("");
   const [ready, setReady] = useState(false);
-  const text = locale === "ar"
-    ? {
-        loggedIn: "مسجّل",
-        login: "دخول",
-        logout: "خروج",
-      }
-    : {
-        loggedIn: "Logged in",
-        login: "Login",
-        logout: "Logout",
-      };
+  const text = {
+    loggedIn: "Logged in",
+    login: "Login",
+    logout: "Logout",
+  };
 
   useEffect(() => {
     async function load() {
@@ -91,10 +82,10 @@ export default function TopbarUser() {
     }
 
     void load();
-    window.addEventListener("garaj-auth-changed", handleAuthChange);
+    window.addEventListener("autointel-auth-changed", handleAuthChange);
     window.addEventListener("focus", handleAuthChange);
     return () => {
-      window.removeEventListener("garaj-auth-changed", handleAuthChange);
+      window.removeEventListener("autointel-auth-changed", handleAuthChange);
       window.removeEventListener("focus", handleAuthChange);
     };
   }, [text.loggedIn]);
@@ -104,7 +95,7 @@ export default function TopbarUser() {
     localStorage.removeItem(NAME_KEY);
     setLabel("");
     setReady(true);
-    window.dispatchEvent(new Event("garaj-auth-changed"));
+    window.dispatchEvent(new Event("autointel-auth-changed"));
     window.location.replace("/");
   }
 

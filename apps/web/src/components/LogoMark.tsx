@@ -3,7 +3,7 @@ type LogoMarkProps = {
   title?: string;
 };
 
-export default function LogoMark({ className, title = "GARAJ logo" }: LogoMarkProps) {
+export default function LogoMark({ className, title = "AutoIntel logo" }: LogoMarkProps) {
   return (
     <img
       className={className}

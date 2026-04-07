@@ -1,8 +1,7 @@
 export type CarMake = {
   key: string;
   name: string;
-  nameAr: string;
-  domain: string; // used to generate favicon/logo URL
+  domain: string;
   models: string[];
 };
 
@@ -14,161 +13,145 @@ export const CAR_MAKES: CarMake[] = [
   {
     key: "toyota",
     name: "Toyota",
-    nameAr: "تويوتا",
     domain: "toyota.com",
-    models: ["Camry", "Corolla", "Land Cruiser", "Prado", "RAV4", "Fortuner", "Hilux", "Yaris", "Innova", "Avalon", "Sequoia", "Rush", "Rav4 Hybrid"],
+    models: ["Camry", "Corolla", "RAV4", "Highlander", "4Runner", "Tacoma", "Tundra", "Prius", "Sienna", "Sequoia", "Land Cruiser", "Crown"],
   },
   {
     key: "hyundai",
     name: "Hyundai",
-    nameAr: "هيونداي",
     domain: "hyundai.com",
-    models: ["Sonata", "Elantra", "Tucson", "Santa Fe", "Accent", "Azera", "i10", "Palisade", "Creta", "Veloster"],
+    models: ["Elantra", "Sonata", "Tucson", "Santa Fe", "Palisade", "Kona", "Venue", "Santa Cruz", "Ioniq 5", "Ioniq 6"],
   },
   {
     key: "nissan",
     name: "Nissan",
-    nameAr: "نيسان",
     domain: "nissan.com",
-    models: ["Patrol", "Altima", "Maxima", "Sunny", "Pathfinder", "X-Trail", "Sentra", "Armada", "Kicks", "Murano", "Navara"],
+    models: ["Altima", "Sentra", "Versa", "Rogue", "Murano", "Pathfinder", "Armada", "Frontier", "Leaf", "Kicks", "Z"],
   },
   {
     key: "kia",
     name: "Kia",
-    nameAr: "كيا",
     domain: "kia.com",
-    models: ["Sportage", "Sorento", "Optima", "Cerato", "Rio", "Carnival", "Stinger", "Telluride", "EV6", "K5"],
+    models: ["K4", "K5", "Forte", "Soul", "Seltos", "Sportage", "Sorento", "Telluride", "Carnival", "EV6", "EV9"],
   },
   {
     key: "honda",
     name: "Honda",
-    nameAr: "هوندا",
     domain: "honda.com",
-    models: ["Accord", "Civic", "CR-V", "Pilot", "HR-V", "Odyssey", "Passport", "Ridgeline"],
+    models: ["Accord", "Civic", "CR-V", "HR-V", "Pilot", "Odyssey", "Passport", "Ridgeline", "Prologue"],
   },
   {
     key: "lexus",
     name: "Lexus",
-    nameAr: "لكزس",
     domain: "lexus.com",
-    models: ["LX 600", "LX 570", "GX 460", "GX 550", "RX 350", "ES 350", "LS 500", "IS 300", "NX 300", "UX 200"],
+    models: ["RX 350", "NX 350", "ES 350", "GX 550", "LX 600", "IS 350", "TX 350", "RC 350", "LS 500", "UX 300h"],
   },
   {
     key: "gmc",
     name: "GMC",
-    nameAr: "GMC",
     domain: "gmc.com",
-    models: ["Yukon", "Tahoe", "Suburban", "Acadia", "Terrain", "Sierra", "Canyon", "Denali"],
+    models: ["Terrain", "Acadia", "Yukon", "Yukon XL", "Canyon", "Sierra 1500", "Sierra HD", "Hummer EV"],
   },
   {
     key: "chevrolet",
     name: "Chevrolet",
-    nameAr: "شيفروليه",
     domain: "chevrolet.com",
-    models: ["Tahoe", "Suburban", "Silverado", "Malibu", "Camaro", "Traverse", "Blazer", "Trailblazer", "Equinox"],
+    models: ["Trax", "Trailblazer", "Equinox", "Blazer", "Traverse", "Tahoe", "Suburban", "Colorado", "Silverado 1500", "Malibu", "Corvette"],
   },
   {
     key: "ford",
     name: "Ford",
-    nameAr: "فورد",
     domain: "ford.com",
-    models: ["F-150", "Explorer", "Edge", "Expedition", "Escape", "Mustang", "Ranger", "Bronco", "Maverick"],
+    models: ["Maverick", "Ranger", "F-150", "Mustang", "Escape", "Bronco Sport", "Bronco", "Explorer", "Expedition", "Transit"],
+  },
+  {
+    key: "tesla",
+    name: "Tesla",
+    domain: "tesla.com",
+    models: ["Model 3", "Model Y", "Model S", "Model X", "Cybertruck"],
   },
   {
     key: "bmw",
     name: "BMW",
-    nameAr: "بي إم دبليو",
     domain: "bmw.com",
-    models: ["3 Series", "5 Series", "7 Series", "X3", "X5", "X6", "X7", "M3", "M5", "i4", "iX"],
+    models: ["2 Series", "3 Series", "4 Series", "5 Series", "7 Series", "X1", "X3", "X5", "X7", "i4", "iX"],
   },
   {
     key: "mercedes-benz",
     name: "Mercedes-Benz",
-    nameAr: "مرسيدس بنز",
     domain: "mercedes-benz.com",
-    models: ["C-Class", "E-Class", "S-Class", "GLC", "GLE", "GLS", "A-Class", "CLA", "G-Class", "EQS"],
+    models: ["C-Class", "E-Class", "S-Class", "GLA", "GLC", "GLE", "GLS", "EQB", "EQE", "G-Class"],
   },
   {
     key: "mitsubishi",
     name: "Mitsubishi",
-    nameAr: "ميتسوبيشي",
     domain: "mitsubishi-motors.com",
-    models: ["Pajero", "Outlander", "Eclipse Cross", "ASX", "L200", "Lancer", "Galant"],
+    models: ["Mirage", "Outlander", "Outlander Sport", "Eclipse Cross"],
   },
   {
     key: "land-rover",
     name: "Land Rover",
-    nameAr: "لاند روفر",
     domain: "landrover.com",
-    models: ["Range Rover", "Range Rover Sport", "Range Rover Velar", "Discovery", "Defender", "Evoque"],
+    models: ["Range Rover", "Range Rover Sport", "Range Rover Velar", "Range Rover Evoque", "Discovery", "Defender"],
   },
   {
     key: "jeep",
     name: "Jeep",
-    nameAr: "جيب",
     domain: "jeep.com",
-    models: ["Grand Cherokee", "Wrangler", "Cherokee", "Renegade", "Gladiator", "Commander", "Compass"],
+    models: ["Compass", "Cherokee", "Grand Cherokee", "Wrangler", "Gladiator", "Wagoneer", "Grand Wagoneer"],
   },
   {
     key: "dodge",
     name: "Dodge",
-    nameAr: "دودج",
     domain: "dodge.com",
-    models: ["Charger", "Challenger", "Durango", "Journey", "Ram 1500", "Grand Caravan"],
+    models: ["Hornet", "Durango", "Charger", "Challenger"],
+  },
+  {
+    key: "ram",
+    name: "Ram",
+    domain: "ramtrucks.com",
+    models: ["1500", "2500", "3500", "ProMaster"],
   },
   {
     key: "volkswagen",
     name: "Volkswagen",
-    nameAr: "فولكس واغن",
     domain: "vw.com",
-    models: ["Golf", "Passat", "Tiguan", "Touareg", "Polo", "Arteon", "ID.4", "Taos"],
+    models: ["Jetta", "Taos", "Tiguan", "Atlas", "Atlas Cross Sport", "Golf GTI", "Golf R", "ID.4"],
   },
   {
     key: "audi",
     name: "Audi",
-    nameAr: "أودي",
     domain: "audi.com",
-    models: ["A3", "A4", "A6", "A8", "Q3", "Q5", "Q7", "Q8", "RS4", "RS6", "e-tron"],
+    models: ["A3", "A4", "A5", "A6", "Q3", "Q5", "Q7", "Q8", "e-tron", "Q4 e-tron"],
   },
   {
     key: "mazda",
     name: "Mazda",
-    nameAr: "مازدا",
     domain: "mazda.com",
-    models: ["CX-5", "CX-9", "CX-60", "Mazda3", "Mazda6", "CX-3", "MX-5"],
+    models: ["Mazda3", "CX-30", "CX-5", "CX-50", "CX-70", "CX-90", "MX-5 Miata"],
   },
   {
     key: "infiniti",
     name: "Infiniti",
-    nameAr: "إنفينيتي",
     domain: "infinitiusa.com",
-    models: ["QX80", "QX60", "QX50", "QX55", "Q50", "Q60"],
+    models: ["Q50", "QX50", "QX55", "QX60", "QX80"],
   },
   {
     key: "cadillac",
     name: "Cadillac",
-    nameAr: "كاديلاك",
     domain: "cadillac.com",
-    models: ["Escalade", "CT5", "CT4", "XT5", "XT6", "Lyriq"],
+    models: ["CT4", "CT5", "XT4", "XT5", "XT6", "Escalade", "Lyriq", "Optiq"],
   },
   {
     key: "subaru",
     name: "Subaru",
-    nameAr: "سوبارو",
     domain: "subaru.com",
-    models: ["Outback", "Forester", "Impreza", "Legacy", "XV", "BRZ", "WRX"],
-  },
-  {
-    key: "suzuki",
-    name: "Suzuki",
-    nameAr: "سوزوكي",
-    domain: "suzuki.com",
-    models: ["Grand Vitara", "Vitara", "Swift", "Jimny", "Ertiga", "Baleno"],
+    models: ["Impreza", "Legacy", "WRX", "Crosstrek", "Forester", "Outback", "Ascent", "BRZ", "Solterra"],
   },
 ];
 
 export const MAKES_BY_KEY: Record<string, CarMake & { logoUrl: string }> = Object.fromEntries(
-  CAR_MAKES.map((m) => [m.key, { ...m, logoUrl: logo(m.domain) }])
+  CAR_MAKES.map((m) => [m.key, { ...m, logoUrl: logo(m.domain) }]),
 );
 
 export function getLogoUrl(domain: string): string {

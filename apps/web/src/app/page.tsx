@@ -39,7 +39,6 @@ function locationUserAndTime(locale: Locale, city?: string, district?: string, s
 
 export default async function HomePage() {
   const locale = await getServerLocale();
-  const isArabic = locale === "ar";
   let listings: HomeListing[] = [];
   let fetchError = "";
 
@@ -47,31 +46,29 @@ export default async function HomePage() {
     const data = await apiGet<HomeSearchResponse>("/v1/search/cars?page_size=8");
     listings = data.items ?? [];
   } catch (err) {
-    fetchError = err instanceof Error ? err.message : isArabic ? "تعذر تحميل الإعلانات." : "Failed to load listings.";
+    fetchError = err instanceof Error ? err.message : "Failed to load listings.";
   }
 
   return (
     <main className="page shell">
       <section className="home-hero">
         <span className="home-hero-badge">
-          {isArabic ? "سوق سيارات السعودية" : "Saudi Arabia's Car Marketplace"}
+          U.S. Car Marketplace
         </span>
         <h1 className="home-hero-title">
-          {isArabic ? "بيع واشترِ سيارتك" : "Buy & Sell Cars"}
+          Buy & Sell Cars
         </h1>
         <p className="home-hero-sub">
-          {isArabic
-            ? "آلاف الإعلانات من جميع أنحاء المملكة"
-            : "Thousands of listings from across the Kingdom"}
+          Thousands of listings from across the United States
         </p>
       </section>
 
-      <h2 className="section-title">{isArabic ? "أحدث السيارات" : "Latest Listings"}</h2>
+      <h2 className="section-title">Latest Listings</h2>
 
       {fetchError ? (
         <div className="notice error">{fetchError}</div>
       ) : listings.length === 0 ? (
-        <div className="notice">{isArabic ? "ما فيه إعلانات للحين." : "No listings available yet."}</div>
+        <div className="notice">No listings available yet.</div>
       ) : (
         <section className="listing-grid">
           {listings.map((car) => {

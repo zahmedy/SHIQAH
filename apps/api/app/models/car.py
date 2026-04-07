@@ -31,7 +31,7 @@ class CarListing(SQLModel, table=True):
     status: CarStatus = Field(default=CarStatus.draft, index=True)
 
     # MVP: keep location simple
-    city: str = Field(index=True)                 # "Dammam" / "Khobar"
+    city: str = Field(index=True)                 # "Dallas" / "Seattle"
     district: Optional[str] = Field(default=None, index=True)
     latitude: Optional[float] = Field(default=None, index=True)
     longitude: Optional[float] = Field(default=None, index=True)

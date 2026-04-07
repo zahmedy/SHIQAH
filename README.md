@@ -1,5 +1,5 @@
-# GARAJ
-Market Place for Used Cars
+# AutoIntel
+Used Car Marketplace for the United States
 
 ## Run With Docker Compose
 
@@ -14,7 +14,7 @@ docker compose -f infra/compose.yaml up --build
 - MinIO Console: `http://localhost:9001`
 
 ```
-garaj/
+autointel/
   apps/
     api/
       app/

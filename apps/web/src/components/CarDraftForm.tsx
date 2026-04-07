@@ -7,12 +7,12 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import CityField from "@/components/CityField";
 import MakeModelField from "@/components/MakeModelField";
 import { useLocale } from "@/components/LocaleProvider";
-import { translateApiMessage, translateReviewReason, translateStatus, translateValue, type Locale } from "@/lib/locale";
+import { translateApiMessage, translateReviewReason, translateStatus, translateValue } from "@/lib/locale";
 import { findNearestCity } from "@/shared/cities";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
-const TOKEN_KEY = "garaj_access_token";
-const FLASH_KEY = "garaj_flash";
+const TOKEN_KEY = "autointel_access_token";
+const FLASH_KEY = "autointel_flash";
 
 type DraftFormMode = "create" | "edit";
 
@@ -138,6 +138,7 @@ const COLOR_OPTIONS = [
 
 const DRAFT_PLACEHOLDER = "__garaj_draft_placeholder__";
 const DRAFT_PLACEHOLDER_YEAR = new Date().getUTCFullYear();
+const KM_PER_MILE = 1.60934;
 const DISALLOWED_REVIEW_TERMS = [
   "wa.me",
   "whatsapp",
@@ -174,47 +175,54 @@ async function parseApiError(res: Response): Promise<string> {
   return translateApiMessage("en", detail || `Failed with status ${res.status}`);
 }
 
-function buildPayload(form: FormState, locale: Locale): BuildPayloadResult {
+function milesToKm(value: number): number {
+  return Math.round(value * KM_PER_MILE);
+}
+
+function kmToMiles(value: number): number {
+  return Math.round(value / KM_PER_MILE);
+}
+
+function buildPayload(form: FormState): BuildPayloadResult {
   const city = form.city.trim();
   const make = form.make.trim();
   const model = form.model.trim();
   const title = form.title_ar.trim();
   const description = form.description_ar.trim();
-  const isArabic = locale === "ar";
 
   if (!city || !make || !model || !description) {
-    return { ok: false, error: isArabic ? "يرجى تعبئة جميع الحقول المطلوبة." : "Please fill all required fields." };
+    return { ok: false, error: "Please fill all required fields." };
   }
 
   const year = Number(form.year);
   const maxYear = new Date().getUTCFullYear() + 1;
   if (!Number.isInteger(year) || year < 1980 || year > maxYear) {
-    return { ok: false, error: isArabic ? `يجب أن تكون السنة بين 1980 و ${maxYear}.` : `Year must be between 1980 and ${maxYear}.` };
+    return { ok: false, error: `Year must be between 1980 and ${maxYear}.` };
   }
 
   const price = parseOptionalNumber(form.price_sar);
   if (form.price_sar.trim() && (price === undefined || price <= 0)) {
-    return { ok: false, error: isArabic ? "إذا أدخلت سعرًا، فيجب أن يكون رقمًا صحيحًا موجبًا." : "If provided, price must be a positive integer." };
+    return { ok: false, error: "If provided, price must be a positive integer." };
   }
 
-  const mileage = parseOptionalNumber(form.mileage_km);
-  if (form.mileage_km.trim() && (mileage === undefined || mileage < 0)) {
-    return { ok: false, error: isArabic ? "يجب أن يكون الممشى صفرًا أو رقمًا صحيحًا موجبًا." : "Mileage must be zero or a positive integer." };
+  const mileageMiles = parseOptionalNumber(form.mileage_km);
+  if (form.mileage_km.trim() && (mileageMiles === undefined || mileageMiles < 0)) {
+    return { ok: false, error: "Mileage must be zero or a positive integer." };
   }
 
   const latitude = parseOptionalFloat(form.latitude);
   const longitude = parseOptionalFloat(form.longitude);
   if ((form.latitude.trim() && latitude === undefined) || (form.longitude.trim() && longitude === undefined)) {
-    return { ok: false, error: isArabic ? "يجب أن تكون خطوط الطول والعرض أرقامًا صحيحة." : "Latitude/longitude must be valid numbers." };
+    return { ok: false, error: "Latitude/longitude must be valid numbers." };
   }
   if ((latitude !== undefined && longitude === undefined) || (latitude === undefined && longitude !== undefined)) {
-    return { ok: false, error: isArabic ? "أدخل خطي العرض والطول معًا أو اتركهما فارغين." : "Provide both latitude and longitude, or leave both empty." };
+    return { ok: false, error: "Provide both latitude and longitude, or leave both empty." };
   }
   if (latitude !== undefined && (latitude < -90 || latitude > 90)) {
-    return { ok: false, error: isArabic ? "يجب أن يكون خط العرض بين -90 و 90." : "Latitude must be between -90 and 90." };
+    return { ok: false, error: "Latitude must be between -90 and 90." };
   }
   if (longitude !== undefined && (longitude < -180 || longitude > 180)) {
-    return { ok: false, error: isArabic ? "يجب أن يكون خط الطول بين -180 و 180." : "Longitude must be between -180 and 180." };
+    return { ok: false, error: "Longitude must be between -180 and 180." };
   }
 
   const payload: CarPayload = {
@@ -226,14 +234,14 @@ function buildPayload(form: FormState, locale: Locale): BuildPayloadResult {
     model,
     year,
     price_sar: form.price_sar.trim() ? price : null,
-    mileage_km: mileage,
+    mileage_km: mileageMiles === undefined ? undefined : milesToKm(mileageMiles),
     body_type: form.body_type.trim() || undefined,
     transmission: form.transmission.trim() || undefined,
     fuel_type: form.fuel_type.trim() || undefined,
     drivetrain: form.drivetrain.trim() || undefined,
     condition: form.condition.trim() || undefined,
     color: form.color.trim() || undefined,
-    title_ar: title || `${make} ${model} ${year} للبيع`,
+    title_ar: title || `${make} ${model} ${year} for sale`,
     description_ar: description,
   };
 
@@ -245,6 +253,13 @@ function fromLoadedField(value?: string | number | null): string {
   return nextValue === DRAFT_PLACEHOLDER ? "" : nextValue;
 }
 
+function fromLoadedMileage(value?: number | null): string {
+  if (value === undefined || value === null) {
+    return "";
+  }
+  return String(kmToMiles(value));
+}
+
 export default function CarDraftForm({
   mode,
   carId,
@@ -253,7 +268,6 @@ export default function CarDraftForm({
   carId?: number;
 }) {
   const locale = useLocale();
-  const isArabic = locale === "ar";
   const router = useRouter();
   const [form, setForm] = useState<FormState>(initialForm);
   const [status, setStatus] = useState<string>("");
@@ -284,231 +298,118 @@ export default function CarDraftForm({
   );
   const isReviewLocked = status === "active" || status === "pending_review";
   const isArchived = status === "expired";
-  const text = isArabic
-    ? {
-        saveChanges: "حفظ التغييرات",
-        saveDraft: "حفظ المسودة",
-        photoNumber: (index: number) => `صورة ${index}`,
-        invalidCarId: "معرّف السيارة غير صالح.",
-        missingApiBase: "متغير NEXT_PUBLIC_API_BASE غير موجود.",
-        loadDraftFailed: "تعذر تحميل المسودة.",
-        sessionExpired: "انتهت الجلسة. سجل الدخول مرة أخرى.",
-        loginRequired: "تسجيل الدخول مطلوب.",
-        changesSaved: "تم حفظ التغييرات.",
-        draftSaved: "تم حفظ المسودة.",
-        saveDraftFailed: "تعذر حفظ المسودة.",
-        listingUpdated: "تم تحديث الإعلان بنجاح.",
-        listingPendingReview: "تم تحديث الإعلان وهو الآن قيد المراجعة.",
-        listingApproved: "تم إرسال الإعلان وتمت الموافقة عليه بنجاح.",
-        listingSubmittedPending: "تم إرسال الإعلان وهو الآن قيد المراجعة.",
-        listingRejected: "تم رفض الإعلان.",
-        listingSubmitted: "تم إرسال الإعلان.",
-        submitListingFailed: "تعذر إرسال الإعلان.",
-        saveBeforeDelete: "احفظ الإعلان قبل حذفه.",
-        archiveConfirm: "أرشفة هذا الإعلان؟ سيتم إخفاؤه من الصفحة العامة والبحث ويمكنك إعادته لاحقًا.",
-        permanentDeleteConfirm: "حذف الإعلان نهائيًا؟ سيتم حذف الإعلان والصور والرسائل والعروض المرتبطة به نهائيًا.",
-        draftDeleted: "تم حذف المسودة نهائيًا.",
-        listingArchived: "تمت أرشفة الإعلان.",
-        listingDeleted: "تم حذف الإعلان نهائيًا.",
-        deleteFailed: "تعذر إتمام العملية.",
-        selectPhotosFirst: "اختر صورة واحدة أو أكثر أولًا.",
-        imagesOnly: "الملفات المسموحة هي الصور فقط.",
-        createDraftBeforeUploadFailed: "تعذر إنشاء مسودة قبل رفع الصور.",
-        failedUpload: (fileName: string, statusCode: number) => `فشل رفع ${fileName} (${statusCode}).`,
-        photosAddedSavedFirst: (count: number) => `تمت إضافة ${count} صورة. تم حفظ الإعلان أولًا.`,
-        photosAdded: (count: number) => `تمت إضافة ${count} صورة.`,
-        photosAddFailed: (count: number) => `تعذر إضافة ${count} صورة. حاول مرة أخرى.`,
-        saveBeforeRemovingPhotos: "احفظ الإعلان قبل حذف الصور.",
-        photoRemoved: "تم حذف الصورة.",
-        removePhotoFailed: "تعذر حذف الصورة.",
-        saveBeforeMainPhoto: "احفظ الإعلان قبل تغيير الصورة الرئيسية.",
-        mainPhotoUpdated: "تم تحديث الصورة الرئيسية.",
-        updateMainPhotoFailed: "تعذر تحديث الصورة الرئيسية.",
-        createDraftTitle: "إنشاء إعلان",
-        editListingTitle: (id?: number) => `تعديل الإعلان #${id ?? ""}`,
-        formNote: "أدخل تفاصيل الإعلان، واحفظه كمسودة في أي وقت، ثم أرسله عندما تصبح جاهزًا.",
-        currentStatus: "الحالة الحالية",
-        rejected: "مرفوض",
-        loginRequiredForDrafts: "تسجيل الدخول مطلوب لإدارة المسودات.",
-        loadingDraft: "جارٍ تحميل المسودة...",
-        cityLabel: "المدينة *",
-        cityHelp: "اختر مدينة رئيسية أو اختر أخرى لإدخالها يدويًا.",
-        otherCity: "اكتب مدينة أخرى",
-        useCurrentLocation: "استخدم موقعي",
-        updateCurrentLocation: "حدّث موقعي",
-        clearCurrentLocation: "مسح الموقع الدقيق",
-        locating: "جارٍ تحديد الموقع...",
-        geolocationUnsupported: "المتصفح لا يدعم تحديد الموقع.",
-        locationDenied: "تعذر الحصول على الموقع.",
-        locationSaved: "تم حفظ الموقع الدقيق لهذا الإعلان.",
-        district: "الحي",
-        make: "الشركة *",
-        model: "الموديل *",
-        year: "السنة *",
-        price: "السعر (ر.س)",
-        mileage: "الممشى (كم)",
-        bodyType: "نوع الهيكل",
-        selectBodyType: "اختر نوع الهيكل",
-        transmission: "ناقل الحركة",
-        selectTransmission: "اختر ناقل الحركة",
-        fuelType: "نوع الوقود",
-        selectFuelType: "اختر نوع الوقود",
-        drivetrain: "نظام الدفع",
-        selectDrivetrain: "اختر نظام الدفع",
-        condition: "الحالة",
-        selectCondition: "اختر الحالة",
-        color: "اللون",
-        selectColor: "اختر اللون",
-        titleLabel: "العنوان",
-        titleHelp: "إذا تركته فارغًا، سيتم إنشاء عنوان تلقائيًا من الشركة والموديل والسنة.",
-        descriptionLabel: "الوصف *",
-        photos: "الصور",
-        photosHelp: "أضف صورًا واضحة.",
-        autoSaveOnFirstPhotos: "سيتم رفعها بعد حفظ الإعلان.",
-        addingPhotos: "جارٍ الإضافة...",
-        addMorePhotos: "أضف صور",
-        addPhotos: "أضف صور",
-        photosReady: (count: number) => `${count} صور جاهزة`,
-        moreNeeded: (count: number) => `${count} أخرى مطلوبة`,
-        photosUploadingNow: "تتم إضافة الصور.",
-        choosePhotosAndSave: "اختر صورًا الآن وسيتم رفعها بعد الحفظ.",
-        choosePhotos: "اختر صورًا للإضافة.",
-        adding: "جارٍ الإضافة",
-        readyToUpload: "جاهزة للرفع",
-        mainPhoto: "الصورة الرئيسية",
-        makeMain: "اجعلها رئيسية",
-        removing: "جارٍ الحذف...",
-        remove: "حذف",
-        noPhotosYet: "لا توجد صور بعد.",
-        photoViewer: "عارض الصور",
-        closePhotoViewer: "إغلاق عارض الصور",
-        previousPhoto: "الصورة السابقة",
-        nextPhoto: "الصورة التالية",
-        saving: "جارٍ الحفظ...",
-        submitting: "جارٍ الإرسال...",
-        saveAndSubmit: "حفظ وإرسال",
-        deleting: "جارٍ الحذف...",
-        archiving: "جارٍ الأرشفة...",
-        archiveListing: "أرشفة الإعلان",
-        deleteDraft: "حذف نهائي",
-        deleteListing: "حذف نهائي",
-        backToMyCars: "العودة إلى الملف الشخصي",
-        editCreatedDraft: "تعديل المسودة التي تم إنشاؤها",
-        descriptionTooShort: "الوصف قصير جدًا للموافقة. اكتب وصفًا أوضح.",
-        disallowedContactInfo: "احذف معلومات التواصل الخارجية من نص الإعلان.",
-      }
-    : {
-        saveChanges: "Save Changes",
-        saveDraft: "Save Draft",
-        photoNumber: (index: number) => `Photo ${index}`,
-        invalidCarId: "Invalid car id.",
-        missingApiBase: "NEXT_PUBLIC_API_BASE is missing.",
-        loadDraftFailed: "Failed to load draft.",
-        sessionExpired: "Session expired. Please login again.",
-        loginRequired: "Login required.",
-        changesSaved: "Changes saved.",
-        draftSaved: "Draft saved.",
-        saveDraftFailed: "Failed to save draft.",
-        listingUpdated: "Listing updated successfully.",
-        listingPendingReview: "Listing updated and is pending review.",
-        listingApproved: "Listing submitted and approved successfully.",
-        listingSubmittedPending: "Listing submitted and is pending review.",
-        listingRejected: "Listing was rejected.",
-        listingSubmitted: "Listing submitted.",
-        submitListingFailed: "Failed to submit listing.",
-        saveBeforeDelete: "Save the listing before deleting it.",
-        archiveConfirm: "Archive this listing? It will be hidden from the public page and search, and you can restore it later.",
-        permanentDeleteConfirm: "Delete this listing permanently? This will permanently remove the listing, photos, messages, and offers.",
-        draftDeleted: "Draft permanently deleted.",
-        listingArchived: "Listing archived.",
-        listingDeleted: "Listing permanently deleted.",
-        deleteFailed: "Failed to complete the action.",
-        selectPhotosFirst: "Select one or more photos first.",
-        imagesOnly: "Only image files are allowed.",
-        createDraftBeforeUploadFailed: "Failed to create draft before upload.",
-        failedUpload: (fileName: string, statusCode: number) => `Failed upload for ${fileName} (${statusCode}).`,
-        photosAddedSavedFirst: (count: number) => `${count} photo${count === 1 ? "" : "s"} added. Your listing was saved first.`,
-        photosAdded: (count: number) => `${count} photo${count === 1 ? "" : "s"} added.`,
-        photosAddFailed: (count: number) => `${count} photo${count === 1 ? "" : "s"} could not be added. Please try again.`,
-        saveBeforeRemovingPhotos: "Save the listing before removing photos.",
-        photoRemoved: "Photo removed.",
-        removePhotoFailed: "Failed to remove photo.",
-        saveBeforeMainPhoto: "Save the listing before changing the main photo.",
-        mainPhotoUpdated: "Main photo updated.",
-        updateMainPhotoFailed: "Failed to update main photo.",
-        createDraftTitle: "Create Post",
-        editListingTitle: (id?: number) => `Edit Listing #${id ?? ""}`,
-        formNote: "Fill in the listing details, save a draft at any time, and submit when you're ready.",
-        currentStatus: "Current status",
-        rejected: "Rejected",
-        loginRequiredForDrafts: "Login required to manage drafts.",
-        loadingDraft: "Loading draft...",
-        cityLabel: "City *",
-        cityHelp: "Choose a major city or select Other to enter one manually.",
-        otherCity: "Enter another city",
-        useCurrentLocation: "Use my location",
-        updateCurrentLocation: "Update location",
-        clearCurrentLocation: "Clear precise location",
-        locating: "Locating...",
-        geolocationUnsupported: "Geolocation not supported in this browser.",
-        locationDenied: "Unable to retrieve location.",
-        locationSaved: "Precise location saved for this listing.",
-        district: "District",
-        make: "Make *",
-        model: "Model *",
-        year: "Year *",
-        price: "Price (SAR)",
-        mileage: "Mileage (KM)",
-        bodyType: "Body Type",
-        selectBodyType: "Select body type",
-        transmission: "Transmission",
-        selectTransmission: "Select transmission",
-        fuelType: "Fuel Type",
-        selectFuelType: "Select fuel type",
-        drivetrain: "Drivetrain",
-        selectDrivetrain: "Select drivetrain",
-        condition: "Condition",
-        selectCondition: "Select condition",
-        color: "Color",
-        selectColor: "Select color",
-        titleLabel: "Title",
-        titleHelp: "If left blank, a title will be generated automatically from make, model, and year.",
-        descriptionLabel: "Description (Arabic) *",
-        photos: "Photos",
-        photosHelp: "Add clear photos.",
-        autoSaveOnFirstPhotos: "They will upload after you save.",
-        addingPhotos: "Adding...",
-        addMorePhotos: "Add Photos",
-        addPhotos: "Add Photos",
-        photosReady: (count: number) => `${count} photos ready`,
-        moreNeeded: (count: number) => `${count} more needed`,
-        photosUploadingNow: "Uploading photos.",
-        choosePhotosAndSave: "Choose photos now and they will upload after save.",
-        choosePhotos: "Choose photos to upload.",
-        adding: "Adding",
-        readyToUpload: "Ready to upload",
-        mainPhoto: "Main photo",
-        makeMain: "Make Main",
-        removing: "Removing...",
-        remove: "Remove",
-        noPhotosYet: "No photos yet.",
-        photoViewer: "Photo viewer",
-        closePhotoViewer: "Close photo viewer",
-        previousPhoto: "Previous photo",
-        nextPhoto: "Next photo",
-        saving: "Saving...",
-        submitting: "Submitting...",
-        saveAndSubmit: "Save & Submit",
-        deleting: "Deleting...",
-        archiving: "Archiving...",
-        archiveListing: "Archive Listing",
-        deleteDraft: "Delete Permanently",
-        deleteListing: "Delete Permanently",
-        backToMyCars: "Back to Profile",
-        editCreatedDraft: "Edit Created Draft",
-        descriptionTooShort: "Description is too short for approval. Add more detail.",
-        disallowedContactInfo: "Remove external contact info from the listing text.",
-      };
+  const text = {
+    saveChanges: "Save Changes",
+    saveDraft: "Save Draft",
+    photoNumber: (index: number) => `Photo ${index}`,
+    invalidCarId: "Invalid car id.",
+    missingApiBase: "NEXT_PUBLIC_API_BASE is missing.",
+    loadDraftFailed: "Failed to load draft.",
+    sessionExpired: "Session expired. Please login again.",
+    loginRequired: "Login required.",
+    changesSaved: "Changes saved.",
+    draftSaved: "Draft saved.",
+    saveDraftFailed: "Failed to save draft.",
+    listingUpdated: "Listing updated successfully.",
+    listingPendingReview: "Listing updated and is pending review.",
+    listingApproved: "Listing submitted and approved successfully.",
+    listingSubmittedPending: "Listing submitted and is pending review.",
+    listingRejected: "Listing was rejected.",
+    listingSubmitted: "Listing submitted.",
+    submitListingFailed: "Failed to submit listing.",
+    saveBeforeDelete: "Save the listing before deleting it.",
+    archiveConfirm: "Archive this listing? It will be hidden from the public page and search, and you can restore it later.",
+    permanentDeleteConfirm: "Delete this listing permanently? This will permanently remove the listing, photos, messages, and offers.",
+    draftDeleted: "Draft permanently deleted.",
+    listingArchived: "Listing archived.",
+    listingDeleted: "Listing permanently deleted.",
+    deleteFailed: "Failed to complete the action.",
+    selectPhotosFirst: "Select one or more photos first.",
+    imagesOnly: "Only image files are allowed.",
+    createDraftBeforeUploadFailed: "Failed to create draft before upload.",
+    failedUpload: (fileName: string, statusCode: number) => `Failed upload for ${fileName} (${statusCode}).`,
+    photosAddedSavedFirst: (count: number) => `${count} photo${count === 1 ? "" : "s"} added. Your listing was saved first.`,
+    photosAdded: (count: number) => `${count} photo${count === 1 ? "" : "s"} added.`,
+    photosAddFailed: (count: number) => `${count} photo${count === 1 ? "" : "s"} could not be added. Please try again.`,
+    saveBeforeRemovingPhotos: "Save the listing before removing photos.",
+    photoRemoved: "Photo removed.",
+    removePhotoFailed: "Failed to remove photo.",
+    saveBeforeMainPhoto: "Save the listing before changing the main photo.",
+    mainPhotoUpdated: "Main photo updated.",
+    updateMainPhotoFailed: "Failed to update main photo.",
+    createDraftTitle: "Create Listing",
+    editListingTitle: (id?: number) => `Edit Listing #${id ?? ""}`,
+    formNote: "Fill in the listing details, save a draft at any time, and submit when you're ready.",
+    currentStatus: "Current status",
+    rejected: "Rejected",
+    loginRequiredForDrafts: "Login required to manage drafts.",
+    loadingDraft: "Loading draft...",
+    cityLabel: "City *",
+    cityHelp: "Choose a major U.S. city or select Other to enter one manually.",
+    otherCity: "Enter another city",
+    useCurrentLocation: "Use my location",
+    updateCurrentLocation: "Update location",
+    clearCurrentLocation: "Clear precise location",
+    locating: "Locating...",
+    geolocationUnsupported: "Geolocation not supported in this browser.",
+    locationDenied: "Unable to retrieve location.",
+    locationSaved: "Precise location saved for this listing.",
+    district: "District",
+    make: "Make *",
+    model: "Model *",
+    year: "Year *",
+    price: "Price (USD)",
+    mileage: "Mileage (mi)",
+    bodyType: "Body Type",
+    selectBodyType: "Select body type",
+    transmission: "Transmission",
+    selectTransmission: "Select transmission",
+    fuelType: "Fuel Type",
+    selectFuelType: "Select fuel type",
+    drivetrain: "Drivetrain",
+    selectDrivetrain: "Select drivetrain",
+    condition: "Condition",
+    selectCondition: "Select condition",
+    color: "Color",
+    selectColor: "Select color",
+    titleLabel: "Title",
+    titleHelp: "If left blank, a title will be generated automatically from make, model, and year.",
+    descriptionLabel: "Description *",
+    photos: "Photos",
+    photosHelp: "Add clear photos.",
+    autoSaveOnFirstPhotos: "They will upload after you save.",
+    addingPhotos: "Adding...",
+    addMorePhotos: "Add Photos",
+    addPhotos: "Add Photos",
+    photosReady: (count: number) => `${count} photos ready`,
+    moreNeeded: (count: number) => `${count} more needed`,
+    photosUploadingNow: "Uploading photos.",
+    choosePhotosAndSave: "Choose photos now and they will upload after save.",
+    choosePhotos: "Choose photos to upload.",
+    adding: "Adding",
+    readyToUpload: "Ready to upload",
+    mainPhoto: "Main photo",
+    makeMain: "Make Main",
+    removing: "Removing...",
+    remove: "Remove",
+    noPhotosYet: "No photos yet.",
+    photoViewer: "Photo viewer",
+    closePhotoViewer: "Close photo viewer",
+    previousPhoto: "Previous photo",
+    nextPhoto: "Next photo",
+    saving: "Saving...",
+    submitting: "Submitting...",
+    saveAndSubmit: "Save & Submit",
+    deleting: "Deleting...",
+    archiving: "Archiving...",
+    archiveListing: "Archive Listing",
+    deleteDraft: "Delete Permanently",
+    deleteListing: "Delete Permanently",
+    backToMyCars: "Back to Profile",
+    editCreatedDraft: "Edit Created Draft",
+    descriptionTooShort: "Description is too short for approval. Add more detail.",
+    disallowedContactInfo: "Remove external contact info from the listing text.",
+  };
   const saveButtonLabel = isReviewLocked ? text.saveChanges : text.saveDraft;
   const hasPreciseLocation = Boolean(form.latitude.trim() && form.longitude.trim());
   const localizedReviewReason = translateReviewReason(locale, reviewReason);
@@ -585,7 +486,7 @@ export default function CarDraftForm({
             ? ""
             : field(car.year),
           price_sar: fromLoadedField(car.price_sar),
-          mileage_km: fromLoadedField(car.mileage_km),
+          mileage_km: fromLoadedMileage(car.mileage_km),
           body_type: fromLoadedField(car.body_type),
           transmission: fromLoadedField(car.transmission),
           fuel_type: fromLoadedField(car.fuel_type),
@@ -668,7 +569,7 @@ export default function CarDraftForm({
   }
 
   async function persistDraft(token: string): Promise<CarOut> {
-    const result = buildPayload(form, locale);
+    const result = buildPayload(form);
     if (result.ok === false) {
       throw new Error(result.error);
     }

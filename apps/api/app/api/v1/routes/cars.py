@@ -23,7 +23,7 @@ def ensure_owner(car: CarListing, user: User):
 
 
 def default_listing_title(make: str, model: str, year: int) -> str:
-    return f"{make} {model} {year} للبيع"
+    return f"{make} {model} {year} for sale"
 
 
 def _load_photos_map(session: Session, car_ids: list[int]) -> dict[int, list[CarPhoto]]:

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GARAJ UI</title>
+  <title>AutoIntel Dev UI</title>
   <style>
     :root {
       --bg: #f7f7f9;
@@ -91,11 +91,11 @@
 <body>
   <main class="wrap">
     <section class="card">
-      <h1>GARAJ Dev UI</h1>
+      <h1>AutoIntel Dev UI</h1>
       <div class="row">
         <label>
           Phone (E.164)
-          <input id="phone" value="+966500000000" />
+          <input id="phone" value="+15555550123" />
         </label>
         <label>
           OTP Code
@@ -133,7 +133,7 @@
     const userOutEl = document.getElementById("userOut");
     const listingsWrapEl = document.getElementById("listingsWrap");
 
-    const saved = localStorage.getItem("garaj_token");
+    const saved = localStorage.getItem("autointel_token");
     if (saved) tokenEl.value = saved;
 
     function setStatus(text, isError = false) {
@@ -185,7 +185,7 @@
               <th>Status</th>
               <th>Car</th>
               <th>Year</th>
-              <th>Price (SAR)</th>
+              <th>Price (USD)</th>
               <th>City</th>
             </tr>
           </thead>
@@ -207,7 +207,7 @@
         });
         const data = await parseResponse(res);
         tokenEl.value = data.access_token || "";
-        localStorage.setItem("garaj_token", tokenEl.value);
+        localStorage.setItem("autointel_token", tokenEl.value);
         setStatus("Token updated.");
       } catch (err) {
         setStatus(err.message || "Verify OTP failed.", true);

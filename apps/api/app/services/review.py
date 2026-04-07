@@ -120,7 +120,7 @@ def _photo_count(session: Session, car_id: int) -> int:
 
 def auto_review_listing(session: Session, car: CarListing) -> CarListing:
     if not car.title_ar.strip():
-        car.title_ar = f"{car.make} {car.model} {car.year} للبيع"
+        car.title_ar = f"{car.make} {car.model} {car.year} for sale"
 
     content = f"{car.title_ar}\n{car.description_ar}".lower()
 

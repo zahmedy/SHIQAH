@@ -2,13 +2,13 @@ services:
   db:
     image: postgres:16
     environment:
-      POSTGRES_USER: garaj
-      POSTGRES_PASSWORD: garaj
-      POSTGRES_DB: garaj
+      POSTGRES_USER: autointel
+      POSTGRES_PASSWORD: autointel
+      POSTGRES_DB: autointel
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U garaj -d garaj"]
+      test: ["CMD-SHELL", "pg_isready -U autointel -d autointel"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -48,10 +48,10 @@ services:
       ENV: dev
       API_HOST: 0.0.0.0
       API_PORT: 8000
-      DATABASE_URL: postgresql+psycopg://garaj:garaj@db:5432/garaj
+      DATABASE_URL: postgresql+psycopg://autointel:autointel@db:5432/autointel
       JWT_SECRET: change-me-super-secret
       OPENSEARCH_URL: http://opensearch:9200
-      OPENSEARCH_INDEX: garaj_cars
+      OPENSEARCH_INDEX: autointel_cars
     ports:
       - "8000:8000"
     depends_on:
@@ -93,10 +93,10 @@ services:
     entrypoint: >
       /bin/sh -c "
       until /usr/bin/mc alias set local http://minio:9000 minioadmin minioadmin; do sleep 1; done;
-      /usr/bin/mc mb -p local/garaj-media || true;
-      /usr/bin/mc anonymous set download local/garaj-media || true;
-      echo '[{\"AllowedOrigin\":[\"http://localhost:3001\",\"http://localhost:3000\"],\"AllowedMethod\":[\"GET\",\"PUT\",\"HEAD\"],\"AllowedHeader\":[\"*\"],\"ExposeHeader\":[\"ETag\"],\"MaxAgeSeconds\":3000}]' > /tmp/garaj-cors.json;
-      /usr/bin/mc cors set local/garaj-media /tmp/garaj-cors.json || true;
+      /usr/bin/mc mb -p local/autointel-media || true;
+      /usr/bin/mc anonymous set download local/autointel-media || true;
+      echo '[{"AllowedOrigin":["http://localhost:3001","http://localhost:3000"],"AllowedMethod":["GET","PUT","HEAD"],"AllowedHeader":["*"],"ExposeHeader":["ETag"],"MaxAgeSeconds":3000}]' > /tmp/autointel-cors.json;
+      /usr/bin/mc cors set local/autointel-media /tmp/autointel-cors.json || true;
       exit 0;
       "
 

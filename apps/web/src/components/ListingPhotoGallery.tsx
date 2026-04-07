@@ -2,8 +2,6 @@
 
 import { useEffect, useState, type MouseEvent } from "react";
 
-import { useLocale } from "@/components/LocaleProvider";
-
 type Photo = {
   id: number;
   public_url: string;
@@ -18,27 +16,17 @@ export default function ListingPhotoGallery({
   photos: Photo[];
   title: string;
 }) {
-  const locale = useLocale();
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const activePhoto = viewerIndex !== null ? photos[viewerIndex] : null;
   const hasMultiplePhotos = photos.length > 1;
-  const text = locale === "ar"
-    ? {
-        openPhoto: (index: number) => `افتح الصورة ${index}`,
-        viewerLabel: "صور الإعلان",
-        closeViewer: "إغلاق عارض الصور",
-        previousPhoto: "الصورة السابقة",
-        nextPhoto: "الصورة التالية",
-        photoLabel: (index: number, total: number) => `الصورة ${index}${total > 1 ? ` / ${total}` : ""}`,
-      }
-    : {
-        openPhoto: (index: number) => `Open photo ${index}`,
-        viewerLabel: "Listing photos",
-        closeViewer: "Close photo viewer",
-        previousPhoto: "Previous photo",
-        nextPhoto: "Next photo",
-        photoLabel: (index: number, total: number) => `Photo ${index}${total > 1 ? ` / ${total}` : ""}`,
-      };
+  const text = {
+    openPhoto: (index: number) => `Open photo ${index}`,
+    viewerLabel: "Listing photos",
+    closeViewer: "Close photo viewer",
+    previousPhoto: "Previous photo",
+    nextPhoto: "Next photo",
+    photoLabel: (index: number, total: number) => `Photo ${index}${total > 1 ? ` / ${total}` : ""}`,
+  };
 
   useEffect(() => {
     if (viewerIndex === null) {

@@ -185,7 +185,7 @@ def create_offer(
     if payload.visibility == "public":
         highest_offer = _highest_offer_amount_for_car(session, car_id)
         if highest_offer is not None and payload.amount_sar <= highest_offer:
-            raise HTTPException(status_code=400, detail=f"Your bid must be higher than the current highest bid of {highest_offer} SAR")
+            raise HTTPException(status_code=400, detail=f"Your bid must be higher than the current highest bid of {highest_offer} USD")
 
     offer_channel = "offer_public" if payload.visibility == "public" else "offer_private"
 

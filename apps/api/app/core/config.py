@@ -28,13 +28,13 @@ class Settings(BaseSettings):
     JWT_EXPIRE_MINUTES: int = 60 * 24 * 30
 
     OPENSEARCH_URL: str = "http://localhost:9200"
-    OPENSEARCH_INDEX: str = "garaj_cars"
+    OPENSEARCH_INDEX: str = "autointel_cars"
 
     S3_ENDPOINT_URL: str = "http://localhost:9000"
     S3_ACCESS_KEY: str = "minioadmin"
     S3_SECRET_KEY: str = "minioadmin"
-    S3_BUCKET: str = "garaj-media"
-    S3_PUBLIC_BASE_URL: str = "http://localhost:9000/garaj-media"
+    S3_BUCKET: str = "autointel-media"
+    S3_PUBLIC_BASE_URL: str = "http://localhost:9000/autointel-media"
 
     model_config = SettingsConfigDict(
         env_file=(ROOT_ENV_FILE, ".env"),
