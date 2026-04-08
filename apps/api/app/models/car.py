@@ -41,6 +41,18 @@ class CarListing(SQLModel, table=True):
     model: str = Field(index=True)                # "Camry"
     year: int = Field(index=True)
 
+    # ML suggestions are stored separately so model output never overwrites
+    # the user-confirmed listing fields.
+    ml_status: Optional[str] = Field(default=None, index=True)      # queued/running/completed/failed
+    ml_source: Optional[str] = Field(default=None)                  # model/service identifier
+    ml_make: Optional[str] = Field(default=None)
+    ml_model: Optional[str] = Field(default=None)
+    ml_year_start: Optional[int] = Field(default=None)
+    ml_year_end: Optional[int] = Field(default=None)
+    ml_confidence: Optional[float] = Field(default=None)
+    ml_raw: Optional[str] = Field(default=None)                     # raw JSON/string payload for debugging
+    ml_updated_at: Optional[datetime] = Field(default=None, index=True)
+
     price_sar: Optional[int] = Field(default=None, index=True)
     mileage_km: Optional[int] = Field(default=None, index=True)
 

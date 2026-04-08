@@ -70,6 +70,16 @@ class CarOut(BaseModel):
     model: str
     year: int
 
+    ml_status: Optional[str]
+    ml_source: Optional[str]
+    ml_make: Optional[str]
+    ml_model: Optional[str]
+    ml_year_start: Optional[int]
+    ml_year_end: Optional[int]
+    ml_confidence: Optional[float]
+    ml_raw: Optional[str]
+    ml_updated_at: Optional[datetime]
+
     price_sar: Optional[int]
     mileage_km: Optional[int]
 
