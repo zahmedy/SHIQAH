@@ -17,8 +17,25 @@ type OTPRequestResponse = {
   needs_name: boolean;
 };
 
-function looksLikeE164(phone: string): boolean {
-  return /^\+\d{8,15}$/.test(phone.trim());
+function normalizeUSPhone(rawPhone: string): string | null {
+  const trimmed = rawPhone.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (/^\+1\d{10}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length === 10) {
+    return `+1${digits}`;
+  }
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return `+${digits}`;
+  }
+
+  return null;
 }
 
 export default function LoginPage() {
@@ -30,18 +47,19 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const normalizedPhone = normalizeUSPhone(phone);
   const text = {
     title: "Login",
-    note: "Enter your phone number, request OTP, then verify. New users will be asked for their name. MVP code is",
+    note: "Enter a U.S. mobile number, request OTP, then verify. New users will be asked for their name. MVP code is",
     missingApiBase: "NEXT_PUBLIC_API_BASE is missing.",
-    invalidPhone: "Enter phone in E.164 format, e.g. +1XXXXXXXXXX.",
+    invalidPhone: "Enter a valid U.S. number, for example (555) 555-0123 or +15555550123.",
     requestOtpFailed: "Failed to request OTP.",
     otpRequested: "OTP requested. For MVP, use code 0000.",
     enterName: "Enter your name.",
-    phoneMustBeE164: "Phone must be E.164 format.",
+    phoneMustBeE164: "Phone must be a valid U.S. number.",
     enterCode: "Enter verification code.",
     verifyOtpFailed: "Failed to verify OTP.",
-    phoneLabel: "Phone (E.164)",
+    phoneLabel: "Phone (U.S.)",
     nameLabel: "Name",
     yourName: "Your name",
     otpCodeLabel: "OTP Code",
@@ -61,7 +79,7 @@ export default function LoginPage() {
       setError(text.missingApiBase);
       return;
     }
-    if (!looksLikeE164(phone)) {
+    if (!normalizedPhone) {
       setError(text.invalidPhone);
       return;
     }
@@ -71,7 +89,7 @@ export default function LoginPage() {
       const res = await fetch(`${API_BASE}/v1/auth/request-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone_e164: phone.trim() }),
+        body: JSON.stringify({ phone_e164: normalizedPhone }),
       });
 
       if (!res.ok) {
@@ -103,7 +121,7 @@ export default function LoginPage() {
       setError(text.enterName);
       return;
     }
-    if (!looksLikeE164(phone)) {
+    if (!normalizedPhone) {
       setError(text.phoneMustBeE164);
       return;
     }
@@ -118,7 +136,7 @@ export default function LoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phone_e164: phone.trim(),
+          phone_e164: normalizedPhone,
           code: code.trim(),
           name: name.trim() || undefined,
         }),
@@ -157,10 +175,14 @@ export default function LoginPage() {
             <input
               id="phone"
               className="input"
-              placeholder="+1XXXXXXXXXX"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel-national"
+              placeholder="(555) 555-0123"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
             />
+            {normalizedPhone ? <p className="helper-text">Using {normalizedPhone}</p> : null}
           </div>
 
           {needsName && (
