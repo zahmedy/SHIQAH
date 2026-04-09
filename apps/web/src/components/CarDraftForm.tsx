@@ -48,7 +48,27 @@ type CarOut = CarPayload & {
   status: string;
   review_reason?: string | null;
   review_source?: string | null;
+  ml_status?: string | null;
+  ml_source?: string | null;
+  ml_make?: string | null;
+  ml_model?: string | null;
+  ml_year_start?: number | null;
+  ml_year_end?: number | null;
+  ml_confidence?: number | null;
+  ml_raw?: string | null;
+  ml_updated_at?: string | null;
   photos?: CarPhoto[];
+};
+
+type MlSuggestion = {
+  status: string | null;
+  source: string | null;
+  make: string | null;
+  model: string | null;
+  yearStart: number | null;
+  yearEnd: number | null;
+  confidence: number | null;
+  updatedAt: string | null;
 };
 
 type BuildPayloadResult =
@@ -260,6 +280,32 @@ function fromLoadedMileage(value?: number | null): string {
   return String(kmToMiles(value));
 }
 
+function extractMlSuggestion(car: CarOut): MlSuggestion | null {
+  const hasContent = Boolean(
+    car.ml_status ||
+    car.ml_make ||
+    car.ml_model ||
+    car.ml_year_start ||
+    car.ml_year_end ||
+    car.ml_confidence !== undefined,
+  );
+
+  if (!hasContent) {
+    return null;
+  }
+
+  return {
+    status: car.ml_status ?? null,
+    source: car.ml_source ?? null,
+    make: car.ml_make ?? null,
+    model: car.ml_model ?? null,
+    yearStart: car.ml_year_start ?? null,
+    yearEnd: car.ml_year_end ?? null,
+    confidence: car.ml_confidence ?? null,
+    updatedAt: car.ml_updated_at ?? null,
+  };
+}
+
 export default function CarDraftForm({
   mode,
   carId,
@@ -290,6 +336,8 @@ export default function CarDraftForm({
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [locating, setLocating] = useState(false);
   const [locationStatus, setLocationStatus] = useState("");
+  const [mlSuggestion, setMlSuggestion] = useState<MlSuggestion | null>(null);
+  const [refreshingMl, setRefreshingMl] = useState(false);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeCarId = useMemo(
@@ -341,6 +389,22 @@ export default function CarDraftForm({
     editListingTitle: (id?: number) => `Edit Listing #${id ?? ""}`,
     formNote: "Fill in the listing details, save a draft at any time, and submit when you're ready.",
     currentStatus: "Current status",
+    mlTitle: "ML Suggestion",
+    mlHint: "Suggestions are generated from uploaded photos and never overwrite your form unless you apply them.",
+    mlRefresh: "Refresh Suggestion",
+    mlRefreshing: "Refreshing...",
+    mlNone: "No suggestion yet. Upload photos, then refresh after inference completes.",
+    mlQueued: "Inference queued.",
+    mlRunning: "Inference running...",
+    mlFailed: "Inference failed.",
+    mlCompleted: "Suggestion ready.",
+    mlDetectedMake: "Detected make",
+    mlDetectedModel: "Detected model",
+    mlDetectedYear: "Detected year",
+    mlConfidence: "Confidence",
+    mlSource: "Source",
+    mlApply: "Use Suggestion",
+    mlApplied: "ML suggestion applied to the form.",
     rejected: "Rejected",
     loginRequiredForDrafts: "Login required to manage drafts.",
     loadingDraft: "Loading draft...",
@@ -433,6 +497,111 @@ export default function CarDraftForm({
   );
   const activeViewerItem =
     viewerIndex !== null && viewerItems[viewerIndex] ? viewerItems[viewerIndex] : null;
+  const mlYearLabel = mlSuggestion
+    ? mlSuggestion.yearStart && mlSuggestion.yearEnd
+      ? mlSuggestion.yearStart === mlSuggestion.yearEnd
+        ? String(mlSuggestion.yearStart)
+        : `${mlSuggestion.yearStart}-${mlSuggestion.yearEnd}`
+      : mlSuggestion.yearStart
+        ? String(mlSuggestion.yearStart)
+        : mlSuggestion.yearEnd
+          ? String(mlSuggestion.yearEnd)
+          : "—"
+    : "—";
+  const mlStatusLabel = mlSuggestion?.status === "queued"
+    ? text.mlQueued
+    : mlSuggestion?.status === "running"
+      ? text.mlRunning
+      : mlSuggestion?.status === "failed"
+        ? text.mlFailed
+        : mlSuggestion?.status === "completed"
+          ? text.mlCompleted
+          : text.mlNone;
+
+  async function fetchCarData(targetCarId: number, token: string): Promise<CarOut> {
+    const res = await fetch(`${API_BASE}/v1/cars/${targetCarId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (res.status === 401 || res.status === 403) {
+      setNeedsLogin(true);
+      throw new Error(text.sessionExpired);
+    }
+    if (!res.ok) {
+      throw new Error(await parseApiError(res));
+    }
+    return (await res.json()) as CarOut;
+  }
+
+  function applyLoadedCar(car: CarOut) {
+    setStatus(car.status);
+    setReviewReason(car.review_reason || "");
+    setPhotos(car.photos || []);
+    setMlSuggestion(extractMlSuggestion(car));
+    setForm({
+      city: fromLoadedField(car.city),
+      district: fromLoadedField(car.district),
+      latitude: fromLoadedField(car.latitude),
+      longitude: fromLoadedField(car.longitude),
+      make: fromLoadedField(car.make),
+      model: fromLoadedField(car.model),
+      year: car.year === DRAFT_PLACEHOLDER_YEAR && car.make === DRAFT_PLACEHOLDER && car.model === DRAFT_PLACEHOLDER
+        ? ""
+        : field(car.year),
+      price_sar: fromLoadedField(car.price_sar),
+      mileage_km: fromLoadedMileage(car.mileage_km),
+      body_type: fromLoadedField(car.body_type),
+      transmission: fromLoadedField(car.transmission),
+      fuel_type: fromLoadedField(car.fuel_type),
+      drivetrain: fromLoadedField(car.drivetrain),
+      condition: fromLoadedField(car.condition),
+      color: fromLoadedField(car.color),
+      title_ar: fromLoadedField(car.title_ar),
+      description_ar: fromLoadedField(car.description_ar),
+    });
+  }
+
+  async function refreshMlSuggestion(targetCarId?: number) {
+    if (!API_BASE || !targetCarId) {
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setNeedsLogin(true);
+      setError(text.loginRequired);
+      return;
+    }
+
+    setRefreshingMl(true);
+    try {
+      const car = await fetchCarData(targetCarId, token);
+      setStatus(car.status);
+      setReviewReason(car.review_reason || "");
+      setPhotos(car.photos || []);
+      setMlSuggestion(extractMlSuggestion(car));
+    } catch (err) {
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.loadDraftFailed);
+    } finally {
+      setRefreshingMl(false);
+    }
+  }
+
+  function applyMlSuggestion() {
+    if (!mlSuggestion) {
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      ...(mlSuggestion.make ? { make: mlSuggestion.make, model: "" } : {}),
+      ...(mlSuggestion.model ? { model: mlSuggestion.model } : {}),
+      ...(mlSuggestion.yearStart && mlSuggestion.yearStart === mlSuggestion.yearEnd
+        ? { year: String(mlSuggestion.yearStart) }
+        : {}),
+    }));
+    setSuccess(text.mlApplied);
+  }
 
   useEffect(() => {
     if (mode !== "edit") return;
@@ -459,43 +628,8 @@ export default function CarDraftForm({
       setError("");
       setSuccess("");
       try {
-        const res = await fetch(`${API_BASE}/v1/cars/${carId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: "no-store",
-        });
-        if (res.status === 401 || res.status === 403) {
-          setNeedsLogin(true);
-          setLoading(false);
-          return;
-        }
-        if (!res.ok) {
-          throw new Error(await parseApiError(res));
-        }
-        const car = (await res.json()) as CarOut;
-        setStatus(car.status);
-        setReviewReason(car.review_reason || "");
-        setPhotos(car.photos || []);
-        setForm({
-          city: fromLoadedField(car.city),
-          district: fromLoadedField(car.district),
-          latitude: fromLoadedField(car.latitude),
-          longitude: fromLoadedField(car.longitude),
-          make: fromLoadedField(car.make),
-          model: fromLoadedField(car.model),
-          year: car.year === DRAFT_PLACEHOLDER_YEAR && car.make === DRAFT_PLACEHOLDER && car.model === DRAFT_PLACEHOLDER
-            ? ""
-            : field(car.year),
-          price_sar: fromLoadedField(car.price_sar),
-          mileage_km: fromLoadedMileage(car.mileage_km),
-          body_type: fromLoadedField(car.body_type),
-          transmission: fromLoadedField(car.transmission),
-          fuel_type: fromLoadedField(car.fuel_type),
-          drivetrain: fromLoadedField(car.drivetrain),
-          condition: fromLoadedField(car.condition),
-          color: fromLoadedField(car.color),
-          title_ar: fromLoadedField(car.title_ar),
-          description_ar: fromLoadedField(car.description_ar),
-        });
+        const car = await fetchCarData(carId, token);
+        applyLoadedCar(car);
     } catch (err) {
       setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.loadDraftFailed);
       } finally {
@@ -599,6 +733,7 @@ export default function CarDraftForm({
     setStatus(data.status);
     setReviewReason(data.review_reason || "");
     setPhotos(data.photos || []);
+    setMlSuggestion(extractMlSuggestion(data));
 
     if (mode === "create") {
       setCreatedId(data.id);
@@ -911,6 +1046,7 @@ export default function CarDraftForm({
     }
 
     setPhotos(nextPhotos);
+    await refreshMlSuggestion(targetCarId);
     if (uploadedCount > 0) {
       setUploadSuccess(text.photosAdded(uploadedCount));
     }
@@ -1174,6 +1310,74 @@ export default function CarDraftForm({
           <p className="notice error">
             {text.rejected}: {localizedReviewReason}
           </p>
+        ) : null}
+
+        {activeCarId ? (
+          <section className="panel panel-soft spaced-top-sm">
+            <div className="inline-actions">
+              <div>
+                <h2 className="subheading">{text.mlTitle}</h2>
+                <p className="helper-text">{text.mlHint}</p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => void refreshMlSuggestion(activeCarId)}
+                disabled={refreshingMl}
+              >
+                {refreshingMl ? text.mlRefreshing : text.mlRefresh}
+              </button>
+            </div>
+
+            <p className="car-meta">{mlStatusLabel}</p>
+
+            {mlSuggestion ? (
+              <>
+                <div className="specs">
+                  <article className="spec">
+                    <p className="spec-key">{text.mlDetectedMake}</p>
+                    <p className="spec-val">{mlSuggestion.make || "—"}</p>
+                  </article>
+                  <article className="spec">
+                    <p className="spec-key">{text.mlDetectedModel}</p>
+                    <p className="spec-val">{mlSuggestion.model || "—"}</p>
+                  </article>
+                  <article className="spec">
+                    <p className="spec-key">{text.mlDetectedYear}</p>
+                    <p className="spec-val">{mlYearLabel}</p>
+                  </article>
+                  <article className="spec">
+                    <p className="spec-key">{text.mlConfidence}</p>
+                    <p className="spec-val">
+                      {mlSuggestion.confidence !== null && mlSuggestion.confidence !== undefined
+                        ? `${Math.round(mlSuggestion.confidence * 100)}%`
+                        : "—"}
+                    </p>
+                  </article>
+                  <article className="spec">
+                    <p className="spec-key">{text.mlSource}</p>
+                    <p className="spec-val">{mlSuggestion.source || "—"}</p>
+                  </article>
+                </div>
+
+                <div className="inline-actions">
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={applyMlSuggestion}
+                    disabled={!mlSuggestion.make && !mlSuggestion.model && !mlSuggestion.yearStart}
+                  >
+                    {text.mlApply}
+                  </button>
+                  {mlSuggestion.yearStart && mlSuggestion.yearEnd && mlSuggestion.yearStart !== mlSuggestion.yearEnd ? (
+                    <p className="helper-text">
+                      The year suggestion is a range, so the form keeps your current year until you choose one.
+                    </p>
+                  ) : null}
+                </div>
+              </>
+            ) : null}
+          </section>
         ) : null}
 
         {needsLogin && <p className="notice">{text.loginRequiredForDrafts}</p>}
