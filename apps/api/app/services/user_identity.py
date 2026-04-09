@@ -1,7 +1,5 @@
 import re
-
 from sqlmodel import Session, select
-
 from app.models.user import User
 
 USER_ID_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9._-]{1,30}[a-z0-9])?$")

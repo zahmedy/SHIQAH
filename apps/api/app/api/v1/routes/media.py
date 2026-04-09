@@ -8,6 +8,7 @@ from app.models.car import CarListing, CarMedia, CarStatus
 from app.schemas.media import PresignRequest, PresignResponse, MediaCompleteRequest
 from app.services.s3 import delete_object, make_storage_key, presign_put
 from app.core.config import settings
+from app.services.car_inference import enqueue_car_inference
 from app.services.opensearch import upsert_car
 from app.services.review import build_search_doc
 
@@ -89,6 +90,7 @@ def complete_upload(
     session.commit()
     session.refresh(media)
     session.refresh(car)
+    enqueue_car_inference(car_id)
     if car.status == CarStatus.active:
         upsert_car(str(car.id), build_search_doc(session, car))
     return {"ok": True, "media_id": media.id, "public_url": media.public_url}
