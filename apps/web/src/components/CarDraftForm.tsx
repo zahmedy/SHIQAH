@@ -387,29 +387,29 @@ export default function CarDraftForm({
     updateMainPhotoFailed: "Failed to update main photo.",
     createDraftTitle: "Create Listing",
     editListingTitle: (id?: number) => `Edit Listing #${id ?? ""}`,
-    formNote: "Fill in the listing details, save a draft at any time, and submit when you're ready.",
+    formNote: mode === "create" ? "Add photos first." : "Update photos or details.",
     currentStatus: "Current status",
-    mlTitle: "ML Suggestion",
-    mlHint: "Suggestions are generated from uploaded photos and never overwrite your form unless you apply them.",
-    mlRefresh: "Refresh Suggestion",
+    mlTitle: "Suggestion",
+    mlHint: "From photos.",
+    mlRefresh: "Refresh",
     mlRefreshing: "Refreshing...",
-    mlNone: "No suggestion yet. Upload photos, then refresh after inference completes.",
-    mlQueued: "Inference queued.",
-    mlRunning: "Inference running...",
-    mlFailed: "Inference failed.",
-    mlCompleted: "Suggestion ready.",
-    mlDetectedMake: "Detected make",
-    mlDetectedModel: "Detected model",
-    mlDetectedYear: "Detected year",
+    mlNone: "No suggestion yet.",
+    mlQueued: "Queued.",
+    mlRunning: "Running...",
+    mlFailed: "Failed.",
+    mlCompleted: "Ready.",
+    mlDetectedMake: "Make",
+    mlDetectedModel: "Model",
+    mlDetectedYear: "Year",
     mlConfidence: "Confidence",
     mlSource: "Source",
-    mlApply: "Use Suggestion",
-    mlApplied: "ML suggestion applied to the form.",
+    mlApply: "Use",
+    mlApplied: "Suggestion applied.",
     rejected: "Rejected",
     loginRequiredForDrafts: "Login required to manage drafts.",
     loadingDraft: "Loading draft...",
     cityLabel: "City *",
-    cityHelp: "Choose a major U.S. city or select Other to enter one manually.",
+    cityHelp: "",
     otherCity: "Enter another city",
     useCurrentLocation: "Use my location",
     updateCurrentLocation: "Update location",
@@ -437,19 +437,19 @@ export default function CarDraftForm({
     color: "Color",
     selectColor: "Select color",
     titleLabel: "Title",
-    titleHelp: "If left blank, a title will be generated automatically from make, model, and year.",
+    titleHelp: "",
     descriptionLabel: "Description *",
     photos: "Photos",
-    photosHelp: "Add clear photos.",
-    autoSaveOnFirstPhotos: "They will upload after you save.",
+    photosHelp: "Add photos.",
+    autoSaveOnFirstPhotos: "Saved first.",
     addingPhotos: "Adding...",
     addMorePhotos: "Add Photos",
     addPhotos: "Add Photos",
     photosReady: (count: number) => `${count} photos ready`,
     moreNeeded: (count: number) => `${count} more needed`,
     photosUploadingNow: "Uploading photos.",
-    choosePhotosAndSave: "Choose photos now and they will upload after save.",
-    choosePhotos: "Choose photos to upload.",
+    choosePhotosAndSave: "Upload after save.",
+    choosePhotos: "Choose photos.",
     adding: "Adding",
     readyToUpload: "Ready to upload",
     mainPhoto: "Main photo",
@@ -1312,86 +1312,181 @@ export default function CarDraftForm({
           </p>
         ) : null}
 
-        {activeCarId ? (
-          <section className="panel panel-soft spaced-top-sm">
-            <div className="inline-actions">
-              <div>
-                <h2 className="subheading">{text.mlTitle}</h2>
-                <p className="helper-text">{text.mlHint}</p>
-              </div>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => void refreshMlSuggestion(activeCarId)}
-                disabled={refreshingMl}
-              >
-                {refreshingMl ? text.mlRefreshing : text.mlRefresh}
-              </button>
-            </div>
-
-            <p className="car-meta">{mlStatusLabel}</p>
-
-            {mlSuggestion ? (
-              <>
-                <div className="specs">
-                  <article className="spec">
-                    <p className="spec-key">{text.mlDetectedMake}</p>
-                    <p className="spec-val">{mlSuggestion.make || "—"}</p>
-                  </article>
-                  <article className="spec">
-                    <p className="spec-key">{text.mlDetectedModel}</p>
-                    <p className="spec-val">{mlSuggestion.model || "—"}</p>
-                  </article>
-                  <article className="spec">
-                    <p className="spec-key">{text.mlDetectedYear}</p>
-                    <p className="spec-val">{mlYearLabel}</p>
-                  </article>
-                  <article className="spec">
-                    <p className="spec-key">{text.mlConfidence}</p>
-                    <p className="spec-val">
-                      {mlSuggestion.confidence !== null && mlSuggestion.confidence !== undefined
-                        ? `${Math.round(mlSuggestion.confidence * 100)}%`
-                        : "—"}
-                    </p>
-                  </article>
-                  <article className="spec">
-                    <p className="spec-key">{text.mlSource}</p>
-                    <p className="spec-val">{mlSuggestion.source || "—"}</p>
-                  </article>
-                </div>
-
-                <div className="inline-actions">
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={applyMlSuggestion}
-                    disabled={!mlSuggestion.make && !mlSuggestion.model && !mlSuggestion.yearStart}
-                  >
-                    {text.mlApply}
-                  </button>
-                  {mlSuggestion.yearStart && mlSuggestion.yearEnd && mlSuggestion.yearStart !== mlSuggestion.yearEnd ? (
-                    <p className="helper-text">
-                      The year suggestion is a range, so the form keeps your current year until you choose one.
-                    </p>
-                  ) : null}
-                </div>
-              </>
-            ) : null}
-          </section>
-        ) : null}
-
         {needsLogin && <p className="notice">{text.loginRequiredForDrafts}</p>}
         {loading && <p className="notice">{text.loadingDraft}</p>}
 
         {!loading && (
           <form className="filters" onSubmit={onSubmit}>
+            <section className="upload-panel">
+              <h2 className="subheading">{text.photos}</h2>
+
+              <input
+                ref={photoInputRef}
+                className="upload-file-input"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => {
+                  handlePhotoSelection(e.target.files);
+                  e.currentTarget.value = "";
+                }}
+                disabled={uploading}
+              />
+
+              <div className="upload-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => photoInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? text.addingPhotos : totalPhotoCount > 0 ? text.addMorePhotos : text.addPhotos}
+                </button>
+                <span className={`status-pill ${hasEnoughPhotos ? "status-active" : "status-pending-review"}`}>
+                  {hasEnoughPhotos ? text.photosReady(totalPhotoCount) : text.moreNeeded(remainingPhotos)}
+                </span>
+                <span className="helper-text">
+                  {uploading
+                    ? text.photosUploadingNow
+                    : !activeCarId && mode === "create"
+                      ? text.choosePhotosAndSave
+                      : text.choosePhotos}
+                </span>
+              </div>
+
+              {uploadError && <p className="notice error">{uploadError}</p>}
+              {uploadSuccess && <p className="notice success">{uploadSuccess}</p>}
+
+              {photos.length > 0 || pendingPreviews.length > 0 ? (
+                <div className="upload-photo-grid">
+                  {pendingPreviews.map((preview) => (
+                    <article className="upload-photo-item" key={preview.id}>
+                      <button
+                        type="button"
+                        className="upload-photo-preview"
+                        onClick={() => openViewer(preview.id)}
+                      >
+                        <img src={preview.objectUrl} alt={preview.fileName} loading="lazy" />
+                      </button>
+                      <div className="upload-photo-meta">
+                        <span className="upload-photo-order">{preview.fileName}</span>
+                        <span className="status-pill status-draft">{uploading && activeCarId ? text.adding : text.readyToUpload}</span>
+                      </div>
+                    </article>
+                  ))}
+                  {photos.map((photo) => (
+                    <article className="upload-photo-item" key={photo.id}>
+                      <button
+                        type="button"
+                        className="upload-photo-preview"
+                        onClick={() => openViewer(`photo-${photo.id}`)}
+                      >
+                        <img src={photo.public_url} alt={`Car photo ${photo.sort_order + 1}`} loading="lazy" />
+                      </button>
+                      <div className="upload-photo-meta">
+                        <span className="upload-photo-order">{text.photoNumber(photo.sort_order + 1)}</span>
+                        <div className="upload-photo-controls">
+                          {photo.is_cover ? <span className="status-pill status-active">{text.mainPhoto}</span> : null}
+                          {!photo.is_cover ? (
+                            <button
+                              type="button"
+                              className="upload-photo-button upload-photo-button-neutral"
+                              onClick={() => void setMainPhoto(photo.id)}
+                              disabled={mainPhotoId === photo.id || removingPhotoId === photo.id || uploading}
+                            >
+                              {mainPhotoId === photo.id ? text.saving : text.makeMain}
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            className="upload-photo-button"
+                            onClick={() => void removePhoto(photo.id)}
+                            disabled={mainPhotoId === photo.id || removingPhotoId === photo.id || uploading}
+                          >
+                            {removingPhotoId === photo.id ? text.removing : text.remove}
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="upload-empty-state">
+                  <p className="car-meta">{text.noPhotosYet}</p>
+                </div>
+              )}
+            </section>
+
+            {activeCarId ? (
+              <section className="panel panel-soft spaced-top-sm">
+                <div className="inline-actions">
+                  <div>
+                    <h2 className="subheading">{text.mlTitle}</h2>
+                    <p className="helper-text">{text.mlHint}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => void refreshMlSuggestion(activeCarId)}
+                    disabled={refreshingMl}
+                  >
+                    {refreshingMl ? text.mlRefreshing : text.mlRefresh}
+                  </button>
+                </div>
+
+                <p className="car-meta">{mlStatusLabel}</p>
+
+                {mlSuggestion ? (
+                  <>
+                    <div className="specs">
+                      <article className="spec">
+                        <p className="spec-key">{text.mlDetectedMake}</p>
+                        <p className="spec-val">{mlSuggestion.make || "—"}</p>
+                      </article>
+                      <article className="spec">
+                        <p className="spec-key">{text.mlDetectedModel}</p>
+                        <p className="spec-val">{mlSuggestion.model || "—"}</p>
+                      </article>
+                      <article className="spec">
+                        <p className="spec-key">{text.mlDetectedYear}</p>
+                        <p className="spec-val">{mlYearLabel}</p>
+                      </article>
+                      <article className="spec">
+                        <p className="spec-key">{text.mlConfidence}</p>
+                        <p className="spec-val">
+                          {mlSuggestion.confidence !== null && mlSuggestion.confidence !== undefined
+                            ? `${Math.round(mlSuggestion.confidence * 100)}%`
+                            : "—"}
+                        </p>
+                      </article>
+                      <article className="spec">
+                        <p className="spec-key">{text.mlSource}</p>
+                        <p className="spec-val">{mlSuggestion.source || "—"}</p>
+                      </article>
+                    </div>
+
+                    <div className="inline-actions">
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={applyMlSuggestion}
+                        disabled={!mlSuggestion.make && !mlSuggestion.model && !mlSuggestion.yearStart}
+                      >
+                        {text.mlApply}
+                      </button>
+                    </div>
+                  </>
+                ) : null}
+              </section>
+            ) : null}
+
             <div className="draft-grid">
               <CityField
                 id="city"
                 label={text.cityLabel}
                 value={form.city}
                 onChange={(city) => setForm((prev) => ({ ...prev, city }))}
-                helperText={text.cityHelp}
+                helperText={text.cityHelp || undefined}
                 otherPlaceholder={text.otherCity}
               />
 
@@ -1601,7 +1696,7 @@ export default function CarDraftForm({
                 value={form.title_ar}
                 onChange={(e) => setForm((prev) => ({ ...prev, title_ar: e.target.value }))}
               />
-              <p className="helper-text">{text.titleHelp}</p>
+              {text.titleHelp ? <p className="helper-text">{text.titleHelp}</p> : null}
             </div>
 
             <div>
@@ -1614,110 +1709,6 @@ export default function CarDraftForm({
                 onChange={(e) => setForm((prev) => ({ ...prev, description_ar: e.target.value }))}
               />
             </div>
-
-            <section className="upload-panel">
-              <h2 className="subheading">{text.photos}</h2>
-              <p className="car-meta">
-                {text.photosHelp}
-                {!activeCarId && mode === "create" ? ` ${text.autoSaveOnFirstPhotos}` : ""}
-              </p>
-
-              <input
-                ref={photoInputRef}
-                className="upload-file-input"
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => {
-                  handlePhotoSelection(e.target.files);
-                  e.currentTarget.value = "";
-                }}
-                disabled={uploading}
-              />
-
-              <div className="upload-actions">
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() => photoInputRef.current?.click()}
-                  disabled={uploading}
-                >
-                  {uploading ? text.addingPhotos : totalPhotoCount > 0 ? text.addMorePhotos : text.addPhotos}
-                </button>
-                <span className={`status-pill ${hasEnoughPhotos ? "status-active" : "status-pending-review"}`}>
-                  {hasEnoughPhotos ? text.photosReady(totalPhotoCount) : text.moreNeeded(remainingPhotos)}
-                </span>
-                <span className="helper-text">
-                  {uploading
-                    ? text.photosUploadingNow
-                    : !activeCarId && mode === "create"
-                      ? text.choosePhotosAndSave
-                      : text.choosePhotos}
-                </span>
-              </div>
-
-              {uploadError && <p className="notice error">{uploadError}</p>}
-              {uploadSuccess && <p className="notice success">{uploadSuccess}</p>}
-
-              {photos.length > 0 || pendingPreviews.length > 0 ? (
-                <div className="upload-photo-grid">
-                  {pendingPreviews.map((preview) => (
-                    <article className="upload-photo-item" key={preview.id}>
-                      <button
-                        type="button"
-                        className="upload-photo-preview"
-                        onClick={() => openViewer(preview.id)}
-                      >
-                        <img src={preview.objectUrl} alt={preview.fileName} loading="lazy" />
-                      </button>
-                      <div className="upload-photo-meta">
-                        <span className="upload-photo-order">{preview.fileName}</span>
-                        <span className="status-pill status-draft">{uploading && activeCarId ? text.adding : text.readyToUpload}</span>
-                      </div>
-                    </article>
-                  ))}
-                  {photos.map((photo) => (
-                    <article className="upload-photo-item" key={photo.id}>
-                      <button
-                        type="button"
-                        className="upload-photo-preview"
-                        onClick={() => openViewer(`photo-${photo.id}`)}
-                      >
-                        <img src={photo.public_url} alt={`Car photo ${photo.sort_order + 1}`} loading="lazy" />
-                      </button>
-                      <div className="upload-photo-meta">
-                        <span className="upload-photo-order">{text.photoNumber(photo.sort_order + 1)}</span>
-                        <div className="upload-photo-controls">
-                          {photo.is_cover ? <span className="status-pill status-active">{text.mainPhoto}</span> : null}
-                          {!photo.is_cover ? (
-                            <button
-                              type="button"
-                              className="upload-photo-button upload-photo-button-neutral"
-                              onClick={() => void setMainPhoto(photo.id)}
-                              disabled={mainPhotoId === photo.id || removingPhotoId === photo.id || uploading}
-                            >
-                              {mainPhotoId === photo.id ? text.saving : text.makeMain}
-                            </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            className="upload-photo-button"
-                            onClick={() => void removePhoto(photo.id)}
-                            disabled={mainPhotoId === photo.id || removingPhotoId === photo.id || uploading}
-                          >
-                            {removingPhotoId === photo.id ? text.removing : text.remove}
-                          </button>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <div className="upload-empty-state">
-                  <p className="car-meta">{text.noPhotosYet}</p>
-                </div>
-              )}
-            </section>
 
             {activeViewerItem ? (
               <div className="photo-viewer" role="dialog" aria-modal="true" aria-label={text.photoViewer}>
