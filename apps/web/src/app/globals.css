@@ -2102,7 +2102,7 @@ a {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 0.45rem;
 }
 
@@ -2113,19 +2113,29 @@ a {
 }
 
 .upload-photo-button {
-  border: 0;
-  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(220, 38, 38, 0.18);
+  border-radius: 999px;
+  background: #fff4f4;
   color: var(--error);
   font: inherit;
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 700;
   cursor: pointer;
-  padding: 0;
-  transition: opacity 150ms ease;
+  padding: 0.36rem 0.7rem;
+  transition: opacity 150ms ease, transform 150ms ease, border-color 150ms ease, background 150ms ease;
 }
 
 .upload-photo-button-neutral {
+  border-color: rgba(21, 128, 61, 0.18);
+  background: #eefbf2;
   color: var(--brand-deep);
+}
+
+.upload-photo-button:hover {
+  transform: translateY(-1px);
 }
 
 .upload-photo-button:disabled {

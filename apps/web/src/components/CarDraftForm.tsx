@@ -268,6 +268,32 @@ function buildPayload(form: FormState): BuildPayloadResult {
   return { ok: true, payload };
 }
 
+function buildPlaceholderPayload(form: FormState): CarPayload {
+  const year = Number(form.year);
+
+  return {
+    city: form.city.trim() || DRAFT_PLACEHOLDER,
+    district: form.district.trim() || undefined,
+    latitude: parseOptionalFloat(form.latitude),
+    longitude: parseOptionalFloat(form.longitude),
+    make: form.make.trim() || DRAFT_PLACEHOLDER,
+    model: form.model.trim() || DRAFT_PLACEHOLDER,
+    year: Number.isInteger(year) && year >= 1980 ? year : DRAFT_PLACEHOLDER_YEAR,
+    price_sar: parseOptionalNumber(form.price_sar) ?? null,
+    mileage_km: form.mileage_km.trim()
+      ? milesToKm(parseOptionalNumber(form.mileage_km) ?? 0)
+      : undefined,
+    body_type: form.body_type.trim() || undefined,
+    transmission: form.transmission.trim() || undefined,
+    fuel_type: form.fuel_type.trim() || undefined,
+    drivetrain: form.drivetrain.trim() || undefined,
+    condition: form.condition.trim() || undefined,
+    color: form.color.trim() || undefined,
+    title_ar: form.title_ar.trim() || DRAFT_PLACEHOLDER,
+    description_ar: form.description_ar.trim() || DRAFT_PLACEHOLDER,
+  };
+}
+
 function fromLoadedField(value?: string | number | null): string {
   const nextValue = field(value);
   return nextValue === DRAFT_PLACEHOLDER ? "" : nextValue;
@@ -451,12 +477,12 @@ export default function CarDraftForm({
     photosReady: (count: number) => `${count} photos ready`,
     moreNeeded: (count: number) => `${count} more needed`,
     photosUploadingNow: "Uploading photos.",
-    choosePhotosAndSave: "Upload after save.",
+    choosePhotosAndSave: "Upload starts right away.",
     choosePhotos: "Choose photos.",
     adding: "Adding",
     readyToUpload: "Ready to upload",
     mainPhoto: "Main photo",
-    makeMain: "Make Main",
+    makeMain: "Set Main",
     removing: "Removing...",
     remove: "Remove",
     noPhotosYet: "No photos yet.",
@@ -768,6 +794,39 @@ export default function CarDraftForm({
     return data;
   }
 
+  async function ensureDraftForUploads(token: string): Promise<number> {
+    if (activeCarId) {
+      return activeCarId;
+    }
+
+    const payload = buildPlaceholderPayload(form);
+    const res = await fetch(`${API_BASE}/v1/cars`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      setNeedsLogin(true);
+      throw new Error(text.sessionExpired);
+    }
+
+    if (!res.ok) {
+      throw new Error(await parseApiError(res));
+    }
+
+    const data = (await res.json()) as CarOut;
+    setCreatedId(data.id);
+    setStatus(data.status);
+    setReviewReason(data.review_reason || "");
+    setPhotos(data.photos || []);
+    setMlSuggestion(extractMlSuggestion(data));
+    return data.id;
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -969,11 +1028,20 @@ export default function CarDraftForm({
 
     setUploading(true);
 
-    const targetCarId = targetCarIdOverride ?? activeCarId;
+    let createdBeforeUpload = false;
+    let targetCarId = targetCarIdOverride ?? activeCarId;
+
     if (!targetCarId) {
-      setUploadError(text.createDraftBeforeUploadFailed);
-      setUploading(false);
-      return { uploadedCount: 0, failedCount: 0, totalPhotos: photos.length };
+      try {
+        targetCarId = await ensureDraftForUploads(token);
+        createdBeforeUpload = true;
+      } catch (err) {
+        setUploadError(
+          err instanceof Error ? translateApiMessage(locale, err.message) : text.createDraftBeforeUploadFailed,
+        );
+        setUploading(false);
+        return { uploadedCount: 0, failedCount: 0, totalPhotos: photos.length };
+      }
     }
 
     let uploadedCount = 0;
@@ -1051,7 +1119,9 @@ export default function CarDraftForm({
     setPhotos(nextPhotos);
     await refreshMlSuggestion(targetCarId);
     if (uploadedCount > 0) {
-      setUploadSuccess(text.photosAdded(uploadedCount));
+      setUploadSuccess(
+        createdBeforeUpload ? text.photosAddedSavedFirst(uploadedCount) : text.photosAdded(uploadedCount),
+      );
     }
     if (failedCount > 0) {
       setUploadError(text.photosAddFailed(failedCount));
@@ -1101,9 +1171,7 @@ export default function CarDraftForm({
       setPendingPreviews((current) => [...current, ...previews]);
     }
 
-    if (activeCarId) {
-      void uploadSelectedPhotos(activeCarId, imageFiles, previews);
-    }
+    void uploadSelectedPhotos(undefined, imageFiles, previews);
   }
 
   async function removePhoto(photoId: number) {
@@ -1327,7 +1395,6 @@ export default function CarDraftForm({
             <section className="upload-panel upload-panel-hero">
               <div className="draft-section-head">
                 <div>
-                  <p className="draft-kicker">Step 1</p>
                   <h2 className="subheading">{text.photos}</h2>
                 </div>
               </div>
@@ -1433,7 +1500,6 @@ export default function CarDraftForm({
               <section className="panel panel-soft spaced-top-sm suggestion-panel">
                 <div className="suggestion-topbar">
                   <div>
-                    <p className="draft-kicker">Step 2</p>
                     <h2 className="subheading">{text.mlTitle}</h2>
                     <p className="helper-text">{text.mlHint}</p>
                   </div>
@@ -1496,7 +1562,6 @@ export default function CarDraftForm({
             <section className="field-section">
               <div className="draft-section-head">
                 <div>
-                  <p className="draft-kicker">Step 3</p>
                   <h2 className="subheading">{text.sectionBasics}</h2>
                 </div>
               </div>
@@ -1619,7 +1684,6 @@ export default function CarDraftForm({
             <section className="field-section">
               <div className="draft-section-head">
                 <div>
-                  <p className="draft-kicker">Step 4</p>
                   <h2 className="subheading">{text.sectionSpecs}</h2>
                 </div>
               </div>
@@ -1732,7 +1796,6 @@ export default function CarDraftForm({
             <section className="field-section">
               <div className="draft-section-head">
                 <div>
-                  <p className="draft-kicker">Step 5</p>
                   <h2 className="subheading">{text.sectionListing}</h2>
                 </div>
               </div>

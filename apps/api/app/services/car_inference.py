@@ -83,6 +83,10 @@ def enqueue_car_inference(car_id: int) -> None:
             return
         _mark_status(session, car, status="queued", source="stub-v1")
 
+    if settings.ENV != "prod":
+        infer_car_attributes_job(car_id)
+        return
+
     try:
         redis_conn = redis.from_url(settings.REDIS_URL)
         queue = Queue("default", connection=redis_conn)
