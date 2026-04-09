@@ -388,6 +388,9 @@ export default function CarDraftForm({
     createDraftTitle: "Create Listing",
     editListingTitle: (id?: number) => `Edit Listing #${id ?? ""}`,
     formNote: mode === "create" ? "Add photos first." : "Update photos or details.",
+    sectionBasics: "Basics",
+    sectionSpecs: "Specs",
+    sectionListing: "Listing",
     currentStatus: "Current status",
     mlTitle: "Suggestion",
     mlHint: "From photos.",
@@ -1297,14 +1300,18 @@ export default function CarDraftForm({
   return (
     <main className="page shell auth-wrap">
       <section className="auth-card draft-card">
-        <h1>{title}</h1>
-        <p className="auth-note">{text.formNote}</p>
-
-        {status && (
-          <p className="car-meta">
-            {text.currentStatus}: <strong>{translateStatus(locale, status)}</strong>
-          </p>
-        )}
+        <div className="draft-header">
+          <div>
+            <h1>{title}</h1>
+            <p className="auth-note">{text.formNote}</p>
+          </div>
+          {status ? (
+            <div className="draft-status-chip">
+              <span className="draft-status-label">{text.currentStatus}</span>
+              <strong>{translateStatus(locale, status)}</strong>
+            </div>
+          ) : null}
+        </div>
 
         {status === "rejected" && reviewReason ? (
           <p className="notice error">
@@ -1317,8 +1324,13 @@ export default function CarDraftForm({
 
         {!loading && (
           <form className="filters" onSubmit={onSubmit}>
-            <section className="upload-panel">
-              <h2 className="subheading">{text.photos}</h2>
+            <section className="upload-panel upload-panel-hero">
+              <div className="draft-section-head">
+                <div>
+                  <p className="draft-kicker">Step 1</p>
+                  <h2 className="subheading">{text.photos}</h2>
+                </div>
+              </div>
 
               <input
                 ref={photoInputRef}
@@ -1418,9 +1430,10 @@ export default function CarDraftForm({
             </section>
 
             {activeCarId ? (
-              <section className="panel panel-soft spaced-top-sm">
-                <div className="inline-actions">
+              <section className="panel panel-soft spaced-top-sm suggestion-panel">
+                <div className="suggestion-topbar">
                   <div>
+                    <p className="draft-kicker">Step 2</p>
                     <h2 className="subheading">{text.mlTitle}</h2>
                     <p className="helper-text">{text.mlHint}</p>
                   </div>
@@ -1438,7 +1451,7 @@ export default function CarDraftForm({
 
                 {mlSuggestion ? (
                   <>
-                    <div className="specs">
+                    <div className="specs suggestion-grid">
                       <article className="spec">
                         <p className="spec-key">{text.mlDetectedMake}</p>
                         <p className="spec-val">{mlSuggestion.make || "—"}</p>
@@ -1480,235 +1493,272 @@ export default function CarDraftForm({
               </section>
             ) : null}
 
-            <div className="draft-grid">
-              <CityField
-                id="city"
-                label={text.cityLabel}
-                value={form.city}
-                onChange={(city) => setForm((prev) => ({ ...prev, city }))}
-                helperText={text.cityHelp || undefined}
-                otherPlaceholder={text.otherCity}
-              />
+            <section className="field-section">
+              <div className="draft-section-head">
+                <div>
+                  <p className="draft-kicker">Step 3</p>
+                  <h2 className="subheading">{text.sectionBasics}</h2>
+                </div>
+              </div>
 
-              <div className="form-grid">
-                <div className="inline-actions">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={handleUseCurrentLocation}
-                    disabled={locating}
-                  >
-                    {locating
-                      ? text.locating
-                      : hasPreciseLocation
-                        ? text.updateCurrentLocation
-                        : text.useCurrentLocation}
-                  </button>
-                  {hasPreciseLocation ? (
+              <div className="city-location-grid">
+                <div className="field-card field-card-main">
+                  <CityField
+                    id="city"
+                    label={text.cityLabel}
+                    value={form.city}
+                    onChange={(city) => setForm((prev) => ({ ...prev, city }))}
+                    helperText={text.cityHelp || undefined}
+                    otherPlaceholder={text.otherCity}
+                  />
+                </div>
+                <div className="field-card location-card">
+                  <p className="location-card-title">Location</p>
+                  <div className="compact-actions">
                     <button
                       type="button"
-                      className="btn"
-                      onClick={handleClearCurrentLocation}
+                      className="btn btn-secondary"
+                      onClick={handleUseCurrentLocation}
                       disabled={locating}
                     >
-                      {text.clearCurrentLocation}
+                      {locating
+                        ? text.locating
+                        : hasPreciseLocation
+                          ? text.updateCurrentLocation
+                          : text.useCurrentLocation}
                     </button>
+                    {hasPreciseLocation ? (
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={handleClearCurrentLocation}
+                        disabled={locating}
+                      >
+                        {text.clearCurrentLocation}
+                      </button>
+                    ) : null}
+                  </div>
+                  {locationStatus || hasPreciseLocation ? (
+                    <p className="helper-text">{locationStatus || text.locationSaved}</p>
                   ) : null}
                 </div>
-                {locationStatus || hasPreciseLocation ? (
-                  <p className="helper-text">{locationStatus || text.locationSaved}</p>
-                ) : null}
               </div>
 
-              <div>
-                <label className="label" htmlFor="district">{text.district}</label>
+              <div className="draft-grid draft-grid-top">
+                <div className="field-card">
+                  <label className="label" htmlFor="district">{text.district}</label>
+                  <input
+                    id="district"
+                    className="input"
+                    value={form.district}
+                    onChange={(e) => setForm((prev) => ({ ...prev, district: e.target.value }))}
+                  />
+                </div>
+
+                <div className="field-card">
+                  <MakeModelField
+                    makeValue={form.make}
+                    modelValue={form.model}
+                    onMakeChange={(v) => setForm((prev) => ({ ...prev, make: v, model: "" }))}
+                    onModelChange={(v) => setForm((prev) => ({ ...prev, model: v }))}
+                    makeLabel={text.make}
+                    modelLabel={text.model}
+                  />
+                </div>
+              </div>
+
+              <div className="field-grid field-grid-3">
+                <div className="field-card">
+                  <label className="label" htmlFor="year">{text.year}</label>
+                  <input
+                    id="year"
+                    className="input"
+                    list="year-options"
+                    inputMode="numeric"
+                    placeholder={String(new Date().getUTCFullYear())}
+                    value={form.year}
+                    onChange={(e) => setForm((prev) => ({ ...prev, year: e.target.value }))}
+                    autoComplete="off"
+                  />
+                  <datalist id="year-options">
+                    {Array.from(
+                      { length: new Date().getUTCFullYear() + 2 - 1980 },
+                      (_, i) => new Date().getUTCFullYear() + 1 - i,
+                    ).map((yr) => (
+                      <option key={yr} value={yr} />
+                    ))}
+                  </datalist>
+                </div>
+
+                <div className="field-card">
+                  <label className="label" htmlFor="price">{text.price}</label>
+                  <input
+                    id="price"
+                    className="input"
+                    type="number"
+                    min={1}
+                    value={form.price_sar}
+                    onChange={(e) => setForm((prev) => ({ ...prev, price_sar: e.target.value }))}
+                  />
+                </div>
+
+                <div className="field-card">
+                  <label className="label" htmlFor="mileage">{text.mileage}</label>
+                  <input
+                    id="mileage"
+                    className="input"
+                    type="number"
+                    min={0}
+                    value={form.mileage_km}
+                    onChange={(e) => setForm((prev) => ({ ...prev, mileage_km: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section className="field-section">
+              <div className="draft-section-head">
+                <div>
+                  <p className="draft-kicker">Step 4</p>
+                  <h2 className="subheading">{text.sectionSpecs}</h2>
+                </div>
+              </div>
+
+              <div className="field-grid field-grid-4">
+                <div className="field-card">
+                  <label className="label" htmlFor="bodyType">{text.bodyType}</label>
+                  <select
+                    id="bodyType"
+                    className="select"
+                    value={form.body_type}
+                    onChange={(e) => setForm((prev) => ({ ...prev, body_type: e.target.value }))}
+                  >
+                    <option value="">{text.selectBodyType}</option>
+                    {BODY_TYPE_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {translateValue(locale, option)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="field-card">
+                  <label className="label" htmlFor="transmission">{text.transmission}</label>
+                  <select
+                    id="transmission"
+                    className="select"
+                    value={form.transmission}
+                    onChange={(e) => setForm((prev) => ({ ...prev, transmission: e.target.value }))}
+                  >
+                    <option value="">{text.selectTransmission}</option>
+                    {TRANSMISSION_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {translateValue(locale, option)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="field-card">
+                  <label className="label" htmlFor="fuelType">{text.fuelType}</label>
+                  <select
+                    id="fuelType"
+                    className="select"
+                    value={form.fuel_type}
+                    onChange={(e) => setForm((prev) => ({ ...prev, fuel_type: e.target.value }))}
+                  >
+                    <option value="">{text.selectFuelType}</option>
+                    {FUEL_TYPE_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {translateValue(locale, option)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="field-card">
+                  <label className="label" htmlFor="drivetrain">{text.drivetrain}</label>
+                  <select
+                    id="drivetrain"
+                    className="select"
+                    value={form.drivetrain}
+                    onChange={(e) => setForm((prev) => ({ ...prev, drivetrain: e.target.value }))}
+                  >
+                    <option value="">{text.selectDrivetrain}</option>
+                    {DRIVETRAIN_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {translateValue(locale, option)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="field-card">
+                  <label className="label" htmlFor="condition">{text.condition}</label>
+                  <select
+                    id="condition"
+                    className="select"
+                    value={form.condition}
+                    onChange={(e) => setForm((prev) => ({ ...prev, condition: e.target.value }))}
+                  >
+                    <option value="">{text.selectCondition}</option>
+                    {CONDITION_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {translateValue(locale, option)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="field-card">
+                  <label className="label" htmlFor="color">{text.color}</label>
+                  <select
+                    id="color"
+                    className="select"
+                    value={form.color}
+                    onChange={(e) => setForm((prev) => ({ ...prev, color: e.target.value }))}
+                  >
+                    <option value="">{text.selectColor}</option>
+                    {COLOR_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {translateValue(locale, option)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </section>
+
+            <section className="field-section">
+              <div className="draft-section-head">
+                <div>
+                  <p className="draft-kicker">Step 5</p>
+                  <h2 className="subheading">{text.sectionListing}</h2>
+                </div>
+              </div>
+
+              <div className="field-card">
+                <label className="label" htmlFor="title">{text.titleLabel}</label>
                 <input
-                  id="district"
+                  id="title"
                   className="input"
-                  value={form.district}
-                  onChange={(e) => setForm((prev) => ({ ...prev, district: e.target.value }))}
+                  value={form.title_ar}
+                  onChange={(e) => setForm((prev) => ({ ...prev, title_ar: e.target.value }))}
+                />
+                {text.titleHelp ? <p className="helper-text">{text.titleHelp}</p> : null}
+              </div>
+
+              <div className="field-card">
+                <label className="label" htmlFor="description">{text.descriptionLabel}</label>
+                <textarea
+                  id="description"
+                  className="textarea"
+                  rows={6}
+                  value={form.description_ar}
+                  onChange={(e) => setForm((prev) => ({ ...prev, description_ar: e.target.value }))}
                 />
               </div>
-
-              <MakeModelField
-                makeValue={form.make}
-                modelValue={form.model}
-                onMakeChange={(v) => setForm((prev) => ({ ...prev, make: v, model: "" }))}
-                onModelChange={(v) => setForm((prev) => ({ ...prev, model: v }))}
-                makeLabel={text.make}
-                modelLabel={text.model}
-              />
-
-              <div>
-                <label className="label" htmlFor="year">{text.year}</label>
-                <input
-                  id="year"
-                  className="input"
-                  list="year-options"
-                  inputMode="numeric"
-                  placeholder={String(new Date().getUTCFullYear())}
-                  value={form.year}
-                  onChange={(e) => setForm((prev) => ({ ...prev, year: e.target.value }))}
-                  autoComplete="off"
-                />
-                <datalist id="year-options">
-                  {Array.from(
-                    { length: new Date().getUTCFullYear() + 2 - 1980 },
-                    (_, i) => new Date().getUTCFullYear() + 1 - i,
-                  ).map((yr) => (
-                    <option key={yr} value={yr} />
-                  ))}
-                </datalist>
-              </div>
-
-              <div>
-                <label className="label" htmlFor="price">{text.price}</label>
-                <input
-                  id="price"
-                  className="input"
-                  type="number"
-                  min={1}
-                  value={form.price_sar}
-                  onChange={(e) => setForm((prev) => ({ ...prev, price_sar: e.target.value }))}
-                />
-              </div>
-
-              <div>
-                <label className="label" htmlFor="mileage">{text.mileage}</label>
-                <input
-                  id="mileage"
-                  className="input"
-                  type="number"
-                  min={0}
-                  value={form.mileage_km}
-                  onChange={(e) => setForm((prev) => ({ ...prev, mileage_km: e.target.value }))}
-                />
-              </div>
-
-              <div>
-                <label className="label" htmlFor="bodyType">{text.bodyType}</label>
-                <select
-                  id="bodyType"
-                  className="select"
-                  value={form.body_type}
-                  onChange={(e) => setForm((prev) => ({ ...prev, body_type: e.target.value }))}
-                >
-                  <option value="">{text.selectBodyType}</option>
-                  {BODY_TYPE_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {translateValue(locale, option)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="label" htmlFor="transmission">{text.transmission}</label>
-                <select
-                  id="transmission"
-                  className="select"
-                  value={form.transmission}
-                  onChange={(e) => setForm((prev) => ({ ...prev, transmission: e.target.value }))}
-                >
-                  <option value="">{text.selectTransmission}</option>
-                  {TRANSMISSION_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {translateValue(locale, option)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="label" htmlFor="fuelType">{text.fuelType}</label>
-                <select
-                  id="fuelType"
-                  className="select"
-                  value={form.fuel_type}
-                  onChange={(e) => setForm((prev) => ({ ...prev, fuel_type: e.target.value }))}
-                >
-                  <option value="">{text.selectFuelType}</option>
-                  {FUEL_TYPE_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {translateValue(locale, option)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="label" htmlFor="drivetrain">{text.drivetrain}</label>
-                <select
-                  id="drivetrain"
-                  className="select"
-                  value={form.drivetrain}
-                  onChange={(e) => setForm((prev) => ({ ...prev, drivetrain: e.target.value }))}
-                >
-                  <option value="">{text.selectDrivetrain}</option>
-                  {DRIVETRAIN_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {translateValue(locale, option)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="label" htmlFor="condition">{text.condition}</label>
-                <select
-                  id="condition"
-                  className="select"
-                  value={form.condition}
-                  onChange={(e) => setForm((prev) => ({ ...prev, condition: e.target.value }))}
-                >
-                  <option value="">{text.selectCondition}</option>
-                  {CONDITION_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {translateValue(locale, option)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="label" htmlFor="color">{text.color}</label>
-                <select
-                  id="color"
-                  className="select"
-                  value={form.color}
-                  onChange={(e) => setForm((prev) => ({ ...prev, color: e.target.value }))}
-                >
-                  <option value="">{text.selectColor}</option>
-                  {COLOR_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {translateValue(locale, option)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="label" htmlFor="title">{text.titleLabel}</label>
-              <input
-                id="title"
-                className="input"
-                value={form.title_ar}
-                onChange={(e) => setForm((prev) => ({ ...prev, title_ar: e.target.value }))}
-              />
-              {text.titleHelp ? <p className="helper-text">{text.titleHelp}</p> : null}
-            </div>
-
-            <div>
-              <label className="label" htmlFor="description">{text.descriptionLabel}</label>
-              <textarea
-                id="description"
-                className="textarea"
-                rows={6}
-                value={form.description_ar}
-                onChange={(e) => setForm((prev) => ({ ...prev, description_ar: e.target.value }))}
-              />
-            </div>
+            </section>
 
             {activeViewerItem ? (
               <div className="photo-viewer" role="dialog" aria-modal="true" aria-label={text.photoViewer}>

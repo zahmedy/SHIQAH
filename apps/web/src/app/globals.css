@@ -1705,13 +1705,217 @@ a {
 /* ─── Draft / My Cars ─────────────────────────────────────────────────── */
 
 .draft-card {
-  width: min(980px, 100%);
+  position: relative;
+  width: min(1120px, 100%);
+  padding: 1.6rem;
+  border-radius: 32px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 249, 245, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  overflow: hidden;
+}
+
+.draft-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 5px;
+  background: linear-gradient(90deg, #15803d 0%, #55b668 40%, #d8b05d 100%);
+  opacity: 0.9;
+}
+
+.draft-card .filters {
+  gap: 1rem;
+}
+
+.draft-card .auth-note {
+  max-width: 34rem;
+  margin: 0.4rem 0 0;
+}
+
+.draft-card .auth-actions {
+  margin-top: 0.4rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(13, 17, 23, 0.08);
+}
+
+.draft-card .label {
+  margin-bottom: 0.5rem;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.draft-card .input,
+.draft-card .textarea,
+.draft-card .select,
+.draft-card .make-trigger {
+  min-height: 56px;
+  border-radius: 18px;
+  border-color: #dcded5;
+  background: #fbfbf8;
+  padding: 0.85rem 1rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.draft-card .input,
+.draft-card .textarea,
+.draft-card .select {
+  font-size: 0.98rem;
+}
+
+.draft-card .textarea {
+  min-height: 180px;
+  padding-top: 1rem;
+}
+
+.draft-card .input:hover,
+.draft-card .textarea:hover,
+.draft-card .select:hover,
+.draft-card .make-trigger:hover {
+  border-color: #bcc2b5;
+  background: #ffffff;
+}
+
+.draft-card .input:focus,
+.draft-card .textarea:focus,
+.draft-card .select:focus,
+.draft-card .make-trigger:focus-visible {
+  border-color: #2d8d4b;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.12);
+}
+
+.draft-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.15rem;
+}
+
+.draft-header h1 {
+  margin: 0;
+  font-size: clamp(2rem, 3.8vw, 2.8rem);
+  line-height: 0.95;
+}
+
+.draft-status-chip {
+  min-width: 180px;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem 1rem;
+  border-radius: 20px;
+  border: 1px solid rgba(13, 17, 23, 0.08);
+  background: rgba(246, 247, 242, 0.95);
+  box-shadow: var(--shadow-xs);
+}
+
+.draft-status-label {
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .draft-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.85rem;
+  gap: 1rem;
+}
+
+.draft-grid-top {
+  margin-top: 1rem;
+}
+
+.draft-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.draft-kicker {
+  margin: 0 0 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brand-deep);
+}
+
+.field-section {
+  padding: 1.2rem;
+  border-radius: 26px;
+  border: 1px solid rgba(13, 17, 23, 0.07);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(246, 247, 242, 0.95) 100%);
+  box-shadow: var(--shadow-card);
+}
+
+.field-card {
+  padding: 1rem;
+  border-radius: 22px;
+  border: 1px solid rgba(13, 17, 23, 0.07);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.field-card-main {
+  padding: 1rem 1rem 0.9rem;
+}
+
+.field-card > .helper-text:last-child {
+  margin-bottom: 0;
+}
+
+.city-location-grid,
+.field-grid,
+.suggestion-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.city-location-grid {
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 0.95fr);
+}
+
+.field-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.field-grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.location-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.75rem;
+  background:
+    radial-gradient(circle at top right, rgba(22, 163, 74, 0.08), transparent 55%),
+    rgba(255, 255, 255, 0.92);
+}
+
+.location-card-title {
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: 1.15rem;
+  letter-spacing: 0.03em;
+}
+
+.compact-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.compact-actions .btn {
+  width: 100%;
+  justify-content: center;
 }
 
 .mycars-toolbar {
@@ -1795,6 +1999,15 @@ a {
   box-shadow: var(--shadow-card);
 }
 
+.upload-panel-hero {
+  padding: 1.25rem;
+  border-radius: 28px;
+  border-color: rgba(21, 128, 61, 0.14);
+  background:
+    radial-gradient(circle at top right, rgba(22, 163, 74, 0.09), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 249, 244, 0.98) 100%);
+}
+
 .upload-file-input {
   position: absolute;
   width: 1px;
@@ -1815,6 +2028,10 @@ a {
   margin-top: 0.75rem;
 }
 
+.upload-actions .helper-text {
+  margin-top: 0;
+}
+
 .upload-empty-state {
   margin-top: 0.85rem;
   border: 1.5px dashed var(--line-strong);
@@ -1831,7 +2048,7 @@ a {
 .upload-photo-grid {
   margin-top: 0.85rem;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 0.7rem;
 }
 
@@ -1871,22 +2088,28 @@ a {
 
 .upload-photo-meta {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.4rem;
-  padding: 0.5rem;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.75rem;
+}
+
+.upload-photo-meta > * {
+  width: 100%;
 }
 
 .upload-photo-controls {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
   gap: 0.45rem;
-  margin-left: auto;
 }
 
 .upload-photo-order {
-  color: var(--muted);
-  font-size: 0.78rem;
+  color: #3f4754;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .upload-photo-button {
@@ -1909,6 +2132,31 @@ a {
   color: var(--muted);
   cursor: default;
   opacity: 0.5;
+}
+
+.suggestion-panel {
+  padding: 1.15rem 1.2rem;
+  border-radius: 26px;
+}
+
+.suggestion-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.suggestion-grid {
+  margin: 0.85rem 0 1rem;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.suggestion-grid .spec {
+  min-height: 100%;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(13, 17, 23, 0.06);
+  background: rgba(255, 255, 255, 0.8);
 }
 
 /* ─── Photo Viewer (Lightbox) ─────────────────────────────────────────── */
@@ -2033,6 +2281,16 @@ a {
   .profile-hero {
     grid-template-columns: 1fr;
   }
+
+  .city-location-grid,
+  .field-grid-4,
+  .suggestion-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .field-grid-3 {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 760px) {
@@ -2100,8 +2358,40 @@ a {
     text-align: left;
   }
 
+  .draft-card {
+    padding: 1.15rem;
+    border-radius: 24px;
+  }
+
+  .draft-header,
+  .suggestion-topbar {
+    flex-direction: column;
+  }
+
+  .draft-status-chip {
+    width: 100%;
+    min-width: 0;
+  }
+
   .draft-grid {
     grid-template-columns: 1fr;
+  }
+
+  .city-location-grid,
+  .field-grid,
+  .field-grid-4,
+  .suggestion-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .field-section {
+    padding: 1rem;
+    border-radius: 22px;
+  }
+
+  .field-card {
+    padding: 0.9rem;
+    border-radius: 18px;
   }
 
   .form-grid-2 {
@@ -2109,7 +2399,7 @@ a {
   }
 
   .upload-photo-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
   .bg-orb-one {
