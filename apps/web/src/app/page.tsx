@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { apiGet } from "@/lib/api";
 import HomeListingCard from "@/components/HomeListingCard";
 import { formatListingPrice, formatMileage, formatRelativeHours, type Locale } from "@/lib/locale";
@@ -49,18 +51,29 @@ export default async function HomePage() {
     fetchError = err instanceof Error ? err.message : "Failed to load listings.";
   }
 
+  const loadedCount = listings.length;
+
   return (
     <main className="page shell">
       <section className="home-hero">
-        <span className="home-hero-badge">
-          U.S. Car Marketplace
-        </span>
-        <h1 className="home-hero-title">
-          Buy & Sell Cars
-        </h1>
-        <p className="home-hero-sub">
-          Thousands of listings from across the United States
-        </p>
+        <div className="home-hero-copy">
+          <div className="home-hero-topline">
+            <span className="home-hero-badge">U.S. Car Marketplace</span>
+          </div>
+
+          <h2 className="home-hero-title">
+            <span className="home-hero-title-accent">List your car fast.</span>
+          </h2>
+
+          <p className="home-hero-sub">
+            Using AI to detect car details and pricing.
+          </p>
+
+          <div className="hero-actions home-hero-actions">
+            <Link href="/search" className="btn btn-primary">Browse Listings</Link>
+            <Link href="/my-cars/new" className="btn btn-secondary">Sell Your Car</Link>
+          </div>
+        </div>
       </section>
 
       <h2 className="section-title">Latest Listings</h2>
