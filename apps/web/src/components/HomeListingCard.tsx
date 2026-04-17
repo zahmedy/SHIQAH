@@ -16,6 +16,8 @@ type HomeListingCardProps = {
   mileageText: string;
   priceText: string;
   metaText: string;
+  winterLabel?: string;
+  badges?: string[];
   photos?: ListingPhoto[];
 };
 
@@ -47,6 +49,8 @@ export default function HomeListingCard({
   mileageText,
   priceText,
   metaText,
+  winterLabel,
+  badges = [],
   photos = [],
 }: HomeListingCardProps) {
   const [photoIndex, setPhotoIndex] = useState(0);
@@ -104,8 +108,16 @@ export default function HomeListingCard({
 
       <Link href={href} className="car-body car-card-link">
         <h3 className="car-title">{title}</h3>
+        {winterLabel ? <p className="winter-score-pill">{winterLabel}</p> : null}
         <p className="car-meta">{make} {model} • {year}</p>
         <p className="car-meta">{mileageText}</p>
+        {badges.length ? (
+          <div className="winter-chip-row" aria-label="Winter-ready highlights">
+            {badges.map((badge) => (
+              <span className="winter-chip" key={badge}>{badge}</span>
+            ))}
+          </div>
+        ) : null}
         <div className="car-footer-row">
           <p className="car-price">{priceText}</p>
           <p className="car-footer-meta">{metaText}</p>

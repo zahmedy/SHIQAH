@@ -17,6 +17,11 @@ def ensure_index() -> None:
                         "seller_name": {"type": "text"},
                         "seller_user_id": {"type": "keyword"},
                         "owner_id": {"type": "integer"},
+                        "fuel_type": {"type": "keyword"},
+                        "drivetrain": {"type": "keyword"},
+                        "body_type": {"type": "keyword"},
+                        "price_sar": {"type": "integer"},
+                        "mileage_km": {"type": "integer"},
                     }
                 },
             )

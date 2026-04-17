@@ -4,6 +4,7 @@ import { apiGet } from "@/lib/api";
 import ListingPhotoGallery from "@/components/ListingPhotoGallery";
 import { formatDateTime, formatDistance, formatListingPrice, translateValue, type Locale } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
+import { winterBadges, winterScore, winterScoreLabel } from "@/lib/winter";
 import ChatPanel from "./ChatPanel";
 import OfferForm from "./OfferForm";
 import OwnerActions from "./OwnerActions";
@@ -30,6 +31,7 @@ type Listing = {
   transmission?: string;
   fuel_type?: string;
   body_type?: string;
+  drivetrain?: string;
   condition?: string;
   color?: string;
   published_at?: string;
@@ -104,6 +106,7 @@ export default async function CarDetailPage({
   }
 
   const car = data.listing;
+  const winterBadgesForCar = winterBadges(car, locale);
 
   return (
     <main className="page shell two-col">
@@ -157,6 +160,10 @@ export default async function CarDetailPage({
             <p className="spec-val">{translateValue(locale, car.fuel_type)}</p>
           </article>
           <article className="spec">
+            <p className="spec-key">Drivetrain</p>
+            <p className="spec-val">{translateValue(locale, car.drivetrain)}</p>
+          </article>
+          <article className="spec">
             <p className="spec-key">Body Type</p>
             <p className="spec-val">{translateValue(locale, car.body_type)}</p>
           </article>
@@ -168,6 +175,22 @@ export default async function CarDetailPage({
             <p className="spec-key">Color</p>
             <p className="spec-val">{translateValue(locale, car.color)}</p>
           </article>
+        </div>
+
+        <div className="panel panel-soft winter-detail-card">
+          <div>
+            <p className="spec-key">Buffalo Winter Fit</p>
+            <h2 className="subheading">{winterScoreLabel(car)}</h2>
+            <p className="body-copy">
+              Scored {winterScore(car)}/10 from available listing details like drivetrain,
+              fuel type, price, mileage, body style, and winter-related notes.
+            </p>
+          </div>
+          <div className="winter-chip-row" aria-label="Winter-ready highlights">
+            {winterBadgesForCar.map((badge) => (
+              <span className="winter-chip" key={badge}>{badge}</span>
+            ))}
+          </div>
         </div>
 
         <div className="panel panel-soft">

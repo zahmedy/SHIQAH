@@ -1160,6 +1160,41 @@ a {
   line-height: 1.4;
 }
 
+.winter-score-pill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin: 0.5rem 0 0;
+  padding: 0.24rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #2563eb 26%, var(--line));
+  background: color-mix(in srgb, #2563eb 8%, #ffffff);
+  color: #1d4ed8;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.winter-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.7rem;
+}
+
+.winter-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.52rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand) 8%, #ffffff);
+  border: 1px solid color-mix(in srgb, var(--brand) 18%, var(--line));
+  color: color-mix(in srgb, var(--brand-deep) 82%, #0f172a);
+  font-size: 0.73rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
 .listing-price-row {
   display: flex;
   align-items: baseline;
@@ -1193,6 +1228,11 @@ a {
   font-size: 1.2rem;
   color: var(--brand-deep);
   letter-spacing: -0.02em;
+}
+
+.winter-detail-card {
+  display: grid;
+  gap: 0.65rem;
 }
 
 /* ─── Profile ─────────────────────────────────────────────────────────── */

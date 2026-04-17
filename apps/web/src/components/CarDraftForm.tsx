@@ -119,7 +119,7 @@ type PhotoViewerItem = {
 };
 
 const initialForm: FormState = {
-  city: "",
+  city: "Buffalo",
   district: "",
   latitude: "",
   longitude: "",
@@ -411,15 +411,15 @@ export default function CarDraftForm({
     saveBeforeMainPhoto: "Save the listing before changing the main photo.",
     mainPhotoUpdated: "Main photo updated.",
     updateMainPhotoFailed: "Failed to update main photo.",
-    createDraftTitle: "Create Listing",
+    createDraftTitle: "List a Winter-Ready Car",
     editListingTitle: (id?: number) => `Edit Listing #${id ?? ""}`,
-    formNote: mode === "create" ? "Add photos first." : "Update photos or details.",
+    formNote: mode === "create" ? "Add photos first, then describe the Buffalo winter details buyers care about." : "Update photos or winter-ready details.",
     sectionBasics: "Basics",
-    sectionSpecs: "Specs",
-    sectionListing: "Listing",
+    sectionSpecs: "Winter & Efficiency Specs",
+    sectionListing: "Listing Story",
     currentStatus: "Current status",
-    mlTitle: "Suggestion",
-    mlHint: "From photos.",
+    mlTitle: "AI Suggestion",
+    mlHint: "From photos. Confirm the result before publishing.",
     mlRefresh: "Refresh",
     mlRefreshing: "Refreshing...",
     mlNone: "No suggestion yet.",
@@ -438,7 +438,7 @@ export default function CarDraftForm({
     loginRequiredForDrafts: "Login required to manage drafts.",
     loadingDraft: "Loading draft...",
     cityLabel: "City *",
-    cityHelp: "",
+    cityHelp: "Buffalo is the default focus. Change it if the car is outside Western New York.",
     otherCity: "Enter another city",
     useCurrentLocation: "Use my location",
     updateCurrentLocation: "Update location",
@@ -447,7 +447,7 @@ export default function CarDraftForm({
     geolocationUnsupported: "Geolocation not supported in this browser.",
     locationDenied: "Unable to retrieve location.",
     locationSaved: "Precise location saved for this listing.",
-    district: "District",
+    district: "Neighborhood / Suburb",
     make: "Make *",
     model: "Model *",
     year: "Year *",
@@ -466,10 +466,11 @@ export default function CarDraftForm({
     color: "Color",
     selectColor: "Select color",
     titleLabel: "Title",
-    titleHelp: "",
-    descriptionLabel: "Description *",
+    titleHelp: "Example: 2019 RAV4 Hybrid AWD with snow tires.",
+    descriptionLabel: "Winter-ready description *",
+    descriptionHelp: "Mention snow tires, AWD/4WD behavior, heated seats, rust condition, battery or hybrid warranty, charging setup, and daily commute range if relevant.",
     photos: "Photos",
-    photosHelp: "Add photos.",
+    photosHelp: "Add clear exterior, interior, tire, underbody/rust, dashboard, and cargo photos.",
     autoSaveOnFirstPhotos: "Saved first.",
     addingPhotos: "Adding...",
     addMorePhotos: "Add Photos",
@@ -1805,6 +1806,7 @@ export default function CarDraftForm({
                 <input
                   id="title"
                   className="input"
+                  placeholder="2019 RAV4 Hybrid AWD with snow tires"
                   value={form.title_ar}
                   onChange={(e) => setForm((prev) => ({ ...prev, title_ar: e.target.value }))}
                 />
@@ -1817,9 +1819,11 @@ export default function CarDraftForm({
                   id="description"
                   className="textarea"
                   rows={6}
+                  placeholder="Include winter tires, AWD/4WD, heated seats, rust condition, battery or hybrid warranty, charging setup, and realistic commute range."
                   value={form.description_ar}
                   onChange={(e) => setForm((prev) => ({ ...prev, description_ar: e.target.value }))}
                 />
+                <p className="helper-text">{text.descriptionHelp}</p>
               </div>
             </section>
 

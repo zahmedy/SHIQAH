@@ -1,5 +1,5 @@
 # AutoIntel
-Used Car Marketplace for the United States
+Buffalo-focused used car marketplace for affordable winter-ready commuters, hybrids, and EVs.
 
 ## Run With Docker Compose
 

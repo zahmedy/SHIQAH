@@ -26,6 +26,7 @@ def search_cars(
 
     transmission: str | None = None,
     fuel_type: str | None = None,
+    drivetrain: str | None = None,
     body_type: str | None = None,
     lat: float | None = Query(default=None, ge=-90, le=90),
     lon: float | None = Query(default=None, ge=-180, le=180),
@@ -52,6 +53,7 @@ def search_cars(
     if model: filters.append({"term": {"model": model}})
     if transmission: filters.append({"term": {"transmission": transmission}})
     if fuel_type: filters.append({"term": {"fuel_type": fuel_type}})
+    if drivetrain: filters.append({"term": {"drivetrain": drivetrain}})
     if body_type: filters.append({"term": {"body_type": body_type}})
 
     if year_min is not None or year_max is not None:
