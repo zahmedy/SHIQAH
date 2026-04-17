@@ -12,7 +12,7 @@ import {
   type Locale,
 } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
-import { winterBadges, winterScoreLabel } from "@/lib/winter";
+import { winterBadges, winterScoreLabel } from "@/shared/winter";
 
 type SearchItem = {
   id: number | string;
@@ -152,7 +152,7 @@ export default async function SearchPage({
               name="city"
               defaultValue={params.city ?? ""}
               blankLabel="Any city"
-              helperText="Buffalo is the default focus, but you can search nearby or any city."
+              helperText="Buffalo is the focus, but you can search nearby or any city."
               otherPlaceholder="Enter another city"
             />
 

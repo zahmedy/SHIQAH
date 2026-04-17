@@ -4,7 +4,7 @@ import { apiGet } from "@/lib/api";
 import ListingPhotoGallery from "@/components/ListingPhotoGallery";
 import { formatDateTime, formatDistance, formatListingPrice, translateValue, type Locale } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
-import { winterBadges, winterScore, winterScoreLabel } from "@/lib/winter";
+import { winterBadges, winterScore, winterScoreLabel } from "@/shared/winter";
 import ChatPanel from "./ChatPanel";
 import OfferForm from "./OfferForm";
 import OwnerActions from "./OwnerActions";

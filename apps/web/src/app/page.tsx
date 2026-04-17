@@ -4,7 +4,7 @@ import { apiGet } from "@/lib/api";
 import HomeListingCard from "@/components/HomeListingCard";
 import { formatListingPrice, formatMileage, formatRelativeHours, type Locale } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
-import { winterBadges, winterScoreLabel } from "@/lib/winter";
+import { winterBadges, winterScoreLabel } from "@/shared/winter";
 
 type HomeListing = {
   id: number | string;
