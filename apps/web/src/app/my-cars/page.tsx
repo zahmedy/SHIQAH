@@ -93,20 +93,15 @@ export default function MyCarsPage() {
     loading: "Loading...",
     refresh: "Refresh",
     account: "Account",
-    accountHelp: "Your public user ID appears in chat and can be changed at any time.",
+    accountHelp: "Set the public ID buyers see in chat.",
     profileMember: "AutoIntel Member",
     accountSummary: "Account Identity",
     listingsSection: "Your Listings",
     listingsSectionHelp: "Manage publishing, review, and edits from one place.",
-    totalListings: "Total Listings",
-    liveListings: "Published",
-    pendingListings: "In Review",
-    attentionListings: "Need Attention",
     adminBadge: "Admin",
+    phone: "Phone",
     publicUserId: "Public User ID",
     userIdHelp: "3-32 chars: `a-z`, `0-9`, `.`, `_`, `-`",
-    phone: "Phone",
-    accountId: (currentUserId: string | null) => `Current account ID: ${currentUserId ? `@${currentUserId}` : "Not set yet"}`,
     saving: "Saving...",
     saveUserId: "Save User ID",
     loginRequiredForCars: "Login is required to view your profile.",
@@ -127,13 +122,6 @@ export default function MyCarsPage() {
   };
 
   const canLoad = useMemo(() => Boolean(API_BASE), []);
-  const profileStats = useMemo(() => {
-    const total = cars.length;
-    const active = cars.filter((car) => car.status === "active").length;
-    const pending = cars.filter((car) => car.status === "pending_review").length;
-    const attention = cars.filter((car) => car.status === "draft" || car.status === "rejected").length;
-    return { total, active, pending, attention };
-  }, [cars]);
 
   const loadCars = useCallback(async () => {
     setLoading(true);
@@ -439,9 +427,7 @@ export default function MyCarsPage() {
             <h2 className="profile-identity-title">
               {me.name || (me.user_id ? `@${me.user_id}` : text.profileMember)}
             </h2>
-            <p className="profile-identity-handle">
-              {me.user_id ? `@${me.user_id}` : me.phone_e164}
-            </p>
+            {me.name && me.user_id ? <p className="profile-identity-handle">@{me.user_id}</p> : null}
             <div className="profile-identity-meta">
               <span>{text.phone}: {me.phone_e164}</span>
               {isAdmin ? <span>{text.adminBadge}</span> : null}
@@ -451,65 +437,35 @@ export default function MyCarsPage() {
       </section>
 
       {!needsLogin && me && (
-        <>
-          <section className="stats profile-stats spaced-top-sm">
-            <article className="stat-card">
-              <p className="stat-label">{text.totalListings}</p>
-              <p className="stat-value">{profileStats.total}</p>
-            </article>
-            <article className="stat-card">
-              <p className="stat-label">{text.liveListings}</p>
-              <p className="stat-value">{profileStats.active}</p>
-            </article>
-            <article className="stat-card">
-              <p className="stat-label">{text.pendingListings}</p>
-              <p className="stat-value">{profileStats.pending}</p>
-            </article>
-            <article className="stat-card">
-              <p className="stat-label">{text.attentionListings}</p>
-              <p className="stat-value">{profileStats.attention}</p>
-            </article>
-          </section>
-
-          <section className="panel profile-account-panel spaced-top-sm">
-            <div className="profile-section-head">
-              <div>
-                <h2 className="subheading">{text.account}</h2>
-                <p className="helper-text">{text.accountHelp}</p>
-              </div>
+        <section className="panel profile-account-panel profile-account-compact">
+          <div className="profile-section-head">
+            <div>
+              <h2 className="subheading">{text.account}</h2>
+              <p className="helper-text">{text.accountHelp}</p>
             </div>
-            <form className="filters spaced-top-sm" onSubmit={saveUserId}>
-              <div className="form-grid form-grid-2">
-                <div>
-                  <label className="label" htmlFor="user-id">{text.publicUserId}</label>
-                  <input
-                    id="user-id"
-                    className="input"
-                    value={userId}
-                    onChange={(e) => setUserId(e.target.value)}
-                    placeholder="user-123"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                  />
-                  <p className="helper-text">{text.userIdHelp}</p>
-                </div>
-
-                <div>
-                  <label className="label" htmlFor="account-phone">{text.phone}</label>
-                  <input id="account-phone" className="input" value={me.phone_e164} disabled />
-                  <p className="helper-text">{text.accountId(me.user_id)}</p>
-                </div>
-              </div>
-
-              <div className="inline-actions">
-                <button type="submit" className="btn btn-primary" disabled={savingUserId}>
-                  {savingUserId ? text.saving : text.saveUserId}
-                </button>
-              </div>
-            </form>
-          </section>
-        </>
+          </div>
+          <form className="profile-user-id-form" onSubmit={saveUserId}>
+            <div className="profile-user-id-field">
+              <label className="label" htmlFor="user-id">{text.publicUserId}</label>
+              <input
+                id="user-id"
+                className="input"
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
+                placeholder="user-123"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+              <p className="helper-text">{text.userIdHelp}</p>
+            </div>
+            <div className="profile-user-id-actions">
+              <button type="submit" className="btn btn-primary" disabled={savingUserId}>
+                {savingUserId ? text.saving : text.saveUserId}
+              </button>
+            </div>
+          </form>
+        </section>
       )}
 
       {needsLogin && (
