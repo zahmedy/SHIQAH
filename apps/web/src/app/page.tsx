@@ -78,6 +78,20 @@ export default async function HomePage() {
             <Link href="/search?city=Buffalo&price_max=30000" className="btn btn-primary">Browse Launch Niche</Link>
             <Link href="/my-cars/new" className="btn btn-secondary">List a Car</Link>
           </div>
+
+          <nav className="home-quick-filters" aria-label="Quick filters">
+            <p className="home-quick-filters-label">Quick filters</p>
+            <div className="home-quick-filter-list">
+              <Link href="/search?price_max=30000">Under $30k</Link>
+              <Link href="/search?drivetrain=AWD">AWD</Link>
+              <Link href="/search?drivetrain=4WD">4WD</Link>
+              <Link href="/search?fuel_type=Hybrid">Hybrids</Link>
+              <Link href="/search?fuel_type=Electric">EVs</Link>
+              <Link href="/search?mileage_max=100000">Under 100k mi</Link>
+              <Link href="/search?body_type=SUV">SUVs</Link>
+              <Link href="/search?city=Buffalo">Buffalo</Link>
+            </div>
+          </nav>
         </div>
 
         <div className="home-hero-rail" aria-label="Marketplace focus">

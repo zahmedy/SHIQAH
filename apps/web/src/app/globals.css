@@ -596,6 +596,47 @@ a {
   margin-top: 0.15rem;
 }
 
+.home-quick-filters {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.1rem;
+}
+
+.home-quick-filters-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.home-quick-filter-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.home-quick-filter-list a {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--brand) 16%, var(--line));
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.68);
+  color: color-mix(in srgb, var(--brand-deep) 88%, var(--text));
+  padding: 0.28rem 0.58rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1.1;
+  transition: transform 150ms var(--ease-spring), border-color 150ms ease, background 150ms ease;
+}
+
+.home-quick-filter-list a:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--brand) 34%, var(--line));
+  background: #ffffff;
+}
+
 .home-hero-rail {
   display: grid;
   gap: 0.55rem;
