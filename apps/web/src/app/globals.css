@@ -489,8 +489,8 @@ a {
 .home-hero {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(220px, 0.68fr);
-  gap: 0.9rem;
+  grid-template-columns: minmax(0, 1.75fr) minmax(220px, 0.5fr);
+  gap: 0.95rem;
   padding: 1.05rem 1.1rem;
   border-radius: 24px;
   border: 1px solid rgba(11, 63, 115, 0.12);
@@ -576,7 +576,11 @@ a {
   letter-spacing: 0.01em;
   font-weight: 800;
   color: var(--text);
-  max-width: 14ch;
+  max-width: 22ch;
+}
+
+.home-hero-title span {
+  white-space: nowrap;
 }
 
 .home-hero-title-accent {
@@ -594,6 +598,19 @@ a {
 
 .home-hero-actions {
   margin-top: 0.15rem;
+}
+
+.home-filter-controls {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.home-filter-controls.is-updating {
+  cursor: progress;
+}
+
+.home-filter-controls.is-updating .home-quick-filter-list {
+  opacity: 0.72;
 }
 
 .home-filter-form {
@@ -622,10 +639,14 @@ a {
   font-size: 0.82rem;
 }
 
+.home-filter-form .btn:disabled {
+  cursor: progress;
+  opacity: 0.72;
+}
+
 .home-quick-filters {
   display: grid;
   gap: 0.45rem;
-  margin-top: 0.1rem;
 }
 
 .home-quick-filters-label {
@@ -687,15 +708,15 @@ a {
 
 .home-hero-rail {
   display: grid;
-  gap: 0.55rem;
-  align-self: stretch;
+  gap: 0.45rem;
+  align-self: start;
 }
 
 .home-hero-stat {
-  padding: 0.72rem 0.78rem;
+  padding: 0.76rem 0.82rem;
   border-radius: 18px;
   border: 1px solid rgba(29, 111, 184, 0.12);
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.58);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
@@ -711,17 +732,17 @@ a {
 }
 
 .home-hero-stat-value {
-  margin: 0.24rem 0 0;
+  margin: 0.28rem 0 0;
   font-family: var(--font-title);
-  font-size: clamp(1.05rem, 1.55vw, 1.35rem);
+  font-size: clamp(1.08rem, 1.5vw, 1.32rem);
   line-height: 1;
   color: var(--text);
 }
 
 .home-hero-stat-note {
-  margin: 0.24rem 0 0;
-  font-size: 0.78rem;
-  line-height: 1.35;
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.42;
   color: var(--muted);
 }
 
@@ -2624,8 +2645,12 @@ a {
   }
 
   .home-hero-title {
-    max-width: 16ch;
+    max-width: 22ch;
     font-size: clamp(1.45rem, 8vw, 2rem);
+  }
+
+  .home-hero-title span {
+    white-space: normal;
   }
 
   .home-hero-sub {
