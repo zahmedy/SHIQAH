@@ -124,12 +124,12 @@ export default async function SearchPage({
   return (
     <main className="page shell">
       <section className="hero hero-mini">
-        <p className="hero-kicker">Buffalo commuter marketplace</p>
-        <h1>Search winter-ready cars</h1>
-        <p>Find affordable hybrids, EVs, AWD, and practical commuter cars for Buffalo snow, salt, and daily mileage.</p>
+        <p className="hero-kicker">AutoIntel launch niche</p>
+        <h1>Search cold-weather commuter cars</h1>
+        <p>Find affordable hybrids, EVs, AWD, and practical commuter cars. Buffalo is the first market, but the filters work for any city.</p>
         <div className="hero-actions">
           <Link href="/search?city=Buffalo&price_max=30000&drivetrain=AWD" className="btn btn-secondary">AWD under $30k</Link>
-          <Link href="/search?city=Buffalo&fuel_type=Hybrid&price_max=30000" className="btn btn-secondary">Buffalo hybrids</Link>
+          <Link href="/search?city=Buffalo&fuel_type=Hybrid&price_max=30000" className="btn btn-secondary">Hybrid commuters</Link>
           <Link href="/search?city=Buffalo&fuel_type=Electric&price_max=30000" className="btn btn-secondary">Used EVs</Link>
         </div>
       </section>
@@ -152,7 +152,7 @@ export default async function SearchPage({
               name="city"
               defaultValue={params.city ?? ""}
               blankLabel="Any city"
-              helperText="Buffalo is the focus, but you can search nearby or any city."
+              helperText="Buffalo is the launch market, but you can search nearby or any city."
               otherPlaceholder="Enter another city"
             />
 

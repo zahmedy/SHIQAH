@@ -411,11 +411,11 @@ export default function CarDraftForm({
     saveBeforeMainPhoto: "Save the listing before changing the main photo.",
     mainPhotoUpdated: "Main photo updated.",
     updateMainPhotoFailed: "Failed to update main photo.",
-    createDraftTitle: "List a Winter-Ready Car",
+    createDraftTitle: "List a Car",
     editListingTitle: (id?: number) => `Edit Listing #${id ?? ""}`,
-    formNote: mode === "create" ? "Add photos first, then describe the Buffalo winter details buyers care about." : "Update photos or winter-ready details.",
+    formNote: mode === "create" ? "Add photos first, then describe the niche details buyers care about." : "Update photos or niche-specific details.",
     sectionBasics: "Basics",
-    sectionSpecs: "Winter & Efficiency Specs",
+    sectionSpecs: "Niche & Efficiency Specs",
     sectionListing: "Listing Story",
     currentStatus: "Current status",
     mlTitle: "AI Suggestion",
@@ -438,7 +438,7 @@ export default function CarDraftForm({
     loginRequiredForDrafts: "Login required to manage drafts.",
     loadingDraft: "Loading draft...",
     cityLabel: "City *",
-    cityHelp: "Buffalo is the default focus. Change it if the car is outside Western New York.",
+    cityHelp: "Buffalo is the launch market. Change it if the car is in another city.",
     otherCity: "Enter another city",
     useCurrentLocation: "Use my location",
     updateCurrentLocation: "Update location",
@@ -467,8 +467,8 @@ export default function CarDraftForm({
     selectColor: "Select color",
     titleLabel: "Title",
     titleHelp: "Example: 2019 RAV4 Hybrid AWD with snow tires.",
-    descriptionLabel: "Winter-ready description *",
-    descriptionHelp: "Mention snow tires, AWD/4WD behavior, heated seats, rust condition, battery or hybrid warranty, charging setup, and daily commute range if relevant.",
+    descriptionLabel: "Listing description *",
+    descriptionHelp: "Mention the details that matter for this niche: traction, tires, rust condition, warranty, charging setup, maintenance, commute range, or performance/luxury options if relevant.",
     photos: "Photos",
     photosHelp: "Add clear exterior, interior, tire, underbody/rust, dashboard, and cargo photos.",
     autoSaveOnFirstPhotos: "Saved first.",
@@ -1819,7 +1819,7 @@ export default function CarDraftForm({
                   id="description"
                   className="textarea"
                   rows={6}
-                  placeholder="Include winter tires, AWD/4WD, heated seats, rust condition, battery or hybrid warranty, charging setup, and realistic commute range."
+                  placeholder="Include niche-specific details like tires, drivetrain, rust condition, warranty, charging setup, maintenance history, commute range, or performance/luxury options."
                   value={form.description_ar}
                   onChange={(e) => setForm((prev) => ({ ...prev, description_ar: e.target.value }))}
                 />

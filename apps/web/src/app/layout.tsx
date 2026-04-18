@@ -10,8 +10,8 @@ import { getServerLocale } from "@/lib/server-locale";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AutoIntel | Buffalo Winter Cars",
-  description: "Affordable winter-ready used cars, hybrids, and EVs for Buffalo commuters.",
+  title: "AutoIntel | Curated Used Cars",
+  description: "A smarter marketplace for niche used cars, starting with cold-weather commuter cars.",
 };
 
 export default async function RootLayout({
@@ -37,8 +37,8 @@ export default async function RootLayout({
                   type="search"
                   name="q"
                   className="input topbar-search-input"
-                  placeholder="Search Buffalo winter cars..."
-                  aria-label="Search Buffalo winter cars"
+                  placeholder="Search curated cars..."
+                  aria-label="Search curated cars"
                 />
               </form>
               <nav className="topnav">

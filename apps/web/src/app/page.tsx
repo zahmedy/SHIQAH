@@ -61,40 +61,40 @@ export default async function HomePage() {
       <section className="home-hero">
         <div className="home-hero-copy">
           <div className="home-hero-topline">
-            <span className="home-hero-badge">Buffalo Winter Cars</span>
-            <span className="home-hero-marker">Hybrids, EVs, AWD, and commuter value</span>
+            <span className="home-hero-badge">Curated Used Cars</span>
+            <span className="home-hero-marker">Starting with cold-weather commuter cars</span>
           </div>
 
           <h2 className="home-hero-title">
-            <span className="home-hero-title-accent">Find a car built for Buffalo winter.</span>
+            <span className="home-hero-title-accent">Find the right car by niche, not endless listings.</span>
           </h2>
 
           <p className="home-hero-sub">
-            Affordable local commuter cars with the details Buffalo buyers care about:
-            traction, fuel savings, mileage, winter equipment, and real seller context.
+            AutoIntel helps buyers search by use case. Our first launch niche is
+            affordable cold-weather commuters in Buffalo, with more niches coming next.
           </p>
 
           <div className="hero-actions home-hero-actions">
-            <Link href="/search?city=Buffalo&price_max=30000" className="btn btn-primary">Browse Buffalo Cars</Link>
-            <Link href="/my-cars/new" className="btn btn-secondary">List a Winter-Ready Car</Link>
+            <Link href="/search?city=Buffalo&price_max=30000" className="btn btn-primary">Browse Launch Niche</Link>
+            <Link href="/my-cars/new" className="btn btn-secondary">List a Car</Link>
           </div>
         </div>
 
         <div className="home-hero-rail" aria-label="Marketplace focus">
           <article className="home-hero-stat">
-            <p className="home-hero-stat-label">Winter Fit</p>
-            <p className="home-hero-stat-value">AWD + 4WD</p>
-            <p className="home-hero-stat-note">Surface traction, snow tires, heated seats, rust notes, and practical body styles.</p>
+            <p className="home-hero-stat-label">Launch Niche</p>
+            <p className="home-hero-stat-value">Cold Weather</p>
+            <p className="home-hero-stat-note">Traction, snow tires, heated seats, rust notes, efficient commuters, and practical body styles.</p>
           </article>
           <article className="home-hero-stat">
-            <p className="home-hero-stat-label">Commuter Cost</p>
-            <p className="home-hero-stat-value">Under $30k</p>
-            <p className="home-hero-stat-note">Hybrid, EV, and efficient gas options for daily drives around Western New York.</p>
+            <p className="home-hero-stat-label">Next Niches</p>
+            <p className="home-hero-stat-value">Performance</p>
+            <p className="home-hero-stat-note">Sports cars, luxury, EVs, work trucks, and local city pages can plug into the same marketplace.</p>
           </article>
         </div>
       </section>
 
-      <h2 className="section-title">Buffalo Winter-Ready Listings</h2>
+      <h2 className="section-title">Featured Launch Niche: Cold-Weather Commuters</h2>
 
       {fetchError ? (
         <div className="notice error">{fetchError}</div>

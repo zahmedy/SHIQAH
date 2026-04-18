@@ -1,5 +1,5 @@
 # AutoIntel
-Buffalo-focused used car marketplace for affordable winter-ready commuters, hybrids, and EVs.
+Curated used car marketplace for niche buyers, starting with cold-weather commuter cars.
 
 ## Run With Docker Compose
 

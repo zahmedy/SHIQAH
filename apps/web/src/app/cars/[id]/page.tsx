@@ -179,7 +179,7 @@ export default async function CarDetailPage({
 
         <div className="panel panel-soft winter-detail-card">
           <div>
-            <p className="spec-key">Buffalo Winter Fit</p>
+            <p className="spec-key">Cold-Weather Fit</p>
             <h2 className="subheading">{winterScoreLabel(car)}</h2>
             <p className="body-copy">
               Scored {winterScore(car)}/10 from available listing details like drivetrain,
