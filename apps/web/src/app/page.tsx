@@ -50,7 +50,7 @@ export default async function HomePage() {
   let fetchError = "";
 
   try {
-    const data = await apiGet<HomeSearchResponse>("/v1/search/cars?city=Buffalo&price_max=30000&page_size=8");
+    const data = await apiGet<HomeSearchResponse>("/v1/search/cars?page_size=8");
     listings = data.items ?? [];
   } catch (err) {
     fetchError = err instanceof Error ? err.message : "Failed to load listings.";
@@ -94,7 +94,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <h2 className="section-title">Featured Launch Niche: Cold-Weather Commuters</h2>
+      <h2 className="section-title">Latest Curated Listings</h2>
 
       {fetchError ? (
         <div className="notice error">{fetchError}</div>
