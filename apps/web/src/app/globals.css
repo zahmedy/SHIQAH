@@ -596,6 +596,32 @@ a {
   margin-top: 0.15rem;
 }
 
+.home-filter-form {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(90px, 0.8fr) minmax(82px, 0.65fr);
+  gap: 0.45rem;
+  margin-top: 0.1rem;
+  padding: 0.6rem;
+  border: 1px solid rgba(29, 111, 184, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.home-filter-form .input,
+.home-filter-form .select {
+  min-height: 38px;
+  border-radius: 12px;
+  padding: 0.46rem 0.62rem;
+  font-size: 0.82rem;
+}
+
+.home-filter-form .btn {
+  min-height: 38px;
+  padding: 0.46rem 0.72rem;
+  border-radius: 12px;
+  font-size: 0.82rem;
+}
+
 .home-quick-filters {
   display: grid;
   gap: 0.45rem;
@@ -635,6 +661,28 @@ a {
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--brand) 34%, var(--line));
   background: #ffffff;
+}
+
+.home-quick-filter-list a.home-quick-filter-active {
+  border-color: color-mix(in srgb, var(--brand) 54%, var(--line));
+  background: linear-gradient(160deg, var(--brand-light), #ffffff);
+  color: var(--brand-deep);
+  box-shadow: 0 0 0 2px rgba(29, 111, 184, 0.1);
+}
+
+.home-quick-filter-list a.home-quick-filter-active::after {
+  content: "×";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.95rem;
+  height: 0.95rem;
+  margin-left: 0.35rem;
+  border-radius: 999px;
+  background: var(--brand-deep);
+  color: #ffffff;
+  font-size: 0.72rem;
+  line-height: 1;
 }
 
 .home-hero-rail {
@@ -2582,6 +2630,10 @@ a {
 
   .home-hero-sub {
     font-size: 0.88rem;
+  }
+
+  .home-filter-form {
+    grid-template-columns: 1fr 1fr;
   }
 
   .home-hero-rail {
