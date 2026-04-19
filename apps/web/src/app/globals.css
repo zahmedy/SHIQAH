@@ -613,54 +613,6 @@ a {
   opacity: 0.72;
 }
 
-.home-filter-form {
-  display: grid;
-  grid-template-columns: minmax(110px, 1fr) minmax(90px, 0.8fr) minmax(82px, 0.65fr);
-  gap: 0.45rem;
-  margin-top: 0.1rem;
-  padding: 0.6rem;
-  border: 1px solid rgba(29, 111, 184, 0.12);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.66);
-}
-
-.home-filter-form .input,
-.home-filter-form .select {
-  min-height: 38px;
-  border-radius: 12px;
-  padding: 0.46rem 0.62rem;
-  font-size: 0.82rem;
-}
-
-.home-filter-form .make-model-wrap {
-  grid-column: span 2;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.45rem;
-}
-
-.home-filter-form .make-model-gap {
-  margin-top: 0;
-}
-
-.home-filter-form .make-trigger {
-  min-height: 38px;
-  border-radius: 12px;
-  padding: 0.46rem 0.62rem;
-  font-size: 0.82rem;
-}
-
-.home-filter-form .btn {
-  min-height: 38px;
-  padding: 0.46rem 0.72rem;
-  border-radius: 12px;
-  font-size: 0.82rem;
-}
-
-.home-filter-form .btn:disabled {
-  cursor: progress;
-  opacity: 0.72;
-}
-
 .home-quick-filters {
   display: grid;
   gap: 0.45rem;
@@ -681,7 +633,8 @@ a {
   gap: 0.4rem;
 }
 
-.home-quick-filter-list a {
+.home-quick-filter-list a,
+.home-quick-filter-list button {
   display: inline-flex;
   align-items: center;
   border: 1px solid color-mix(in srgb, var(--brand) 16%, var(--line));
@@ -691,24 +644,29 @@ a {
   padding: 0.28rem 0.58rem;
   font-size: 0.75rem;
   font-weight: 800;
+  font-family: inherit;
   line-height: 1.1;
+  cursor: pointer;
   transition: transform 150ms var(--ease-spring), border-color 150ms ease, background 150ms ease;
 }
 
-.home-quick-filter-list a:hover {
+.home-quick-filter-list a:hover,
+.home-quick-filter-list button:hover {
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--brand) 34%, var(--line));
   background: #ffffff;
 }
 
-.home-quick-filter-list a.home-quick-filter-active {
+.home-quick-filter-list a.home-quick-filter-active,
+.home-quick-filter-list button.home-quick-filter-active {
   border-color: color-mix(in srgb, var(--brand) 54%, var(--line));
   background: linear-gradient(160deg, var(--brand-light), #ffffff);
   color: var(--brand-deep);
   box-shadow: 0 0 0 2px rgba(29, 111, 184, 0.1);
 }
 
-.home-quick-filter-list a.home-quick-filter-active::after {
+.home-quick-filter-list a.home-quick-filter-active::after,
+.home-quick-filter-list button.home-quick-filter-active::after {
   content: "×";
   display: inline-flex;
   align-items: center;
@@ -2724,10 +2682,6 @@ a {
 
   .home-hero-sub {
     font-size: 0.88rem;
-  }
-
-  .home-filter-form {
-    grid-template-columns: 1fr 1fr;
   }
 
   .home-hero-rail {

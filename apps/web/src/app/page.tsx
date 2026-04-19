@@ -31,8 +31,6 @@ type HomeSearchResponse = {
 
 type Query = {
   city?: string;
-  make?: string;
-  model?: string;
   q?: string;
   price_max?: string;
   mileage_max?: string;
@@ -63,8 +61,6 @@ function locationUserAndTime(locale: Locale, city?: string, district?: string, s
 function buildHomeSearchPath(params: Query): string {
   const qs = new URLSearchParams({ page_size: "8" });
   if (params.city) qs.set("city", params.city);
-  if (params.make) qs.set("make", params.make);
-  if (params.model) qs.set("model", params.model);
   if (params.q) qs.set("q", params.q);
   if (params.price_max) qs.set("price_max", params.price_max);
   if (params.mileage_max) {
@@ -85,8 +81,6 @@ function buildHomeSearchPath(params: Query): string {
 function hasHomeFilters(params: Query): boolean {
   return Boolean(
     params.city ||
-    params.make ||
-    params.model ||
     params.q ||
     params.price_max ||
     params.mileage_max ||
@@ -124,7 +118,7 @@ export default async function HomePage({
             <span className="home-hero-title-accent">not endless listings.</span>
           </h2>
 
-          <HomeFilterControls params={params} isFiltered={isFiltered} />
+          <HomeFilterControls params={params} />
         </div>
 
         <div className="home-hero-rail" aria-label="Marketplace focus">
