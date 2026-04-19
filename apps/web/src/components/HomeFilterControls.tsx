@@ -4,14 +4,22 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useTransition } from "react";
 
+import MakeModelField from "@/components/MakeModelField";
+import NearbySearch from "@/components/NearbySearch";
+
 type HomeFilterParams = {
   city?: string;
+  make?: string;
+  model?: string;
   q?: string;
   price_max?: string;
   mileage_max?: string;
   fuel_type?: string;
   drivetrain?: string;
   body_type?: string;
+  lat?: string;
+  lon?: string;
+  radius_km?: string;
 };
 
 type HomeFilterControlsProps = {
@@ -19,7 +27,7 @@ type HomeFilterControlsProps = {
   isFiltered: boolean;
 };
 
-const QUERY_KEYS = ["q", "city", "price_max", "mileage_max", "fuel_type", "drivetrain", "body_type"] as const;
+const QUERY_KEYS = ["q", "city", "make", "model", "price_max", "mileage_max", "fuel_type", "drivetrain", "body_type", "lat", "lon", "radius_km"] as const;
 const FUEL_TYPE_OPTIONS = [
   ["Hybrid", "Hybrid"],
   ["Electric", "Electric"],
@@ -66,6 +74,8 @@ export default function HomeFilterControls({ params, isFiltered }: HomeFilterCon
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const formKey = QUERY_KEYS.map((key) => params[key] ?? "").join("|");
+  const radiusKm = Number(params.radius_km);
+  const initialRadiusKm = Number.isFinite(radiusKm) && radiusKm >= 1 && radiusKm <= 500 ? radiusKm : 50;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -88,8 +98,12 @@ export default function HomeFilterControls({ params, isFiltered }: HomeFilterCon
   return (
     <div className={isPending ? "home-filter-controls is-updating" : "home-filter-controls"}>
       <form key={formKey} className="home-filter-form" onSubmit={handleSubmit}>
+        {params.lat ? <input type="hidden" name="lat" value={params.lat} /> : null}
+        {params.lon ? <input type="hidden" name="lon" value={params.lon} /> : null}
+        {params.radius_km ? <input type="hidden" name="radius_km" value={params.radius_km} /> : null}
         <input name="q" defaultValue={params.q ?? ""} className="input" placeholder="Keyword" aria-label="Keyword" />
         <input name="city" defaultValue={params.city ?? ""} className="input" placeholder="City" aria-label="City" />
+        <MakeModelField defaultMake={params.make ?? ""} defaultModel={params.model ?? ""} />
         <input name="price_max" defaultValue={params.price_max ?? ""} className="input" inputMode="numeric" placeholder="Max $" aria-label="Max price" />
         <select name="fuel_type" defaultValue={params.fuel_type ?? ""} className="select" aria-label="Fuel type">
           <option value="">Any fuel</option>
@@ -112,6 +126,8 @@ export default function HomeFilterControls({ params, isFiltered }: HomeFilterCon
         <button type="submit" className="btn btn-primary" disabled={isPending}>{isPending ? "Filtering" : "Filter"}</button>
         {isFiltered ? <Link href="/" scroll={false} className="btn btn-secondary">Clear</Link> : null}
       </form>
+
+      <NearbySearch initialRadiusKm={initialRadiusKm} />
 
       <nav className="home-quick-filters" aria-label="Quick filters">
         <p className="home-quick-filters-label">Quick filters</p>

@@ -632,6 +632,23 @@ a {
   font-size: 0.82rem;
 }
 
+.home-filter-form .make-model-wrap {
+  grid-column: span 2;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.home-filter-form .make-model-gap {
+  margin-top: 0;
+}
+
+.home-filter-form .make-trigger {
+  min-height: 38px;
+  border-radius: 12px;
+  padding: 0.46rem 0.62rem;
+  font-size: 0.82rem;
+}
+
 .home-filter-form .btn {
   min-height: 38px;
   padding: 0.46rem 0.72rem;

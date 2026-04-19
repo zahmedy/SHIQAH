@@ -31,12 +31,17 @@ type HomeSearchResponse = {
 
 type Query = {
   city?: string;
+  make?: string;
+  model?: string;
   q?: string;
   price_max?: string;
   mileage_max?: string;
   fuel_type?: string;
   drivetrain?: string;
   body_type?: string;
+  lat?: string;
+  lon?: string;
+  radius_km?: string;
 };
 
 const MILES_TO_KM = 1.60934;
@@ -58,6 +63,8 @@ function locationUserAndTime(locale: Locale, city?: string, district?: string, s
 function buildHomeSearchPath(params: Query): string {
   const qs = new URLSearchParams({ page_size: "8" });
   if (params.city) qs.set("city", params.city);
+  if (params.make) qs.set("make", params.make);
+  if (params.model) qs.set("model", params.model);
   if (params.q) qs.set("q", params.q);
   if (params.price_max) qs.set("price_max", params.price_max);
   if (params.mileage_max) {
@@ -69,11 +76,25 @@ function buildHomeSearchPath(params: Query): string {
   if (params.fuel_type) qs.set("fuel_type", params.fuel_type);
   if (params.drivetrain) qs.set("drivetrain", params.drivetrain);
   if (params.body_type) qs.set("body_type", params.body_type);
+  if (params.lat) qs.set("lat", params.lat);
+  if (params.lon) qs.set("lon", params.lon);
+  if (params.radius_km) qs.set("radius_km", params.radius_km);
   return `/v1/search/cars?${qs.toString()}`;
 }
 
 function hasHomeFilters(params: Query): boolean {
-  return Boolean(params.city || params.q || params.price_max || params.mileage_max || params.fuel_type || params.drivetrain || params.body_type);
+  return Boolean(
+    params.city ||
+    params.make ||
+    params.model ||
+    params.q ||
+    params.price_max ||
+    params.mileage_max ||
+    params.fuel_type ||
+    params.drivetrain ||
+    params.body_type ||
+    (params.lat && params.lon)
+  );
 }
 
 export default async function HomePage({
