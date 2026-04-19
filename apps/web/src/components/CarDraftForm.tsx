@@ -118,6 +118,15 @@ type PhotoViewerItem = {
   label: string;
 };
 
+function normalizePhotoOrder(nextPhotos: CarPhoto[]) {
+  const currentCoverId = nextPhotos.find((photo) => photo.is_cover)?.id ?? null;
+  return nextPhotos.map((photo, index) => ({
+    ...photo,
+    sort_order: index,
+    is_cover: currentCoverId ? photo.id === currentCoverId : index === 0,
+  }));
+}
+
 const initialForm: FormState = {
   city: "Buffalo",
   district: "",
@@ -510,6 +519,7 @@ export default function CarDraftForm({
   const totalPhotoCount = photos.length + pendingPreviews.length;
   const remainingPhotos = Math.max(0, 4 - totalPhotoCount);
   const hasEnoughPhotos = totalPhotoCount >= 4;
+  const photoActionInProgress = uploading || removingPhotoId !== null || mainPhotoId !== null;
   const viewerItems = useMemo<PhotoViewerItem[]>(
     () => [
       ...pendingPreviews.map((preview) => ({
@@ -1195,7 +1205,26 @@ export default function CarDraftForm({
       return;
     }
 
+    const previousPhotos = photos;
+    const photoToRemove = previousPhotos.find((photo) => photo.id === photoId);
+
+    if (!photoToRemove) {
+      return;
+    }
+
     setRemovingPhotoId(photoId);
+    setPhotos(normalizePhotoOrder(previousPhotos.filter((photo) => photo.id !== photoId)));
+    setViewerIndex((current) => {
+      if (current === null) return current;
+
+      const removedViewerIndex = viewerItems.findIndex((item) => item.id === `photo-${photoId}`);
+      if (removedViewerIndex < 0) return current;
+      if (viewerItems.length <= 1) return null;
+      if (current > removedViewerIndex) return current - 1;
+      if (current === removedViewerIndex) return Math.min(current, viewerItems.length - 2);
+      return current;
+    });
+
     try {
       const res = await fetch(`${API_BASE}/v1/cars/${activeCarId}/media/${photoId}`, {
         method: "DELETE",
@@ -1213,17 +1242,20 @@ export default function CarDraftForm({
         throw new Error(await parseApiError(res));
       }
 
-      setPhotos((prev) => {
-        const remaining = prev.filter((photo) => photo.id !== photoId);
-        const currentCoverId = remaining.find((photo) => photo.is_cover)?.id ?? null;
-        return remaining.map((photo, index) => ({
-          ...photo,
-          sort_order: index,
-          is_cover: currentCoverId ? photo.id === currentCoverId : index === 0,
-        }));
-      });
       setUploadSuccess(text.photoRemoved);
     } catch (err) {
+      setPhotos((current) => {
+        if (current.some((photo) => photo.id === photoId)) {
+          return current;
+        }
+
+        const insertAt = Math.min(photoToRemove.sort_order, current.length);
+        return normalizePhotoOrder([
+          ...current.slice(0, insertAt),
+          photoToRemove,
+          ...current.slice(insertAt),
+        ]);
+      });
       setUploadError(err instanceof Error ? translateApiMessage(locale, err.message) : text.removePhotoFailed);
     } finally {
       setRemovingPhotoId(null);
@@ -1410,7 +1442,7 @@ export default function CarDraftForm({
                   handlePhotoSelection(e.target.files);
                   e.currentTarget.value = "";
                 }}
-                disabled={uploading}
+                disabled={photoActionInProgress}
               />
 
               <div className="upload-actions">
@@ -1418,7 +1450,7 @@ export default function CarDraftForm({
                   type="button"
                   className="btn btn-primary"
                   onClick={() => photoInputRef.current?.click()}
-                  disabled={uploading}
+                  disabled={photoActionInProgress}
                 >
                   {uploading ? text.addingPhotos : totalPhotoCount > 0 ? text.addMorePhotos : text.addPhotos}
                 </button>
@@ -1472,7 +1504,7 @@ export default function CarDraftForm({
                               type="button"
                               className="upload-photo-button upload-photo-button-neutral"
                               onClick={() => void setMainPhoto(photo.id)}
-                              disabled={mainPhotoId === photo.id || removingPhotoId === photo.id || uploading}
+                              disabled={photoActionInProgress}
                             >
                               {mainPhotoId === photo.id ? text.saving : text.makeMain}
                             </button>
@@ -1481,7 +1513,7 @@ export default function CarDraftForm({
                             type="button"
                             className="upload-photo-button"
                             onClick={() => void removePhoto(photo.id)}
-                            disabled={mainPhotoId === photo.id || removingPhotoId === photo.id || uploading}
+                            disabled={photoActionInProgress}
                           >
                             {removingPhotoId === photo.id ? text.removing : text.remove}
                           </button>

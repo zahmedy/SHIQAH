@@ -103,11 +103,6 @@ export default async function HomePage({
             <span className="home-hero-title-accent">not endless listings.</span>
           </h2>
 
-          <p className="home-hero-sub">
-            AutoIntel helps buyers search by use case. Our first launch niche is
-            affordable cold-weather commuters in Buffalo, with more niches coming next.
-          </p>
-
           <HomeFilterControls params={params} isFiltered={isFiltered} />
         </div>
 
