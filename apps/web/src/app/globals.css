@@ -1574,6 +1574,17 @@ a {
   height: 220px;
 }
 
+.profile-listing-media .car-thumb-nav {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.profile-listing-media .car-thumb-count {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
 .profile-listing-body {
   display: grid;
   gap: 0.55rem;

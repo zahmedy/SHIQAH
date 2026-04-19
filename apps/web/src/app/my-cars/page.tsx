@@ -50,6 +50,34 @@ type MeResponse = {
   verified_at: string | null;
 };
 
+function ChevronIcon({ direction }: { direction: "left" | "right" }) {
+  return (
+    <svg
+      className="car-thumb-nav-icon"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d={direction === "left" ? "M12.5 4.5L7.5 10l5 5.5" : "M7.5 4.5l5 5.5-5 5.5"}
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function getOrderedPhotos(photos: CarPhoto[]): CarPhoto[] {
+  return [...photos].sort((a, b) => {
+    if (a.is_cover !== b.is_cover) {
+      return a.is_cover ? -1 : 1;
+    }
+    return a.sort_order - b.sort_order || a.id - b.id;
+  });
+}
+
 async function parseApiError(res: Response): Promise<string> {
   const contentType = res.headers.get("content-type") || "";
   const payload = contentType.includes("application/json") ? await res.json() : await res.text();
@@ -70,6 +98,7 @@ export default function MyCarsPage() {
   const [me, setMe] = useState<MeResponse | null>(null);
   const [userId, setUserId] = useState("");
   const [savingUserId, setSavingUserId] = useState(false);
+  const [photoIndexes, setPhotoIndexes] = useState<Record<number, number>>({});
   const text = {
     missingApiBase: "NEXT_PUBLIC_API_BASE is missing.",
     sessionExpired: "Your session is missing or expired. Please login again.",
@@ -109,6 +138,9 @@ export default function MyCarsPage() {
     cityNotSet: "Location not set",
     createdOn: (value: string) => `Created ${value}`,
     review: "Review",
+    previousPhoto: "Previous photo",
+    nextPhoto: "Next photo",
+    photoCount: (index: number, total: number) => `${index}/${total}`,
     fixAndResubmit: "Fix and Resubmit",
     editListing: "Edit Listing",
     submitting: "Submitting...",
@@ -404,6 +436,16 @@ export default function MyCarsPage() {
     }
   }
 
+  function showListingPhoto(carId: number, photoCount: number, direction: -1 | 1) {
+    setPhotoIndexes((prev) => {
+      const current = prev[carId] ?? 0;
+      return {
+        ...prev,
+        [carId]: (current + direction + photoCount) % photoCount,
+      };
+    });
+  }
+
   return (
     <main className="page shell profile-page">
       <section className="profile-hero">
@@ -499,16 +541,46 @@ export default function MyCarsPage() {
           </div>
           <div className="profile-listing-grid">
             {cars.map((car) => {
-              const cover = car.photos.find((photo) => photo.is_cover)?.public_url || car.photos[0]?.public_url || "";
+              const photos = getOrderedPhotos(car.photos);
+              const photoIndex = Math.min(photoIndexes[car.id] ?? 0, Math.max(photos.length - 1, 0));
+              const activePhoto = photos[photoIndex]?.public_url || "";
+              const hasMultiplePhotos = photos.length > 1;
               const statusClass = `status-pill status-${car.status.replace(/_/g, "-")}`;
 
               return (
                 <article key={car.id} className="car-card profile-listing-card">
-                  {cover ? (
-                    <img className="car-thumb profile-listing-thumb" src={cover} alt={car.title_ar || `${car.make} ${car.model}`} />
-                  ) : (
-                    <div className="car-thumb profile-listing-thumb" aria-hidden="true" />
-                  )}
+                  <div className="car-media profile-listing-media">
+                    {activePhoto ? (
+                      <img className="car-thumb profile-listing-thumb" src={activePhoto} alt={car.title_ar || `${car.make} ${car.model}`} />
+                    ) : (
+                      <div className="car-thumb profile-listing-thumb" aria-hidden="true" />
+                    )}
+                    {hasMultiplePhotos ? (
+                      <>
+                        <button
+                          type="button"
+                          className="car-thumb-nav car-thumb-nav-prev"
+                          onClick={() => showListingPhoto(car.id, photos.length, -1)}
+                          aria-label={text.previousPhoto}
+                          dir="ltr"
+                        >
+                          <ChevronIcon direction="left" />
+                        </button>
+                        <button
+                          type="button"
+                          className="car-thumb-nav car-thumb-nav-next"
+                          onClick={() => showListingPhoto(car.id, photos.length, 1)}
+                          aria-label={text.nextPhoto}
+                          dir="ltr"
+                        >
+                          <ChevronIcon direction="right" />
+                        </button>
+                        <p className="car-thumb-count" aria-live="polite">
+                          {text.photoCount(photoIndex + 1, photos.length)}
+                        </p>
+                      </>
+                    ) : null}
+                  </div>
 
                   <div className="car-body profile-listing-body">
                     <div className="car-row">
