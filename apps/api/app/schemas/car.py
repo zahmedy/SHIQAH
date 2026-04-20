@@ -73,6 +73,27 @@ class VinScanResponse(BaseModel):
     message: Optional[str] = None
 
 
+class DescriptionFillRequest(BaseModel):
+    city: Optional[str] = None
+    district: Optional[str] = None
+    make: str
+    model: str
+    year: int
+    price_sar: Optional[int] = None
+    mileage_km: Optional[int] = None
+    body_type: Optional[str] = None
+    transmission: Optional[str] = None
+    fuel_type: Optional[str] = None
+    drivetrain: Optional[str] = None
+    condition: Optional[str] = None
+    color: Optional[str] = None
+    title_ar: Optional[str] = None
+
+
+class DescriptionFillResponse(BaseModel):
+    description_ar: str
+
+
 class CarOut(BaseModel):
     id: int
     status: str

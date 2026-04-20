@@ -108,6 +108,10 @@ type VinScanResponse = {
   message?: string | null;
 };
 
+type DescriptionFillResponse = {
+  description_ar: string;
+};
+
 type PendingPhotoPreview = {
   id: string;
   fileName: string;
@@ -378,6 +382,8 @@ export default function CarDraftForm({
   const [locationStatus, setLocationStatus] = useState("");
   const [vinScanning, setVinScanning] = useState(false);
   const [vinStatus, setVinStatus] = useState("");
+  const [descriptionFilling, setDescriptionFilling] = useState(false);
+  const [descriptionFillStatus, setDescriptionFillStatus] = useState("");
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const vinInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -475,6 +481,11 @@ export default function CarDraftForm({
     titleHelp: "Example: 2019 RAV4 Hybrid AWD with snow tires.",
     descriptionLabel: "Listing description *",
     descriptionHelp: "Mention the details that matter for this niche: traction, tires, rust condition, warranty, charging setup, maintenance, commute range, or performance/luxury options if relevant.",
+    descriptionAiFill: "AI Fill",
+    descriptionAiFilling: "Writing...",
+    descriptionAiFillNeedsBasics: "Fill make, model, and year first.",
+    descriptionAiFillApplied: "Description filled. Review and edit before publishing.",
+    descriptionAiFillFailed: "Failed to fill description.",
     photos: "Photos",
     photosHelp: "Add clear exterior, interior, tire, underbody/rust, dashboard, and cargo photos.",
     autoSaveOnFirstPhotos: "Saved first.",
@@ -653,6 +664,81 @@ export default function CarDraftForm({
       setVinStatus(err instanceof Error ? translateApiMessage(locale, err.message) : text.vinScanFailed);
     } finally {
       setVinScanning(false);
+    }
+  }
+
+  async function handleDescriptionAiFill() {
+    setError("");
+    setSuccess("");
+    setDescriptionFillStatus("");
+
+    if (!API_BASE) {
+      setDescriptionFillStatus(text.missingApiBase);
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setNeedsLogin(true);
+      setDescriptionFillStatus(text.loginRequired);
+      return;
+    }
+
+    const make = form.make.trim();
+    const model = form.model.trim();
+    const year = Number(form.year);
+    const maxYear = new Date().getUTCFullYear() + 1;
+    if (!make || !model || !Number.isInteger(year) || year < 1980 || year > maxYear) {
+      setDescriptionFillStatus(text.descriptionAiFillNeedsBasics);
+      return;
+    }
+
+    const price = parseOptionalNumber(form.price_sar);
+    const mileageMiles = parseOptionalNumber(form.mileage_km);
+
+    setDescriptionFilling(true);
+    try {
+      const res = await fetch(`${API_BASE}/v1/cars/description/fill`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          city: form.city.trim() || undefined,
+          district: form.district.trim() || undefined,
+          make,
+          model,
+          year,
+          price_sar: price && price > 0 ? price : undefined,
+          mileage_km: mileageMiles !== undefined && mileageMiles >= 0 ? milesToKm(mileageMiles) : undefined,
+          body_type: form.body_type.trim() || undefined,
+          transmission: form.transmission.trim() || undefined,
+          fuel_type: form.fuel_type.trim() || undefined,
+          drivetrain: form.drivetrain.trim() || undefined,
+          condition: form.condition.trim() || undefined,
+          color: form.color.trim() || undefined,
+          title_ar: form.title_ar.trim() || undefined,
+        }),
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        setNeedsLogin(true);
+        throw new Error(text.sessionExpired);
+      }
+      if (!res.ok) {
+        throw new Error(await parseApiError(res));
+      }
+
+      const data = (await res.json()) as DescriptionFillResponse;
+      setForm((prev) => ({ ...prev, description_ar: data.description_ar }));
+      setDescriptionFillStatus(text.descriptionAiFillApplied);
+    } catch (err) {
+      setDescriptionFillStatus(
+        err instanceof Error ? translateApiMessage(locale, err.message) : text.descriptionAiFillFailed,
+      );
+    } finally {
+      setDescriptionFilling(false);
     }
   }
 
@@ -1822,7 +1908,17 @@ export default function CarDraftForm({
               </div>
 
               <div className="field-card">
-                <label className="label" htmlFor="description">{text.descriptionLabel}</label>
+                <div className="field-label-action">
+                  <label className="label" htmlFor="description">{text.descriptionLabel}</label>
+                  <button
+                    type="button"
+                    className="upload-photo-button upload-photo-button-neutral"
+                    onClick={() => void handleDescriptionAiFill()}
+                    disabled={descriptionFilling || saving || loading}
+                  >
+                    {descriptionFilling ? text.descriptionAiFilling : text.descriptionAiFill}
+                  </button>
+                </div>
                 <textarea
                   id="description"
                   className="textarea"
@@ -1832,6 +1928,7 @@ export default function CarDraftForm({
                   onChange={(e) => setForm((prev) => ({ ...prev, description_ar: e.target.value }))}
                 />
                 <p className="helper-text">{text.descriptionHelp}</p>
+                {descriptionFillStatus ? <p className="helper-text">{descriptionFillStatus}</p> : null}
               </div>
             </section>
 

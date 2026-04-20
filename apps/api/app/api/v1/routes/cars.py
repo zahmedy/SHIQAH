@@ -13,10 +13,20 @@ from app.models.chat import ChatMessage
 from app.models.lead import Lead
 from app.models.user import User
 from app.models.car import CarListing, CarStatus, CarMedia
-from app.schemas.car import CarCreate, CarUpdate, CarOut, CarPhoto, VinScanRequest, VinScanResponse
+from app.schemas.car import (
+    CarCreate,
+    CarUpdate,
+    CarOut,
+    CarPhoto,
+    DescriptionFillRequest,
+    DescriptionFillResponse,
+    VinScanRequest,
+    VinScanResponse,
+)
 from app.services.opensearch import delete_car, upsert_car
 from app.services.s3 import delete_object
 from app.services.review import build_search_doc, enqueue_auto_review
+from app.services.description import generate_listing_description
 from app.services.vin import decode_vin
 from app.services.vision import detect_vin_from_image
 
@@ -136,6 +146,24 @@ def scan_vin_photo(
         logger.info("VIN scan decoded payload: %s", _debug_vin_payload(decoded))
 
     return VinScanResponse(**decoded)
+
+
+@router.post("/cars/description/fill", response_model=DescriptionFillResponse)
+def fill_car_description(
+    payload: DescriptionFillRequest,
+    user: User = Depends(get_current_user),
+):
+    if payload.year < 1980 or payload.year > datetime.utcnow().year + 1:
+        raise HTTPException(status_code=400, detail="Invalid year")
+
+    try:
+        description = generate_listing_description(payload)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Failed to generate description.") from exc
+
+    return DescriptionFillResponse(description_ar=description)
 
 
 @router.post("/cars", response_model=CarOut)
