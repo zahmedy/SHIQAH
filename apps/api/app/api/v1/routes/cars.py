@@ -20,6 +20,7 @@ from app.schemas.car import (
     CarPhoto,
     DescriptionFillRequest,
     DescriptionFillResponse,
+    VinDecodeRequest,
     VinScanRequest,
     VinScanResponse,
 )
@@ -28,7 +29,7 @@ from app.services.s3 import delete_object
 from app.services.review import build_search_doc, enqueue_auto_review
 from app.services.description import generate_listing_description
 from app.services.vin import decode_vin
-from app.services.vision import detect_vin_from_image
+from app.services.vision import detect_vin_from_image, normalize_vin
 
 router = APIRouter(tags=["cars"])
 logger = logging.getLogger(__name__)
@@ -144,6 +145,28 @@ def scan_vin_photo(
 
     if settings.VIN_SCAN_DEBUG:
         logger.info("VIN scan decoded payload: %s", _debug_vin_payload(decoded))
+
+    return VinScanResponse(**decoded)
+
+
+@router.post("/cars/vin/decode", response_model=VinScanResponse)
+def decode_typed_vin(
+    payload: VinDecodeRequest,
+    user: User = Depends(get_current_user),
+):
+    vin = normalize_vin(payload.vin)
+    if not vin:
+        raise HTTPException(status_code=400, detail="Enter a valid 17-character VIN.")
+
+    try:
+        decoded = decode_vin(vin)
+    except Exception as exc:
+        if settings.VIN_SCAN_DEBUG:
+            logger.exception("Typed VIN decoder request failed for VIN %s", _mask_vin(vin))
+        raise HTTPException(status_code=502, detail="Failed to decode VIN.") from exc
+
+    if settings.VIN_SCAN_DEBUG:
+        logger.info("Typed VIN decoded payload: %s", _debug_vin_payload(decoded))
 
     return VinScanResponse(**decoded)
 

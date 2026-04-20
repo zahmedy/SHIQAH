@@ -2237,7 +2237,7 @@ a {
 
 .vin-scan-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.34fr);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.7fr);
   gap: 0.8rem;
   align-items: center;
   margin-bottom: 1rem;
@@ -2245,6 +2245,35 @@ a {
 
 .vin-scan-card > .helper-text:last-child {
   grid-column: 1 / -1;
+}
+
+.vin-scan-controls {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.vin-manual-entry {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.vin-manual-entry .label,
+.vin-manual-entry .helper-text {
+  margin-bottom: 0;
+}
+
+.vin-manual-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.vin-input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .city-location-grid,
@@ -2796,6 +2825,14 @@ a {
   .field-grid-4,
   .suggestion-grid {
     grid-template-columns: 1fr;
+  }
+
+  .vin-manual-row {
+    grid-template-columns: 1fr;
+  }
+
+  .vin-manual-row .field-action-button {
+    width: 100%;
   }
 
   .field-section {

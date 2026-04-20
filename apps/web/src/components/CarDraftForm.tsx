@@ -224,8 +224,107 @@ function readFileAsBase64(file: File): Promise<string> {
   });
 }
 
+function loadImageFile(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Failed to read image."));
+    };
+    image.src = objectUrl;
+  });
+}
+
+async function getVinPhotoQualityIssue(file: File, text: {
+  vinPhotoTooSmall: string;
+  vinPhotoTooDark: string;
+  vinPhotoLowContrast: string;
+  vinPhotoTooBlurry: string;
+}): Promise<string | null> {
+  const image = await loadImageFile(file);
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+
+  if (Math.min(sourceWidth, sourceHeight) < 420 || sourceWidth * sourceHeight < 260000) {
+    return text.vinPhotoTooSmall;
+  }
+
+  const scale = Math.min(1, 360 / Math.max(sourceWidth, sourceHeight));
+  const width = Math.max(1, Math.round(sourceWidth * scale));
+  const height = Math.max(1, Math.round(sourceHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) {
+    return null;
+  }
+
+  context.drawImage(image, 0, 0, width, height);
+  const pixels = context.getImageData(0, 0, width, height).data;
+  const grayscale = new Float32Array(width * height);
+  let total = 0;
+
+  for (let index = 0, pixel = 0; index < pixels.length; index += 4, pixel += 1) {
+    const value = pixels[index] * 0.299 + pixels[index + 1] * 0.587 + pixels[index + 2] * 0.114;
+    grayscale[pixel] = value;
+    total += value;
+  }
+
+  const count = grayscale.length;
+  const mean = total / count;
+  if (mean < 38 || mean > 238) {
+    return text.vinPhotoTooDark;
+  }
+
+  let variance = 0;
+  for (const value of grayscale) {
+    variance += (value - mean) ** 2;
+  }
+  const contrast = Math.sqrt(variance / count);
+  if (contrast < 18) {
+    return text.vinPhotoLowContrast;
+  }
+
+  let laplacianTotal = 0;
+  let laplacianSquareTotal = 0;
+  let laplacianCount = 0;
+  for (let y = 1; y < height - 1; y += 1) {
+    for (let x = 1; x < width - 1; x += 1) {
+      const centerIndex = y * width + x;
+      const laplacian = (
+        grayscale[centerIndex - width] +
+        grayscale[centerIndex - 1] +
+        grayscale[centerIndex + 1] +
+        grayscale[centerIndex + width] -
+        (4 * grayscale[centerIndex])
+      );
+      laplacianTotal += laplacian;
+      laplacianSquareTotal += laplacian ** 2;
+      laplacianCount += 1;
+    }
+  }
+
+  const laplacianMean = laplacianTotal / laplacianCount;
+  const blurScore = (laplacianSquareTotal / laplacianCount) - (laplacianMean ** 2);
+  if (blurScore < 26) {
+    return text.vinPhotoTooBlurry;
+  }
+
+  return null;
+}
+
 function normalizeVehicleToken(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function normalizeVinEntry(value: string): string {
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 17);
 }
 
 function normalizeDecodedVehicleFields(data: VinScanResponse) {
@@ -355,6 +454,8 @@ export default function CarDraftForm({
   const [locating, setLocating] = useState(false);
   const [locationStatus, setLocationStatus] = useState("");
   const [vinScanning, setVinScanning] = useState(false);
+  const [vinDecoding, setVinDecoding] = useState(false);
+  const [manualVin, setManualVin] = useState("");
   const [vinStatus, setVinStatus] = useState("");
   const [descriptionFilling, setDescriptionFilling] = useState(false);
   const [descriptionFillStatus, setDescriptionFillStatus] = useState("");
@@ -413,12 +514,22 @@ export default function CarDraftForm({
     sectionListing: "Listing Story",
     currentStatus: "Current status",
     vinTitle: "VIN Autofill",
-    vinHelp: "Upload a clear photo of the VIN plate or sticker. The form will fill detected vehicle info.",
+    vinHelp: "Upload a clear VIN photo or type the VIN if the photo is hard to read.",
+    vinManualLabel: "VIN",
+    vinManualPlaceholder: "17-character VIN",
+    vinManualHelp: "Manual VIN decode does not use AI.",
+    vinDecode: "Decode VIN",
+    vinDecoding: "Decoding...",
     vinUploadPhoto: "Upload VIN Photo",
     vinScanning: "Reading VIN...",
     vinApplied: (vin: string) => `VIN ${vin} detected. Details applied.`,
     vinDetectedOnly: (vin: string) => `VIN ${vin} detected, but details were not decoded.`,
     vinScanFailed: "Failed to read VIN photo.",
+    vinManualInvalid: "Enter a valid 17-character VIN.",
+    vinPhotoTooSmall: "That VIN photo looks too small. Try a closer, sharper photo or type the VIN.",
+    vinPhotoTooDark: "That VIN photo looks too dark or washed out. Try better lighting or type the VIN.",
+    vinPhotoLowContrast: "That VIN photo has low contrast. Try a clearer angle or type the VIN.",
+    vinPhotoTooBlurry: "That VIN photo looks blurry. Try holding still and moving closer, or type the VIN.",
     rejected: "Rejected",
     loginRequiredForDrafts: "Login required to manage drafts.",
     loadingDraft: "Loading draft...",
@@ -559,6 +670,83 @@ export default function CarDraftForm({
     });
   }
 
+  function applyDecodedVinData(data: VinScanResponse) {
+    const decodedFields = normalizeDecodedVehicleFields(data);
+    const hasDecodedFields = Boolean(
+      decodedFields.make ||
+      decodedFields.model ||
+      data.year ||
+      data.body_type ||
+      data.transmission ||
+      data.fuel_type ||
+      data.drivetrain,
+    );
+
+    setForm((prev) => ({
+      ...prev,
+      ...(decodedFields.make ? { make: decodedFields.make } : {}),
+      ...(decodedFields.model ? { model: decodedFields.model } : {}),
+      ...(data.year ? { year: String(data.year) } : {}),
+      ...(data.body_type ? { body_type: data.body_type } : {}),
+      ...(data.transmission ? { transmission: data.transmission } : {}),
+      ...(data.fuel_type ? { fuel_type: data.fuel_type } : {}),
+      ...(data.drivetrain ? { drivetrain: data.drivetrain } : {}),
+    }));
+    setManualVin(data.vin);
+    setVinStatus(hasDecodedFields ? text.vinApplied(data.vin) : text.vinDetectedOnly(data.vin));
+  }
+
+  async function handleManualVinDecode() {
+    setError("");
+    setSuccess("");
+    setVinStatus("");
+
+    const vin = normalizeVinEntry(manualVin);
+    setManualVin(vin);
+
+    if (vin.length !== 17) {
+      setVinStatus(text.vinManualInvalid);
+      return;
+    }
+    if (!API_BASE) {
+      setVinStatus(text.missingApiBase);
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setNeedsLogin(true);
+      setVinStatus(text.loginRequired);
+      return;
+    }
+
+    setVinDecoding(true);
+    try {
+      const res = await fetch(`${API_BASE}/v1/cars/vin/decode`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ vin }),
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        setNeedsLogin(true);
+        throw new Error(text.sessionExpired);
+      }
+      if (!res.ok) {
+        throw new Error(await parseApiError(res));
+      }
+
+      applyDecodedVinData((await res.json()) as VinScanResponse);
+    } catch (err) {
+      setVinStatus(err instanceof Error ? translateApiMessage(locale, err.message) : text.vinScanFailed);
+    } finally {
+      setVinDecoding(false);
+    }
+  }
+
   async function handleVinPhotoSelection(files: FileList | null) {
     const file = files?.[0];
     if (!file) {
@@ -587,6 +775,17 @@ export default function CarDraftForm({
 
     setVinScanning(true);
     try {
+      let qualityIssue: string | null = null;
+      try {
+        qualityIssue = await getVinPhotoQualityIssue(file, text);
+      } catch {
+        qualityIssue = null;
+      }
+      if (qualityIssue) {
+        setVinStatus(qualityIssue);
+        return;
+      }
+
       const imageBase64 = await readFileAsBase64(file);
       const res = await fetch(`${API_BASE}/v1/cars/vin/scan`, {
         method: "POST",
@@ -608,29 +807,7 @@ export default function CarDraftForm({
         throw new Error(await parseApiError(res));
       }
 
-      const data = (await res.json()) as VinScanResponse;
-      const decodedFields = normalizeDecodedVehicleFields(data);
-      const hasDecodedFields = Boolean(
-        decodedFields.make ||
-        decodedFields.model ||
-        data.year ||
-        data.body_type ||
-        data.transmission ||
-        data.fuel_type ||
-        data.drivetrain,
-      );
-
-      setForm((prev) => ({
-        ...prev,
-        ...(decodedFields.make ? { make: decodedFields.make } : {}),
-        ...(decodedFields.model ? { model: decodedFields.model } : {}),
-        ...(data.year ? { year: String(data.year) } : {}),
-        ...(data.body_type ? { body_type: data.body_type } : {}),
-        ...(data.transmission ? { transmission: data.transmission } : {}),
-        ...(data.fuel_type ? { fuel_type: data.fuel_type } : {}),
-        ...(data.drivetrain ? { drivetrain: data.drivetrain } : {}),
-      }));
-      setVinStatus(hasDecodedFields ? text.vinApplied(data.vin) : text.vinDetectedOnly(data.vin));
+      applyDecodedVinData((await res.json()) as VinScanResponse);
     } catch (err) {
       setVinStatus(err instanceof Error ? translateApiMessage(locale, err.message) : text.vinScanFailed);
     } finally {
@@ -1596,14 +1773,42 @@ export default function CarDraftForm({
                     void handleVinPhotoSelection(e.target.files);
                     e.currentTarget.value = "";
                   }}
-                  disabled={vinScanning}
+                  disabled={vinScanning || vinDecoding}
                 />
-                <div className="compact-actions">
+                <div className="vin-scan-controls">
+                  <div className="vin-manual-entry">
+                    <label className="label" htmlFor="manual-vin">{text.vinManualLabel}</label>
+                    <div className="vin-manual-row">
+                      <input
+                        id="manual-vin"
+                        className="input vin-input"
+                        value={manualVin}
+                        maxLength={17}
+                        placeholder={text.vinManualPlaceholder}
+                        onChange={(e) => setManualVin(normalizeVinEntry(e.target.value))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void handleManualVinDecode();
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="field-action-button"
+                        onClick={() => void handleManualVinDecode()}
+                        disabled={vinDecoding || vinScanning}
+                      >
+                        {vinDecoding ? text.vinDecoding : text.vinDecode}
+                      </button>
+                    </div>
+                    <p className="helper-text">{text.vinManualHelp}</p>
+                  </div>
                   <button
                     type="button"
                     className="btn btn-secondary"
                     onClick={() => vinInputRef.current?.click()}
-                    disabled={vinScanning}
+                    disabled={vinScanning || vinDecoding}
                   >
                     {vinScanning ? text.vinScanning : text.vinUploadPhoto}
                   </button>

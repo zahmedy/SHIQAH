@@ -61,6 +61,10 @@ class VinScanRequest(BaseModel):
     content_type: str = "image/jpeg"
 
 
+class VinDecodeRequest(BaseModel):
+    vin: str
+
+
 class VinScanResponse(BaseModel):
     vin: str
     make: Optional[str] = None
