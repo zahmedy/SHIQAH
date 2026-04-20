@@ -61,17 +61,6 @@ type CarOut = CarPayload & {
   photos?: CarPhoto[];
 };
 
-type MlSuggestion = {
-  status: string | null;
-  source: string | null;
-  make: string | null;
-  model: string | null;
-  yearStart: number | null;
-  yearEnd: number | null;
-  confidence: number | null;
-  updatedAt: string | null;
-};
-
 type BuildPayloadResult =
   | { ok: true; payload: CarPayload }
   | { ok: false; error: string };
@@ -357,32 +346,6 @@ function fromLoadedMileage(value?: number | null): string {
   return String(kmToMiles(value));
 }
 
-function extractMlSuggestion(car: CarOut): MlSuggestion | null {
-  const hasContent = Boolean(
-    car.ml_status ||
-    car.ml_make ||
-    car.ml_model ||
-    car.ml_year_start ||
-    car.ml_year_end ||
-    car.ml_confidence !== undefined,
-  );
-
-  if (!hasContent) {
-    return null;
-  }
-
-  return {
-    status: car.ml_status ?? null,
-    source: car.ml_source ?? null,
-    make: car.ml_make ?? null,
-    model: car.ml_model ?? null,
-    yearStart: car.ml_year_start ?? null,
-    yearEnd: car.ml_year_end ?? null,
-    confidence: car.ml_confidence ?? null,
-    updatedAt: car.ml_updated_at ?? null,
-  };
-}
-
 export default function CarDraftForm({
   mode,
   carId,
@@ -413,8 +376,6 @@ export default function CarDraftForm({
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [locating, setLocating] = useState(false);
   const [locationStatus, setLocationStatus] = useState("");
-  const [mlSuggestion, setMlSuggestion] = useState<MlSuggestion | null>(null);
-  const [refreshingMl, setRefreshingMl] = useState(false);
   const [vinScanning, setVinScanning] = useState(false);
   const [vinStatus, setVinStatus] = useState("");
   const photoInputRef = useRef<HTMLInputElement | null>(null);
@@ -472,22 +433,6 @@ export default function CarDraftForm({
     sectionSpecs: "Niche & Efficiency Specs",
     sectionListing: "Listing Story",
     currentStatus: "Current status",
-    mlTitle: "AI Suggestion",
-    mlHint: "From photos. Confirm the result before publishing.",
-    mlRefresh: "Refresh",
-    mlRefreshing: "Refreshing...",
-    mlNone: "No suggestion yet.",
-    mlQueued: "Queued.",
-    mlRunning: "Running...",
-    mlFailed: "Failed.",
-    mlCompleted: "Ready.",
-    mlDetectedMake: "Make",
-    mlDetectedModel: "Model",
-    mlDetectedYear: "Year",
-    mlConfidence: "Confidence",
-    mlSource: "Source",
-    mlApply: "Use",
-    mlApplied: "Suggestion applied.",
     vinTitle: "VIN Autofill",
     vinHelp: "Upload a clear photo of the VIN plate or sticker. The form will fill detected vehicle info.",
     vinUploadPhoto: "Upload VIN Photo",
@@ -589,26 +534,6 @@ export default function CarDraftForm({
   );
   const activeViewerItem =
     viewerIndex !== null && viewerItems[viewerIndex] ? viewerItems[viewerIndex] : null;
-  const mlYearLabel = mlSuggestion
-    ? mlSuggestion.yearStart && mlSuggestion.yearEnd
-      ? mlSuggestion.yearStart === mlSuggestion.yearEnd
-        ? String(mlSuggestion.yearStart)
-        : `${mlSuggestion.yearStart}-${mlSuggestion.yearEnd}`
-      : mlSuggestion.yearStart
-        ? String(mlSuggestion.yearStart)
-        : mlSuggestion.yearEnd
-          ? String(mlSuggestion.yearEnd)
-          : "—"
-    : "—";
-  const mlStatusLabel = mlSuggestion?.status === "queued"
-    ? text.mlQueued
-    : mlSuggestion?.status === "running"
-      ? text.mlRunning
-      : mlSuggestion?.status === "failed"
-        ? text.mlFailed
-        : mlSuggestion?.status === "completed"
-          ? text.mlCompleted
-          : text.mlNone;
 
   async function fetchCarData(targetCarId: number, token: string): Promise<CarOut> {
     const res = await fetch(`${API_BASE}/v1/cars/${targetCarId}`, {
@@ -629,7 +554,6 @@ export default function CarDraftForm({
     setStatus(car.status);
     setReviewReason(car.review_reason || "");
     setPhotos(car.photos || []);
-    setMlSuggestion(extractMlSuggestion(car));
     setForm({
       city: fromLoadedField(car.city),
       district: fromLoadedField(car.district),
@@ -651,48 +575,6 @@ export default function CarDraftForm({
       title_ar: fromLoadedField(car.title_ar),
       description_ar: fromLoadedField(car.description_ar),
     });
-  }
-
-  async function refreshMlSuggestion(targetCarId?: number) {
-    if (!API_BASE || !targetCarId) {
-      return;
-    }
-
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      setNeedsLogin(true);
-      setError(text.loginRequired);
-      return;
-    }
-
-    setRefreshingMl(true);
-    try {
-      const car = await fetchCarData(targetCarId, token);
-      setStatus(car.status);
-      setReviewReason(car.review_reason || "");
-      setPhotos(car.photos || []);
-      setMlSuggestion(extractMlSuggestion(car));
-    } catch (err) {
-      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.loadDraftFailed);
-    } finally {
-      setRefreshingMl(false);
-    }
-  }
-
-  function applyMlSuggestion() {
-    if (!mlSuggestion) {
-      return;
-    }
-
-    setForm((prev) => ({
-      ...prev,
-      ...(mlSuggestion.make ? { make: mlSuggestion.make, model: "" } : {}),
-      ...(mlSuggestion.model ? { model: mlSuggestion.model } : {}),
-      ...(mlSuggestion.yearStart && mlSuggestion.yearStart === mlSuggestion.yearEnd
-        ? { year: String(mlSuggestion.yearStart) }
-        : {}),
-    }));
-    setSuccess(text.mlApplied);
   }
 
   async function handleVinPhotoSelection(files: FileList | null) {
@@ -904,7 +786,6 @@ export default function CarDraftForm({
     setStatus(data.status);
     setReviewReason(data.review_reason || "");
     setPhotos(data.photos || []);
-    setMlSuggestion(extractMlSuggestion(data));
 
     if (mode === "create") {
       setCreatedId(data.id);
@@ -965,7 +846,6 @@ export default function CarDraftForm({
     setStatus(data.status);
     setReviewReason(data.review_reason || "");
     setPhotos(data.photos || []);
-    setMlSuggestion(extractMlSuggestion(data));
     return data.id;
   }
 
@@ -1259,7 +1139,6 @@ export default function CarDraftForm({
     }
 
     setPhotos(nextPhotos);
-    await refreshMlSuggestion(targetCarId);
     if (uploadedCount > 0) {
       setUploadSuccess(
         createdBeforeUpload ? text.photosAddedSavedFirst(uploadedCount) : text.photosAdded(uploadedCount),
@@ -1659,69 +1538,6 @@ export default function CarDraftForm({
                 </div>
               )}
             </section>
-
-            {activeCarId ? (
-              <section className="panel panel-soft spaced-top-sm suggestion-panel">
-                <div className="suggestion-topbar">
-                  <div>
-                    <h2 className="subheading">{text.mlTitle}</h2>
-                    <p className="helper-text">{text.mlHint}</p>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => void refreshMlSuggestion(activeCarId)}
-                    disabled={refreshingMl}
-                  >
-                    {refreshingMl ? text.mlRefreshing : text.mlRefresh}
-                  </button>
-                </div>
-
-                <p className="car-meta">{mlStatusLabel}</p>
-
-                {mlSuggestion ? (
-                  <>
-                    <div className="specs suggestion-grid">
-                      <article className="spec">
-                        <p className="spec-key">{text.mlDetectedMake}</p>
-                        <p className="spec-val">{mlSuggestion.make || "—"}</p>
-                      </article>
-                      <article className="spec">
-                        <p className="spec-key">{text.mlDetectedModel}</p>
-                        <p className="spec-val">{mlSuggestion.model || "—"}</p>
-                      </article>
-                      <article className="spec">
-                        <p className="spec-key">{text.mlDetectedYear}</p>
-                        <p className="spec-val">{mlYearLabel}</p>
-                      </article>
-                      <article className="spec">
-                        <p className="spec-key">{text.mlConfidence}</p>
-                        <p className="spec-val">
-                          {mlSuggestion.confidence !== null && mlSuggestion.confidence !== undefined
-                            ? `${Math.round(mlSuggestion.confidence * 100)}%`
-                            : "—"}
-                        </p>
-                      </article>
-                      <article className="spec">
-                        <p className="spec-key">{text.mlSource}</p>
-                        <p className="spec-val">{mlSuggestion.source || "—"}</p>
-                      </article>
-                    </div>
-
-                    <div className="inline-actions">
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        onClick={applyMlSuggestion}
-                        disabled={!mlSuggestion.make && !mlSuggestion.model && !mlSuggestion.yearStart}
-                      >
-                        {text.mlApply}
-                      </button>
-                    </div>
-                  </>
-                ) : null}
-              </section>
-            ) : null}
 
             <section className="field-section">
               <div className="draft-section-head">
