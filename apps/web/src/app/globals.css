@@ -2276,6 +2276,30 @@ a {
   text-transform: uppercase;
 }
 
+.vin-status {
+  grid-column: 1 / -1;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.7rem 0.8rem;
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: color-mix(in srgb, #ffffff 94%, var(--ice));
+}
+
+.vin-status-error {
+  border-color: color-mix(in srgb, var(--error) 42%, var(--line));
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) 7%, #ffffff);
+}
+
+.vin-status-success {
+  border-color: color-mix(in srgb, var(--ok) 42%, var(--line));
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 7%, #ffffff);
+}
+
 .city-location-grid,
 .field-grid,
 .suggestion-grid {

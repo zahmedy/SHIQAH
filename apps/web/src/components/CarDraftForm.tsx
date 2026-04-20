@@ -457,6 +457,7 @@ export default function CarDraftForm({
   const [vinDecoding, setVinDecoding] = useState(false);
   const [manualVin, setManualVin] = useState("");
   const [vinStatus, setVinStatus] = useState("");
+  const [vinStatusTone, setVinStatusTone] = useState<"success" | "error" | "">("");
   const [descriptionFilling, setDescriptionFilling] = useState(false);
   const [descriptionFillStatus, setDescriptionFillStatus] = useState("");
   const photoInputRef = useRef<HTMLInputElement | null>(null);
@@ -693,6 +694,7 @@ export default function CarDraftForm({
       ...(data.drivetrain ? { drivetrain: data.drivetrain } : {}),
     }));
     setManualVin(data.vin);
+    setVinStatusTone(hasDecodedFields ? "success" : "error");
     setVinStatus(hasDecodedFields ? text.vinApplied(data.vin) : text.vinDetectedOnly(data.vin));
   }
 
@@ -700,15 +702,18 @@ export default function CarDraftForm({
     setError("");
     setSuccess("");
     setVinStatus("");
+    setVinStatusTone("");
 
     const vin = normalizeVinEntry(manualVin);
     setManualVin(vin);
 
     if (vin.length !== 17) {
+      setVinStatusTone("error");
       setVinStatus(text.vinManualInvalid);
       return;
     }
     if (!API_BASE) {
+      setVinStatusTone("error");
       setVinStatus(text.missingApiBase);
       return;
     }
@@ -716,6 +721,7 @@ export default function CarDraftForm({
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
       setNeedsLogin(true);
+      setVinStatusTone("error");
       setVinStatus(text.loginRequired);
       return;
     }
@@ -741,6 +747,7 @@ export default function CarDraftForm({
 
       applyDecodedVinData((await res.json()) as VinScanResponse);
     } catch (err) {
+      setVinStatusTone("error");
       setVinStatus(err instanceof Error ? translateApiMessage(locale, err.message) : text.vinScanFailed);
     } finally {
       setVinDecoding(false);
@@ -756,12 +763,15 @@ export default function CarDraftForm({
     setError("");
     setSuccess("");
     setVinStatus("");
+    setVinStatusTone("");
 
     if (!file.type.startsWith("image/")) {
+      setVinStatusTone("error");
       setVinStatus(text.imagesOnly);
       return;
     }
     if (!API_BASE) {
+      setVinStatusTone("error");
       setVinStatus(text.missingApiBase);
       return;
     }
@@ -769,6 +779,7 @@ export default function CarDraftForm({
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
       setNeedsLogin(true);
+      setVinStatusTone("error");
       setVinStatus(text.loginRequired);
       return;
     }
@@ -782,6 +793,7 @@ export default function CarDraftForm({
         qualityIssue = null;
       }
       if (qualityIssue) {
+        setVinStatusTone("error");
         setVinStatus(qualityIssue);
         return;
       }
@@ -809,6 +821,7 @@ export default function CarDraftForm({
 
       applyDecodedVinData((await res.json()) as VinScanResponse);
     } catch (err) {
+      setVinStatusTone("error");
       setVinStatus(err instanceof Error ? translateApiMessage(locale, err.message) : text.vinScanFailed);
     } finally {
       setVinScanning(false);
@@ -1813,7 +1826,11 @@ export default function CarDraftForm({
                     {vinScanning ? text.vinScanning : text.vinUploadPhoto}
                   </button>
                 </div>
-                {vinStatus ? <p className="helper-text">{vinStatus}</p> : null}
+                {vinStatus ? (
+                  <p className={`vin-status${vinStatusTone ? ` vin-status-${vinStatusTone}` : ""}`}>
+                    {vinStatus}
+                  </p>
+                ) : null}
               </div>
 
               <div className="city-location-grid">
