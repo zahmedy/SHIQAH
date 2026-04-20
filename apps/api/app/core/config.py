@@ -38,6 +38,7 @@ class Settings(BaseSettings):
 
     OPENAI_API_KEY: str | None = None
     OPENAI_VISION_MODEL: str = "gpt-4o-mini"
+    VIN_SCAN_DEBUG: bool = False
 
     model_config = SettingsConfigDict(
         env_file=(ROOT_ENV_FILE, ".env"),

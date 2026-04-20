@@ -9,6 +9,7 @@ import MakeModelField from "@/components/MakeModelField";
 import { useLocale } from "@/components/LocaleProvider";
 import { translateApiMessage, translateReviewReason, translateStatus, translateValue } from "@/lib/locale";
 import { findNearestCity } from "@/shared/cities";
+import { findMake } from "@/shared/carMakes";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const TOKEN_KEY = "autointel_access_token";
@@ -227,6 +228,22 @@ function readFileAsBase64(file: File): Promise<string> {
     };
     reader.readAsDataURL(file);
   });
+}
+
+function normalizeVehicleToken(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function normalizeDecodedVehicleFields(data: VinScanResponse) {
+  const makeData = data.make ? findMake(data.make) : undefined;
+  const normalizedModel = data.model && makeData
+    ? makeData.models.find((model) => normalizeVehicleToken(model) === normalizeVehicleToken(data.model || ""))
+    : undefined;
+
+  return {
+    make: makeData?.name ?? data.make,
+    model: normalizedModel ?? data.model,
+  };
 }
 
 function milesToKm(value: number): number {
@@ -728,9 +745,10 @@ export default function CarDraftForm({
       }
 
       const data = (await res.json()) as VinScanResponse;
+      const decodedFields = normalizeDecodedVehicleFields(data);
       const hasDecodedFields = Boolean(
-        data.make ||
-        data.model ||
+        decodedFields.make ||
+        decodedFields.model ||
         data.year ||
         data.body_type ||
         data.transmission ||
@@ -740,8 +758,8 @@ export default function CarDraftForm({
 
       setForm((prev) => ({
         ...prev,
-        ...(data.make ? { make: data.make } : {}),
-        ...(data.model ? { model: data.model } : {}),
+        ...(decodedFields.make ? { make: decodedFields.make } : {}),
+        ...(decodedFields.model ? { model: decodedFields.model } : {}),
         ...(data.year ? { year: String(data.year) } : {}),
         ...(data.body_type ? { body_type: data.body_type } : {}),
         ...(data.transmission ? { transmission: data.transmission } : {}),

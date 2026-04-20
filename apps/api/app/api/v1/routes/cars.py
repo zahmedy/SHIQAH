@@ -1,11 +1,13 @@
 import base64
 import binascii
+import logging
 from collections import defaultdict
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select, func
 
 from app.core.deps import get_current_user
+from app.core.config import settings
 from app.db.session import get_session
 from app.models.chat import ChatMessage
 from app.models.lead import Lead
@@ -19,6 +21,7 @@ from app.services.vin import decode_vin
 from app.services.vision import detect_vin_from_image
 
 router = APIRouter(tags=["cars"])
+logger = logging.getLogger(__name__)
 
 MAX_VIN_IMAGE_BYTES = 8 * 1024 * 1024
 
@@ -30,6 +33,21 @@ def ensure_owner(car: CarListing, user: User):
 
 def default_listing_title(make: str, model: str, year: int) -> str:
     return f"{make} {model} {year} for sale"
+
+
+def _mask_vin(vin: str | None) -> str | None:
+    if not vin:
+        return None
+    if len(vin) <= 6:
+        return "***"
+    return f"{vin[:3]}***{vin[-4:]}"
+
+
+def _debug_vin_payload(payload: dict) -> dict:
+    return {
+        **payload,
+        "vin": _mask_vin(str(payload.get("vin") or "")),
+    }
 
 
 def _load_photos_map(session: Session, car_ids: list[int]) -> dict[int, list[CarPhoto]]:
@@ -88,20 +106,34 @@ def scan_vin_photo(
     try:
         vin = detect_vin_from_image(image_bytes, content_type)
     except RuntimeError as exc:
+        if settings.VIN_SCAN_DEBUG:
+            logger.exception("VIN scan configuration error")
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
+        if settings.VIN_SCAN_DEBUG:
+            logger.exception("VIN scan OCR request failed")
         raise HTTPException(status_code=502, detail="Failed to read VIN from image.") from exc
 
     if not vin:
+        if settings.VIN_SCAN_DEBUG:
+            logger.info("VIN scan completed without a valid VIN")
         raise HTTPException(status_code=422, detail="No valid VIN was detected in the image.")
+
+    if settings.VIN_SCAN_DEBUG:
+        logger.info("VIN scan detected VIN: %s", _mask_vin(vin))
 
     try:
         decoded = decode_vin(vin)
     except Exception:
+        if settings.VIN_SCAN_DEBUG:
+            logger.exception("VIN decoder request failed for VIN %s", _mask_vin(vin))
         decoded = {
             "vin": vin,
             "message": "VIN detected, but vehicle details could not be decoded.",
         }
+
+    if settings.VIN_SCAN_DEBUG:
+        logger.info("VIN scan decoded payload: %s", _debug_vin_payload(decoded))
 
     return VinScanResponse(**decoded)
 

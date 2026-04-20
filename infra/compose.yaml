@@ -54,6 +54,7 @@ services:
       OPENSEARCH_INDEX: autointel_cars
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_VISION_MODEL: ${OPENAI_VISION_MODEL:-gpt-4o-mini}
+      VIN_SCAN_DEBUG: ${VIN_SCAN_DEBUG:-false}
     ports:
       - "8000:8000"
     depends_on:
