@@ -116,6 +116,7 @@ type PendingPhotoPreview = {
   id: string;
   fileName: string;
   objectUrl: string;
+  file: File;
 };
 
 type PhotoViewerItem = {
@@ -312,32 +313,6 @@ function buildPayload(form: FormState): BuildPayloadResult {
   return { ok: true, payload };
 }
 
-function buildPlaceholderPayload(form: FormState): CarPayload {
-  const year = Number(form.year);
-
-  return {
-    city: form.city.trim() || DRAFT_PLACEHOLDER,
-    district: form.district.trim() || undefined,
-    latitude: parseOptionalFloat(form.latitude),
-    longitude: parseOptionalFloat(form.longitude),
-    make: form.make.trim() || DRAFT_PLACEHOLDER,
-    model: form.model.trim() || DRAFT_PLACEHOLDER,
-    year: Number.isInteger(year) && year >= 1980 ? year : DRAFT_PLACEHOLDER_YEAR,
-    price_sar: parseOptionalNumber(form.price_sar) ?? null,
-    mileage_km: form.mileage_km.trim()
-      ? milesToKm(parseOptionalNumber(form.mileage_km) ?? 0)
-      : undefined,
-    body_type: form.body_type.trim() || undefined,
-    transmission: form.transmission.trim() || undefined,
-    fuel_type: form.fuel_type.trim() || undefined,
-    drivetrain: form.drivetrain.trim() || undefined,
-    condition: form.condition.trim() || undefined,
-    color: form.color.trim() || undefined,
-    title_ar: form.title_ar.trim() || DRAFT_PLACEHOLDER,
-    description_ar: form.description_ar.trim() || DRAFT_PLACEHOLDER,
-  };
-}
-
 function fromLoadedField(value?: string | number | null): string {
   const nextValue = field(value);
   return nextValue === DRAFT_PLACEHOLDER ? "" : nextValue;
@@ -369,7 +344,6 @@ export default function CarDraftForm({
   const [success, setSuccess] = useState("");
   const [createdId, setCreatedId] = useState<number | null>(null);
   const [photos, setPhotos] = useState<CarPhoto[]>([]);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [pendingPreviews, setPendingPreviews] = useState<PendingPhotoPreview[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -421,9 +395,8 @@ export default function CarDraftForm({
     deleteFailed: "Failed to complete the action.",
     selectPhotosFirst: "Select one or more photos first.",
     imagesOnly: "Only image files are allowed.",
-    createDraftBeforeUploadFailed: "Failed to create draft before upload.",
+    saveBeforeUploadingPhotos: "Click Save Draft before uploading photos.",
     failedUpload: (fileName: string, statusCode: number) => `Failed upload for ${fileName} (${statusCode}).`,
-    photosAddedSavedFirst: (count: number) => `${count} photo${count === 1 ? "" : "s"} added. Your listing was saved first.`,
     photosAdded: (count: number) => `${count} photo${count === 1 ? "" : "s"} added.`,
     photosAddFailed: (count: number) => `${count} photo${count === 1 ? "" : "s"} could not be added. Please try again.`,
     saveBeforeRemovingPhotos: "Save the listing before removing photos.",
@@ -434,7 +407,7 @@ export default function CarDraftForm({
     updateMainPhotoFailed: "Failed to update main photo.",
     createDraftTitle: "List a Car",
     editListingTitle: (id?: number) => `Edit Listing #${id ?? ""}`,
-    formNote: mode === "create" ? "Add photos first, then describe the niche details buyers care about." : "Update photos or niche-specific details.",
+    formNote: mode === "create" ? "Choose photos, fill the listing, then Save Draft or Save & Submit." : "Update photos or niche-specific details.",
     sectionBasics: "Basics",
     sectionSpecs: "Niche & Efficiency Specs",
     sectionListing: "Listing Story",
@@ -488,15 +461,13 @@ export default function CarDraftForm({
     descriptionAiFillFailed: "Failed to fill description.",
     photos: "Photos",
     photosHelp: "Add clear exterior, interior, tire, underbody/rust, dashboard, and cargo photos.",
-    autoSaveOnFirstPhotos: "Saved first.",
     addingPhotos: "Adding...",
     addMorePhotos: "Add Photos",
     addPhotos: "Add Photos",
     photosReady: (count: number) => `${count} photos ready`,
     moreNeeded: (count: number) => `${count} more needed`,
     photosUploadingNow: "Uploading photos.",
-    choosePhotosAndSave: "Upload starts right away.",
-    choosePhotos: "Choose photos.",
+    choosePhotos: "Photos upload when you save.",
     adding: "Adding",
     readyToUpload: "Ready to upload",
     mainPhoto: "Main photo",
@@ -903,38 +874,6 @@ export default function CarDraftForm({
     return data;
   }
 
-  async function ensureDraftForUploads(token: string): Promise<number> {
-    if (activeCarId) {
-      return activeCarId;
-    }
-
-    const payload = buildPlaceholderPayload(form);
-    const res = await fetch(`${API_BASE}/v1/cars`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (res.status === 401 || res.status === 403) {
-      setNeedsLogin(true);
-      throw new Error(text.sessionExpired);
-    }
-
-    if (!res.ok) {
-      throw new Error(await parseApiError(res));
-    }
-
-    const data = (await res.json()) as CarOut;
-    setCreatedId(data.id);
-    setStatus(data.status);
-    setReviewReason(data.review_reason || "");
-    setPhotos(data.photos || []);
-    return data.id;
-  }
-
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -955,8 +894,8 @@ export default function CarDraftForm({
     setSaving(true);
     try {
       const saved = await persistDraft(token);
-      if (pendingPreviews.length > 0 && selectedFiles.length > 0) {
-        const uploadResult = await uploadSelectedPhotos(saved.id, selectedFiles, pendingPreviews);
+      if (pendingPreviews.length > 0) {
+        const uploadResult = await uploadSelectedPhotos(saved.id, pendingPreviews.map((preview) => preview.file), pendingPreviews);
         if (uploadResult.failedCount > 0) {
           setError(text.photosAddFailed(uploadResult.failedCount));
           return;
@@ -1002,8 +941,8 @@ export default function CarDraftForm({
     try {
       const saved = await persistDraft(token);
 
-      if (pendingPreviews.length > 0 && selectedFiles.length > 0) {
-        const uploadResult = await uploadSelectedPhotos(saved.id, selectedFiles, pendingPreviews);
+      if (pendingPreviews.length > 0) {
+        const uploadResult = await uploadSelectedPhotos(saved.id, pendingPreviews.map((preview) => preview.file), pendingPreviews);
         if (uploadResult.failedCount > 0) {
           setError(text.photosAddFailed(uploadResult.failedCount));
           return;
@@ -1122,7 +1061,7 @@ export default function CarDraftForm({
       return { uploadedCount: 0, failedCount: 0, totalPhotos: photos.length };
     }
 
-    const files = filesToUpload ?? selectedFiles;
+    const files = filesToUpload ?? pendingPreviews.map((preview) => preview.file);
     if (files.length === 0) {
       setUploadError(text.selectPhotosFirst);
       return { uploadedCount: 0, failedCount: 0, totalPhotos: photos.length };
@@ -1136,20 +1075,12 @@ export default function CarDraftForm({
 
     setUploading(true);
 
-    let createdBeforeUpload = false;
-    let targetCarId = targetCarIdOverride ?? activeCarId;
+    const targetCarId = targetCarIdOverride ?? activeCarId;
 
     if (!targetCarId) {
-      try {
-        targetCarId = await ensureDraftForUploads(token);
-        createdBeforeUpload = true;
-      } catch (err) {
-        setUploadError(
-          err instanceof Error ? translateApiMessage(locale, err.message) : text.createDraftBeforeUploadFailed,
-        );
-        setUploading(false);
-        return { uploadedCount: 0, failedCount: 0, totalPhotos: photos.length };
-      }
+      setUploadError(text.saveBeforeUploadingPhotos);
+      setUploading(false);
+      return { uploadedCount: 0, failedCount: 0, totalPhotos: photos.length };
     }
 
     let uploadedCount = 0;
@@ -1226,9 +1157,7 @@ export default function CarDraftForm({
 
     setPhotos(nextPhotos);
     if (uploadedCount > 0) {
-      setUploadSuccess(
-        createdBeforeUpload ? text.photosAddedSavedFirst(uploadedCount) : text.photosAdded(uploadedCount),
-      );
+      setUploadSuccess(text.photosAdded(uploadedCount));
     }
     if (failedCount > 0) {
       setUploadError(text.photosAddFailed(failedCount));
@@ -1242,10 +1171,6 @@ export default function CarDraftForm({
         current.filter((preview) => !previewsToClear.some((item) => item.id === preview.id)),
       );
     }
-    setSelectedFiles((current) =>
-      current.filter((file) => !files.includes(file)),
-    );
-
     setUploading(false);
     return { uploadedCount, failedCount, totalPhotos: nextPhotos.length };
   }
@@ -1265,20 +1190,39 @@ export default function CarDraftForm({
 
     setUploadError("");
     setUploadSuccess("");
-    setSelectedFiles((current) => [...current, ...imageFiles]);
 
     const previews = imageFiles
       .map((file, index) => ({
         id: `${file.name}-${file.size}-${index}-${Date.now()}`,
         fileName: file.name,
         objectUrl: URL.createObjectURL(file),
+        file,
       }));
 
     if (previews.length > 0) {
       setPendingPreviews((current) => [...current, ...previews]);
     }
 
-    void uploadSelectedPhotos(undefined, imageFiles, previews);
+  }
+
+  function removePendingPreview(previewId: string) {
+    setPendingPreviews((current) => {
+      const preview = current.find((item) => item.id === previewId);
+      if (preview) {
+        URL.revokeObjectURL(preview.objectUrl);
+      }
+      return current.filter((item) => item.id !== previewId);
+    });
+    setViewerIndex((current) => {
+      if (current === null) return current;
+
+      const removedViewerIndex = viewerItems.findIndex((item) => item.id === previewId);
+      if (removedViewerIndex < 0) return current;
+      if (viewerItems.length <= 1) return null;
+      if (current > removedViewerIndex) return current - 1;
+      if (current === removedViewerIndex) return Math.min(current, viewerItems.length - 2);
+      return current;
+    });
   }
 
   async function removePhoto(photoId: number) {
@@ -1554,11 +1498,7 @@ export default function CarDraftForm({
                   {hasEnoughPhotos ? text.photosReady(totalPhotoCount) : text.moreNeeded(remainingPhotos)}
                 </span>
                 <span className="helper-text">
-                  {uploading
-                    ? text.photosUploadingNow
-                    : !activeCarId && mode === "create"
-                      ? text.choosePhotosAndSave
-                      : text.choosePhotos}
+                  {uploading ? text.photosUploadingNow : text.choosePhotos}
                 </span>
               </div>
 
@@ -1578,7 +1518,17 @@ export default function CarDraftForm({
                       </button>
                       <div className="upload-photo-meta">
                         <span className="upload-photo-order">{preview.fileName}</span>
-                        <span className="status-pill status-draft">{uploading && activeCarId ? text.adding : text.readyToUpload}</span>
+                        <div className="upload-photo-controls">
+                          <span className="status-pill status-draft">{uploading ? text.adding : text.readyToUpload}</span>
+                          <button
+                            type="button"
+                            className="upload-photo-button"
+                            onClick={() => removePendingPreview(preview.id)}
+                            disabled={uploading}
+                          >
+                            {text.remove}
+                          </button>
+                        </div>
                       </div>
                     </article>
                   ))}
@@ -1912,7 +1862,7 @@ export default function CarDraftForm({
                   <label className="label" htmlFor="description">{text.descriptionLabel}</label>
                   <button
                     type="button"
-                    className="upload-photo-button upload-photo-button-neutral"
+                    className="field-action-button"
                     onClick={() => void handleDescriptionAiFill()}
                     disabled={descriptionFilling || saving || loading}
                   >
