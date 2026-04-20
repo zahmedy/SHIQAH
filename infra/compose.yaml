@@ -52,6 +52,8 @@ services:
       JWT_SECRET: change-me-super-secret
       OPENSEARCH_URL: http://opensearch:9200
       OPENSEARCH_INDEX: autointel_cars
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_VISION_MODEL: ${OPENAI_VISION_MODEL:-gpt-4o-mini}
     ports:
       - "8000:8000"
     depends_on:
