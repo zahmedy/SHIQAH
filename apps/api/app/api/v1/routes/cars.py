@@ -1,3 +1,5 @@
+import base64
+import binascii
 from collections import defaultdict
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,12 +11,16 @@ from app.models.chat import ChatMessage
 from app.models.lead import Lead
 from app.models.user import User
 from app.models.car import CarListing, CarStatus, CarMedia
-from app.schemas.car import CarCreate, CarUpdate, CarOut, CarPhoto
+from app.schemas.car import CarCreate, CarUpdate, CarOut, CarPhoto, VinScanRequest, VinScanResponse
 from app.services.opensearch import delete_car, upsert_car
 from app.services.s3 import delete_object
 from app.services.review import build_search_doc, enqueue_auto_review
+from app.services.vin import decode_vin
+from app.services.vision import detect_vin_from_image
 
 router = APIRouter(tags=["cars"])
+
+MAX_VIN_IMAGE_BYTES = 8 * 1024 * 1024
 
 
 def ensure_owner(car: CarListing, user: User):
@@ -58,6 +64,46 @@ def to_car_out(car: CarListing, photos: list[CarPhoto] | None = None) -> CarOut:
         data["status"] = str(status)
     data["photos"] = photos or []
     return CarOut(**data)
+
+
+@router.post("/cars/vin/scan", response_model=VinScanResponse)
+def scan_vin_photo(
+    payload: VinScanRequest,
+    user: User = Depends(get_current_user),
+):
+    content_type = payload.content_type.strip().lower()
+    if not content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Upload an image of the VIN.")
+
+    try:
+        image_bytes = base64.b64decode(payload.image_base64, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid VIN image payload.") from exc
+
+    if not image_bytes:
+        raise HTTPException(status_code=400, detail="VIN image is empty.")
+    if len(image_bytes) > MAX_VIN_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail="VIN image is too large.")
+
+    try:
+        vin = detect_vin_from_image(image_bytes, content_type)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Failed to read VIN from image.") from exc
+
+    if not vin:
+        raise HTTPException(status_code=422, detail="No valid VIN was detected in the image.")
+
+    try:
+        decoded = decode_vin(vin)
+    except Exception:
+        decoded = {
+            "vin": vin,
+            "message": "VIN detected, but vehicle details could not be decoded.",
+        }
+
+    return VinScanResponse(**decoded)
 
 
 @router.post("/cars", response_model=CarOut)

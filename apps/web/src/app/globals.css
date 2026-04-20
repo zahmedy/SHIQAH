@@ -2190,6 +2190,18 @@ a {
   margin-bottom: 0;
 }
 
+.vin-scan-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.34fr);
+  gap: 0.8rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.vin-scan-card > .helper-text:last-child {
+  grid-column: 1 / -1;
+}
+
 .city-location-grid,
 .field-grid,
 .suggestion-grid {
@@ -2733,6 +2745,7 @@ a {
     grid-template-columns: 1fr;
   }
 
+  .vin-scan-card,
   .city-location-grid,
   .field-grid,
   .field-grid-4,

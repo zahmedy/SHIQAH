@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     S3_BUCKET: str = "autointel-media"
     S3_PUBLIC_BASE_URL: str = "http://localhost:9000/autointel-media"
 
+    OPENAI_API_KEY: str | None = None
+    OPENAI_VISION_MODEL: str = "gpt-4o-mini"
+
     model_config = SettingsConfigDict(
         env_file=(ROOT_ENV_FILE, ".env"),
         extra="ignore",

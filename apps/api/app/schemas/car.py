@@ -56,6 +56,23 @@ class CarUpdate(BaseModel):
     description_ar: Optional[str] = None
 
 
+class VinScanRequest(BaseModel):
+    image_base64: str
+    content_type: str = "image/jpeg"
+
+
+class VinScanResponse(BaseModel):
+    vin: str
+    make: Optional[str] = None
+    model: Optional[str] = None
+    year: Optional[int] = None
+    body_type: Optional[str] = None
+    transmission: Optional[str] = None
+    fuel_type: Optional[str] = None
+    drivetrain: Optional[str] = None
+    message: Optional[str] = None
+
+
 class CarOut(BaseModel):
     id: int
     status: str

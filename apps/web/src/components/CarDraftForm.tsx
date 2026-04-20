@@ -106,6 +106,18 @@ type CompleteResponse = {
   public_url: string;
 };
 
+type VinScanResponse = {
+  vin: string;
+  make?: string | null;
+  model?: string | null;
+  year?: number | null;
+  body_type?: string | null;
+  transmission?: string | null;
+  fuel_type?: string | null;
+  drivetrain?: string | null;
+  message?: string | null;
+};
+
 type PendingPhotoPreview = {
   id: string;
   fileName: string;
@@ -202,6 +214,19 @@ async function parseApiError(res: Response): Promise<string> {
   const payload = contentType.includes("application/json") ? await res.json() : await res.text();
   const detail = typeof payload === "string" ? payload : payload?.detail;
   return translateApiMessage("en", detail || `Failed with status ${res.status}`);
+}
+
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Failed to read file."));
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      const commaIndex = result.indexOf(",");
+      resolve(commaIndex >= 0 ? result.slice(commaIndex + 1) : result);
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 function milesToKm(value: number): number {
@@ -373,7 +398,10 @@ export default function CarDraftForm({
   const [locationStatus, setLocationStatus] = useState("");
   const [mlSuggestion, setMlSuggestion] = useState<MlSuggestion | null>(null);
   const [refreshingMl, setRefreshingMl] = useState(false);
+  const [vinScanning, setVinScanning] = useState(false);
+  const [vinStatus, setVinStatus] = useState("");
   const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const vinInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeCarId = useMemo(
     () => (mode === "edit" ? (carId ?? null) : createdId),
@@ -443,6 +471,13 @@ export default function CarDraftForm({
     mlSource: "Source",
     mlApply: "Use",
     mlApplied: "Suggestion applied.",
+    vinTitle: "VIN Autofill",
+    vinHelp: "Upload a clear photo of the VIN plate or sticker. The form will fill detected vehicle info.",
+    vinUploadPhoto: "Upload VIN Photo",
+    vinScanning: "Reading VIN...",
+    vinApplied: (vin: string) => `VIN ${vin} detected. Details applied.`,
+    vinDetectedOnly: (vin: string) => `VIN ${vin} detected, but details were not decoded.`,
+    vinScanFailed: "Failed to read VIN photo.",
     rejected: "Rejected",
     loginRequiredForDrafts: "Login required to manage drafts.",
     loadingDraft: "Loading draft...",
@@ -641,6 +676,84 @@ export default function CarDraftForm({
         : {}),
     }));
     setSuccess(text.mlApplied);
+  }
+
+  async function handleVinPhotoSelection(files: FileList | null) {
+    const file = files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+    setVinStatus("");
+
+    if (!file.type.startsWith("image/")) {
+      setVinStatus(text.imagesOnly);
+      return;
+    }
+    if (!API_BASE) {
+      setVinStatus(text.missingApiBase);
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setNeedsLogin(true);
+      setVinStatus(text.loginRequired);
+      return;
+    }
+
+    setVinScanning(true);
+    try {
+      const imageBase64 = await readFileAsBase64(file);
+      const res = await fetch(`${API_BASE}/v1/cars/vin/scan`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          image_base64: imageBase64,
+          content_type: file.type || "image/jpeg",
+        }),
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        setNeedsLogin(true);
+        throw new Error(text.sessionExpired);
+      }
+      if (!res.ok) {
+        throw new Error(await parseApiError(res));
+      }
+
+      const data = (await res.json()) as VinScanResponse;
+      const hasDecodedFields = Boolean(
+        data.make ||
+        data.model ||
+        data.year ||
+        data.body_type ||
+        data.transmission ||
+        data.fuel_type ||
+        data.drivetrain,
+      );
+
+      setForm((prev) => ({
+        ...prev,
+        ...(data.make ? { make: data.make } : {}),
+        ...(data.model ? { model: data.model } : {}),
+        ...(data.year ? { year: String(data.year) } : {}),
+        ...(data.body_type ? { body_type: data.body_type } : {}),
+        ...(data.transmission ? { transmission: data.transmission } : {}),
+        ...(data.fuel_type ? { fuel_type: data.fuel_type } : {}),
+        ...(data.drivetrain ? { drivetrain: data.drivetrain } : {}),
+      }));
+      setVinStatus(hasDecodedFields ? text.vinApplied(data.vin) : text.vinDetectedOnly(data.vin));
+    } catch (err) {
+      setVinStatus(err instanceof Error ? translateApiMessage(locale, err.message) : text.vinScanFailed);
+    } finally {
+      setVinScanning(false);
+    }
   }
 
   useEffect(() => {
@@ -1597,6 +1710,35 @@ export default function CarDraftForm({
                 <div>
                   <h2 className="subheading">{text.sectionBasics}</h2>
                 </div>
+              </div>
+
+              <div className="field-card vin-scan-card">
+                <div>
+                  <p className="location-card-title">{text.vinTitle}</p>
+                  <p className="helper-text">{text.vinHelp}</p>
+                </div>
+                <input
+                  ref={vinInputRef}
+                  className="upload-file-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    void handleVinPhotoSelection(e.target.files);
+                    e.currentTarget.value = "";
+                  }}
+                  disabled={vinScanning}
+                />
+                <div className="compact-actions">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => vinInputRef.current?.click()}
+                    disabled={vinScanning}
+                  >
+                    {vinScanning ? text.vinScanning : text.vinUploadPhoto}
+                  </button>
+                </div>
+                {vinStatus ? <p className="helper-text">{vinStatus}</p> : null}
               </div>
 
               <div className="city-location-grid">
