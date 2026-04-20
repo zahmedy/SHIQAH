@@ -240,18 +240,28 @@ function loadImageFile(file: File): Promise<HTMLImageElement> {
   });
 }
 
+type VinPhotoQualityIssue = {
+  message: string;
+  shouldBlock: boolean;
+};
+
 async function getVinPhotoQualityIssue(file: File, text: {
+  vinPhotoUnusable: string;
   vinPhotoTooSmall: string;
   vinPhotoTooDark: string;
   vinPhotoLowContrast: string;
   vinPhotoTooBlurry: string;
-}): Promise<string | null> {
+}): Promise<VinPhotoQualityIssue | null> {
   const image = await loadImageFile(file);
   const sourceWidth = image.naturalWidth || image.width;
   const sourceHeight = image.naturalHeight || image.height;
 
-  if (Math.min(sourceWidth, sourceHeight) < 420 || sourceWidth * sourceHeight < 260000) {
-    return text.vinPhotoTooSmall;
+  if (Math.min(sourceWidth, sourceHeight) < 90 || sourceWidth * sourceHeight < 15000) {
+    return { message: text.vinPhotoUnusable, shouldBlock: true };
+  }
+
+  if (Math.min(sourceWidth, sourceHeight) < 300 || sourceWidth * sourceHeight < 150000) {
+    return { message: text.vinPhotoTooSmall, shouldBlock: false };
   }
 
   const scale = Math.min(1, 360 / Math.max(sourceWidth, sourceHeight));
@@ -278,8 +288,8 @@ async function getVinPhotoQualityIssue(file: File, text: {
 
   const count = grayscale.length;
   const mean = total / count;
-  if (mean < 38 || mean > 238) {
-    return text.vinPhotoTooDark;
+  if (mean < 25 || mean > 245) {
+    return { message: text.vinPhotoTooDark, shouldBlock: false };
   }
 
   let variance = 0;
@@ -287,8 +297,8 @@ async function getVinPhotoQualityIssue(file: File, text: {
     variance += (value - mean) ** 2;
   }
   const contrast = Math.sqrt(variance / count);
-  if (contrast < 18) {
-    return text.vinPhotoLowContrast;
+  if (contrast < 10) {
+    return { message: text.vinPhotoLowContrast, shouldBlock: false };
   }
 
   let laplacianTotal = 0;
@@ -312,8 +322,8 @@ async function getVinPhotoQualityIssue(file: File, text: {
 
   const laplacianMean = laplacianTotal / laplacianCount;
   const blurScore = (laplacianSquareTotal / laplacianCount) - (laplacianMean ** 2);
-  if (blurScore < 26) {
-    return text.vinPhotoTooBlurry;
+  if (blurScore < 10) {
+    return { message: text.vinPhotoTooBlurry, shouldBlock: false };
   }
 
   return null;
@@ -527,10 +537,11 @@ export default function CarDraftForm({
     vinDetectedOnly: (vin: string) => `VIN ${vin} detected, but details were not decoded.`,
     vinScanFailed: "Failed to read VIN photo.",
     vinManualInvalid: "Enter a valid 17-character VIN.",
-    vinPhotoTooSmall: "That VIN photo looks too small. Try a closer, sharper photo or type the VIN.",
-    vinPhotoTooDark: "That VIN photo looks too dark or washed out. Try better lighting or type the VIN.",
-    vinPhotoLowContrast: "That VIN photo has low contrast. Try a clearer angle or type the VIN.",
-    vinPhotoTooBlurry: "That VIN photo looks blurry. Try holding still and moving closer, or type the VIN.",
+    vinPhotoUnusable: "That VIN photo is too small to scan. Try a closer photo or type the VIN.",
+    vinPhotoTooSmall: "That VIN photo is small, so it may fail. Trying scan anyway.",
+    vinPhotoTooDark: "That VIN photo may be too dark or washed out. Trying scan anyway.",
+    vinPhotoLowContrast: "That VIN photo may have low contrast. Trying scan anyway.",
+    vinPhotoTooBlurry: "That VIN photo may be blurry. Trying scan anyway.",
     rejected: "Rejected",
     loginRequiredForDrafts: "Login required to manage drafts.",
     loadingDraft: "Loading draft...",
@@ -786,16 +797,18 @@ export default function CarDraftForm({
 
     setVinScanning(true);
     try {
-      let qualityIssue: string | null = null;
+      let qualityIssue: VinPhotoQualityIssue | null = null;
       try {
         qualityIssue = await getVinPhotoQualityIssue(file, text);
       } catch {
         qualityIssue = null;
       }
       if (qualityIssue) {
-        setVinStatusTone("error");
-        setVinStatus(qualityIssue);
-        return;
+        setVinStatusTone(qualityIssue.shouldBlock ? "error" : "");
+        setVinStatus(qualityIssue.message);
+        if (qualityIssue.shouldBlock) {
+          return;
+        }
       }
 
       const imageBase64 = await readFileAsBase64(file);

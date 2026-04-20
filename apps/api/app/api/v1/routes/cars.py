@@ -183,6 +183,8 @@ def fill_car_description(
         description = generate_listing_description(payload)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=502, detail="Failed to generate description.") from exc
 
