@@ -64,7 +64,7 @@ const FUEL_TYPE_OPTIONS = [
   ["Petrol", "Gasoline"],
 ] as const;
 const DRIVETRAIN_OPTIONS = ["AWD", "4WD", "FWD", "RWD"] as const;
-const BODY_TYPE_OPTIONS = ["SUV", "Hatchback", "Sedan", "Pickup", "Van"] as const;
+const BODY_TYPE_OPTIONS = ["SUV", "Hatchback", "Sedan", "Pickup", "Van", "Wagon", "Convertible"] as const;
 
 function locationUserAndTime(locale: Locale, city?: string, district?: string, sellerUserId?: string, publishedAt?: string) {
   const parts = [];

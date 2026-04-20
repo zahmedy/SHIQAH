@@ -24,17 +24,21 @@ def _title_vehicle_value(value: str | None) -> str | None:
 
 def _map_body_type(value: str | None) -> str | None:
     cleaned = (value or "").lower()
-    if "sport utility" in cleaned or "suv" in cleaned:
+    if "sport utility" in cleaned or "suv" in cleaned or cleaned == "jeep":
         return "SUV"
     if "pickup" in cleaned:
         return "Pickup"
-    if "van" in cleaned:
+    if "goods wagon" in cleaned or "microbus" in cleaned or "minivan" in cleaned or "van" in cleaned:
         return "Van"
+    if "wagon" in cleaned or "universal" in cleaned or "estate" in cleaned:
+        return "Wagon"
+    if "convertible" in cleaned or "cabriolet" in cleaned or "roadster" in cleaned:
+        return "Convertible"
     if "hatchback" in cleaned:
         return "Hatchback"
     if "coupe" in cleaned:
         return "Coupe"
-    if "sedan" in cleaned or "saloon" in cleaned:
+    if "sedan" in cleaned or "saloon" in cleaned or "limousine" in cleaned:
         return "Sedan"
     return None
 

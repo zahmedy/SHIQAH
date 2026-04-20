@@ -154,7 +154,7 @@ const initialForm: FormState = {
   description_ar: "",
 };
 
-const BODY_TYPE_OPTIONS = ["Sedan", "SUV", "Coupe", "Hatchback", "Pickup", "Van"];
+const BODY_TYPE_OPTIONS = ["Sedan", "SUV", "Coupe", "Hatchback", "Pickup", "Van", "Wagon", "Convertible"];
 const TRANSMISSION_OPTIONS = ["Automatic", "Manual"];
 const FUEL_TYPE_OPTIONS = ["Petrol", "Hybrid", "Diesel", "Electric"];
 const DRIVETRAIN_OPTIONS = ["FWD", "RWD", "AWD", "4WD"];

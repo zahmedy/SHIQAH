@@ -40,7 +40,7 @@ export function winterScore(listing: WinterListingSignal): number {
   if (city === "buffalo") score += 1;
   if (drivetrain === "awd" || drivetrain === "4wd") score += 3;
   if (fuelType === "hybrid" || fuelType === "electric") score += 2;
-  if (bodyType === "suv" || bodyType === "hatchback" || bodyType === "pickup") score += 1;
+  if (bodyType === "suv" || bodyType === "hatchback" || bodyType === "pickup" || bodyType === "wagon") score += 1;
   if (listing.price_sar !== undefined && listing.price_sar !== null && listing.price_sar <= AFFORDABLE_PRICE) score += 2;
   if (listing.mileage_km !== undefined && listing.mileage_km !== null && listing.mileage_km <= LOW_MILEAGE_KM) score += 1;
   if (mentionsWinterReadiness(listing)) score += 1;
