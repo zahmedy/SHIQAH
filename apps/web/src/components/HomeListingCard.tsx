@@ -112,7 +112,7 @@ export default function HomeListingCard({
         <p className="car-meta">{make} {model} • {year}</p>
         <p className="car-meta">{mileageText}</p>
         {badges.length ? (
-          <div className="winter-chip-row" aria-label="Winter-ready highlights">
+          <div className="winter-chip-row" aria-label="Niche signals">
             {badges.map((badge) => (
               <span className="winter-chip" key={badge}>{badge}</span>
             ))}

@@ -49,7 +49,7 @@ export default function LogoMark({ className, title = "AutoIntel logo" }: LogoMa
           fontWeight="800"
           letterSpacing="1.6"
         >
-          CURATED USED CARS
+          NICHE CAR SEARCH
         </text>
       </g>
     </svg>

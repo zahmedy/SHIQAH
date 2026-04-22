@@ -480,7 +480,7 @@ export default function CarDraftForm({
   const isReviewLocked = status === "active" || status === "pending_review";
   const isArchived = status === "expired";
   const text = {
-    saveChanges: "Save Changes",
+    saveChanges: "Save",
     saveDraft: "Save Draft",
     photoNumber: (index: number) => `Photo ${index}`,
     invalidCarId: "Invalid car id.",
@@ -491,10 +491,10 @@ export default function CarDraftForm({
     changesSaved: "Changes saved.",
     draftSaved: "Draft saved.",
     saveDraftFailed: "Failed to save draft.",
-    listingUpdated: "Listing updated successfully.",
-    listingPendingReview: "Listing updated and is pending review.",
-    listingApproved: "Listing submitted and approved successfully.",
-    listingSubmittedPending: "Listing submitted and is pending review.",
+    listingUpdated: "Saved.",
+    listingPendingReview: "Saved for review.",
+    listingApproved: "Submitted.",
+    listingSubmittedPending: "Submitted for review.",
     listingRejected: "Listing was rejected.",
     listingSubmitted: "Listing submitted.",
     submitListingFailed: "Failed to submit listing.",
@@ -517,18 +517,22 @@ export default function CarDraftForm({
     saveBeforeMainPhoto: "Save the listing before changing the main photo.",
     mainPhotoUpdated: "Main photo updated.",
     updateMainPhotoFailed: "Failed to update main photo.",
-    createDraftTitle: "List a Car",
-    editListingTitle: (id?: number) => `Edit Listing #${id ?? ""}`,
-    formNote: mode === "create" ? "Choose photos, fill the listing, then Save Draft or Save & Submit." : "Update photos or niche-specific details.",
+    createDraftTitle: "Sell Your Car",
+    editListingTitle: (id?: number) => `Edit Car #${id ?? ""}`,
+    formNote: mode === "create" ? "AutoIntel turns the details into a niche-ready listing." : "Update the details buyers need.",
     sectionBasics: "Basics",
-    sectionSpecs: "Niche & Efficiency Specs",
-    sectionListing: "Listing Story",
+    sectionSpecs: "Details",
+    sectionListing: "Listing",
     currentStatus: "Current status",
-    vinTitle: "VIN Autofill",
-    vinHelp: "Upload a clear VIN photo or type the VIN if the photo is hard to read.",
+    flowPhotos: "Photos",
+    flowVin: "VIN",
+    flowDetails: "Details",
+    flowPublish: "Publish",
+    vinTitle: "AutoIntel VIN",
+    vinHelp: "Photo or type the VIN. AutoIntel fills what it can.",
     vinManualLabel: "VIN",
     vinManualPlaceholder: "17-character VIN",
-    vinManualHelp: "Manual VIN decode does not use AI.",
+    vinManualHelp: "Fast decode. No guesswork.",
     vinDecode: "Decode VIN",
     vinDecoding: "Decoding...",
     vinUploadPhoto: "Upload VIN Photo",
@@ -546,7 +550,7 @@ export default function CarDraftForm({
     loginRequiredForDrafts: "Login required to manage drafts.",
     loadingDraft: "Loading draft...",
     cityLabel: "City *",
-    cityHelp: "Buffalo is the launch market. Change it if the car is in another city.",
+    cityHelp: "Where buyers should search for the car.",
     otherCity: "Enter another city",
     useCurrentLocation: "Use my location",
     updateCurrentLocation: "Update location",
@@ -574,43 +578,43 @@ export default function CarDraftForm({
     color: "Color",
     selectColor: "Select color",
     titleLabel: "Title",
-    titleHelp: "Example: 2019 RAV4 Hybrid AWD with snow tires.",
+    titleHelp: "Example: 2019 RAV4 Hybrid AWD.",
     descriptionLabel: "Listing description *",
-    descriptionHelp: "Mention the details that matter for this niche: traction, tires, rust condition, warranty, charging setup, maintenance, commute range, or performance/luxury options if relevant.",
-    descriptionAiFill: "AI Fill",
+    descriptionHelp: "Keep it honest. Mention condition, maintenance, tires, rust, damage, charging, and standout options.",
+    descriptionAiFill: "AutoIntel Fill",
     descriptionAiFilling: "Writing...",
     descriptionAiFillNeedsBasics: "Fill make, model, and year first.",
-    descriptionAiFillApplied: "Description filled. Review and edit before publishing.",
-    descriptionAiFillFailed: "Failed to fill description.",
+    descriptionAiFillApplied: "Draft filled. Review before publishing.",
+    descriptionAiFillFailed: "Could not write the draft.",
     photos: "Photos",
-    photosHelp: "Add clear exterior, interior, tire, underbody/rust, dashboard, and cargo photos.",
+    photosHelp: "Add exterior, interior, tires, dash, and any damage.",
     addingPhotos: "Adding...",
     addMorePhotos: "Add Photos",
     addPhotos: "Add Photos",
     photosReady: (count: number) => `${count} photos ready`,
     moreNeeded: (count: number) => `${count} more needed`,
     photosUploadingNow: "Uploading photos.",
-    choosePhotos: "Photos upload when you save.",
+    choosePhotos: "Uploads when you save.",
     adding: "Adding",
     readyToUpload: "Ready to upload",
     mainPhoto: "Main photo",
     makeMain: "Set Main",
     removing: "Removing...",
     remove: "Remove",
-    noPhotosYet: "No photos yet.",
+    noPhotosYet: "Add photos to start.",
     photoViewer: "Photo viewer",
     closePhotoViewer: "Close photo viewer",
     previousPhoto: "Previous photo",
     nextPhoto: "Next photo",
     saving: "Saving...",
     submitting: "Submitting...",
-    saveAndSubmit: "Save & Submit",
+    saveAndSubmit: "Publish",
     deleting: "Deleting...",
     archiving: "Archiving...",
-    archiveListing: "Archive Listing",
+    archiveListing: "Archive",
     deleteDraft: "Delete Permanently",
-    deleteListing: "Delete Permanently",
-    backToMyCars: "Back to Profile",
+    deleteListing: "Delete",
+    backToMyCars: "Back",
     editCreatedDraft: "Edit Created Draft",
     descriptionTooShort: "Description is too short for approval. Add more detail.",
     disallowedContactInfo: "Remove external contact info from the listing text.",
@@ -1648,6 +1652,12 @@ export default function CarDraftForm({
           <div>
             <h1>{title}</h1>
             <p className="auth-note">{text.formNote}</p>
+            <div className="draft-flow-steps" aria-label="AutoIntel seller flow">
+              <span>{text.flowPhotos}</span>
+              <span>{text.flowVin}</span>
+              <span>{text.flowDetails}</span>
+              <span>{text.flowPublish}</span>
+            </div>
           </div>
           {status ? (
             <div className="draft-status-chip">
@@ -2108,7 +2118,7 @@ export default function CarDraftForm({
                   id="description"
                   className="textarea"
                   rows={6}
-                  placeholder="Include niche-specific details like tires, drivetrain, rust condition, warranty, charging setup, maintenance history, commute range, or performance/luxury options."
+                  placeholder="Example: Clean title, daily driven, recent brakes, small rust spot on rear quarter. Includes winter tires."
                   value={form.description_ar}
                   onChange={(e) => setForm((prev) => ({ ...prev, description_ar: e.target.value }))}
                 />

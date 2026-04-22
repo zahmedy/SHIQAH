@@ -105,8 +105,8 @@ export default function HomeFilterControls({ params }: HomeFilterControlsProps) 
 
   return (
     <div className={isPending ? "home-filter-controls is-updating" : "home-filter-controls"}>
-      <nav className="home-quick-filters" aria-label="Quick filters">
-        <p className="home-quick-filters-label">Quick filters</p>
+      <nav className="home-quick-filters" aria-label="One-tap filters">
+        <p className="home-quick-filters-label">Start with one tap</p>
         <div className="home-quick-filter-list">
           <button
             type="button"

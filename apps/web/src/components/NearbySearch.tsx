@@ -17,13 +17,13 @@ export default function NearbySearch({ initialRadiusKm }: { initialRadiusKm: num
   const [radiusKm, setRadiusKm] = useState<number>(initialRadiusKm);
   const text = {
     distance: "Distance",
-    useMyLocation: "Use my location",
+    useMyLocation: "Near me",
     clearLocation: "Clear location",
     geolocationUnsupported: "Geolocation not supported in this browser.",
     requestingLocation: "Requesting location...",
     unableToRetrieveLocation: "Unable to retrieve location.",
-    showingWithin: (distance: number) => `Showing listings within ${formatDistance(distance, locale)}.`,
-    filteringWithin: (distance: number) => `Filtering listings within ${formatDistance(distance, locale)}.`,
+    showingWithin: (distance: number) => `Showing cars within ${formatDistance(distance, locale)}.`,
+    filteringWithin: (distance: number) => `Cars within ${formatDistance(distance, locale)}.`,
   };
 
   const isActive = useMemo(() => {

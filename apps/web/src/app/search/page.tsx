@@ -124,12 +124,12 @@ export default async function SearchPage({
   return (
     <main className="page shell">
       <section className="hero hero-mini">
-        <p className="hero-kicker">AutoIntel launch niche</p>
-        <h1>Search cold-weather commuter cars</h1>
-        <p>Find affordable hybrids, EVs, AWD, and practical commuter cars. Buffalo is the first market, but the filters work for any city.</p>
+        <p className="hero-kicker">AutoIntel Niche Search</p>
+        <h1>Search by use case</h1>
+        <p>Start with cold-weather commuter signals: traction, fuel, mileage, price, body, and distance.</p>
         <div className="hero-actions">
           <Link href="/search?city=Buffalo&price_max=30000&drivetrain=AWD" className="btn btn-secondary">AWD under $30k</Link>
-          <Link href="/search?city=Buffalo&fuel_type=Hybrid&price_max=30000" className="btn btn-secondary">Hybrid commuters</Link>
+          <Link href="/search?city=Buffalo&fuel_type=Hybrid&price_max=30000" className="btn btn-secondary">Hybrids under $30k</Link>
           <Link href="/search?city=Buffalo&fuel_type=Electric&price_max=30000" className="btn btn-secondary">Used EVs</Link>
         </div>
       </section>
@@ -152,7 +152,7 @@ export default async function SearchPage({
               name="city"
               defaultValue={params.city ?? ""}
               blankLabel="Any city"
-              helperText="Buffalo is the launch market, but you can search nearby or any city."
+              helperText="Search any city or use Nearby."
               otherPlaceholder="Enter another city"
             />
 
@@ -214,19 +214,19 @@ export default async function SearchPage({
               </div>
             </div>
 
-            <button type="submit" className="btn btn-primary">Apply Filters</button>
+            <button type="submit" className="btn btn-primary">Show Cars</button>
           </form>
         </aside>
 
         <section>
           <div className="panel panel-compact">
-            <strong>{data.total}</strong> listings found
+            <strong>{data.total}</strong> cars found
           </div>
 
           {fetchError ? (
             <div className="notice error">{fetchError}</div>
           ) : data.items.length === 0 ? (
-            <div className="notice">No listings matched your filters.</div>
+            <div className="notice">No cars match those filters.</div>
           ) : (
             <div className="listing-grid">
               {data.items.map((car) => {
@@ -249,7 +249,7 @@ export default async function SearchPage({
                           .filter((value) => value !== "—")
                           .join(" • ") || "Specs not set"}
                       </p>
-                      <div className="winter-chip-row" aria-label="Winter-ready highlights">
+                      <div className="winter-chip-row" aria-label="Niche signals">
                         {badges.map((badge) => (
                           <span className="winter-chip" key={badge}>{badge}</span>
                         ))}

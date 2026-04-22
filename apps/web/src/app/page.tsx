@@ -114,28 +114,39 @@ export default async function HomePage({
       <section className="home-hero">
         <div className="home-hero-copy">
           <h2 className="home-hero-title">
-            <span>Find the right car by niche,</span>
-            <span className="home-hero-title-accent">not endless listings.</span>
+            <span>Find cars by real use case.</span>
+            <span className="home-hero-title-accent">List without the drag.</span>
           </h2>
+          <p className="home-hero-sub">
+            AutoIntel turns messy car listings into clear niche signals. First focus:
+            affordable cold-weather commuters.
+          </p>
 
           <HomeFilterControls params={params} />
         </div>
 
-        <div className="home-hero-rail" aria-label="Marketplace focus">
+        <div className="home-hero-rail" aria-label="AutoIntel niche signals">
           <article className="home-hero-stat">
             <p className="home-hero-stat-label">Launch Niche</p>
-            <p className="home-hero-stat-value">Cold Weather</p>
-            <p className="home-hero-stat-note">Traction, snow tires, heated seats, rust notes, efficient commuters, and practical body styles.</p>
+            <p className="home-hero-stat-value">Buffalo winter commuters</p>
+            <p className="home-hero-stat-note">
+              Quick reads on traction, fuel, price, mileage, body style, tires, and seller notes.
+            </p>
+            <div className="home-hero-signal-list" aria-label="Niche signals">
+              <span>AWD / 4WD</span>
+              <span>Hybrid / EV</span>
+              <span>Rust + tires</span>
+            </div>
           </article>
         </div>
       </section>
 
-      <h2 id="listings" className="section-title">{isFiltered ? "Filtered Listings" : "Latest Curated Listings"}</h2>
+      <h2 id="listings" className="section-title">{isFiltered ? "Niche Matches" : "Fresh Niche Listings"}</h2>
 
       {fetchError ? (
         <div className="notice error">{fetchError}</div>
       ) : listings.length === 0 ? (
-        <div className="notice">No listings available yet.</div>
+        <div className="notice">No niche matches yet.</div>
       ) : (
         <section className="listing-grid">
           {listings.map((car) => {

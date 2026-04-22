@@ -179,14 +179,14 @@ export default async function CarDetailPage({
 
         <div className="panel panel-soft winter-detail-card">
           <div>
-            <p className="spec-key">Cold-Weather Fit</p>
+            <p className="spec-key">Niche Fit</p>
             <h2 className="subheading">{winterScoreLabel(car)}</h2>
             <p className="body-copy">
-              Scored {winterScore(car)}/10 from available listing details like drivetrain,
-              fuel type, price, mileage, body style, and winter-related notes.
+              Scored {winterScore(car)}/10 from niche signals like drivetrain, fuel type,
+              price, mileage, body style, and seller notes.
             </p>
           </div>
-          <div className="winter-chip-row" aria-label="Winter-ready highlights">
+          <div className="winter-chip-row" aria-label="Niche signals">
             {winterBadgesForCar.map((badge) => (
               <span className="winter-chip" key={badge}>{badge}</span>
             ))}

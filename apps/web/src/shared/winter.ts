@@ -50,9 +50,9 @@ export function winterScore(listing: WinterListingSignal): number {
 
 export function winterScoreLabel(listing: WinterListingSignal): string {
   const score = winterScore(listing);
-  if (score >= 7) return "Strong cold-weather fit";
-  if (score >= 4) return "Good commuter fit";
-  return "Basic cold-weather fit";
+  if (score >= 7) return "Strong niche fit";
+  if (score >= 4) return "Good niche fit";
+  return "Basic match";
 }
 
 export function winterBadges(listing: WinterListingSignal, locale: Locale): string[] {
