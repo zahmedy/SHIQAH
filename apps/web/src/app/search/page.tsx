@@ -128,9 +128,9 @@ export default async function SearchPage({
         <h1>Search by use case</h1>
         <p>Start with cold-weather commuter signals: traction, fuel, mileage, price, body, and distance.</p>
         <div className="hero-actions">
-          <Link href="/search?city=Buffalo&price_max=30000&drivetrain=AWD" className="btn btn-secondary">AWD under $30k</Link>
-          <Link href="/search?city=Buffalo&fuel_type=Hybrid&price_max=30000" className="btn btn-secondary">Hybrids under $30k</Link>
-          <Link href="/search?city=Buffalo&fuel_type=Electric&price_max=30000" className="btn btn-secondary">Used EVs</Link>
+          <Link href="/search?price_max=30000&drivetrain=AWD" className="btn btn-secondary">AWD under $30k</Link>
+          <Link href="/search?fuel_type=Hybrid&price_max=30000" className="btn btn-secondary">Hybrids under $30k</Link>
+          <Link href="/search?fuel_type=Electric&price_max=30000" className="btn btn-secondary">Used EVs</Link>
         </div>
       </section>
 

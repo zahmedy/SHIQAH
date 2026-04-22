@@ -135,7 +135,7 @@ function normalizePhotoOrder(nextPhotos: CarPhoto[]) {
 }
 
 const initialForm: FormState = {
-  city: "Buffalo",
+  city: "",
   district: "",
   latitude: "",
   longitude: "",

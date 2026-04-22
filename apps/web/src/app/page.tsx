@@ -128,7 +128,7 @@ export default async function HomePage({
         <div className="home-hero-rail" aria-label="AutoIntel niche signals">
           <article className="home-hero-stat">
             <p className="home-hero-stat-label">Launch Niche</p>
-            <p className="home-hero-stat-value">Buffalo winter commuters</p>
+            <p className="home-hero-stat-value">Cold-city commuters</p>
             <p className="home-hero-stat-note">
               Quick reads on traction, fuel, price, mileage, body style, tires, and seller notes.
             </p>

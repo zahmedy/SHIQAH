@@ -35,9 +35,7 @@ export function winterScore(listing: WinterListingSignal): number {
   const fuelType = normalized(listing.fuel_type);
   const drivetrain = normalized(listing.drivetrain);
   const bodyType = normalized(listing.body_type);
-  const city = normalized(listing.city);
 
-  if (city === "buffalo") score += 1;
   if (drivetrain === "awd" || drivetrain === "4wd") score += 3;
   if (fuelType === "hybrid" || fuelType === "electric") score += 2;
   if (bodyType === "suv" || bodyType === "hatchback" || bodyType === "pickup" || bodyType === "wagon") score += 1;

@@ -124,7 +124,6 @@ export default function HomeFilterControls({ params }: HomeFilterControlsProps) 
           <Link scroll={false} href={filterHref(params, "fuel_type", "Electric")} className={quickFilterClass(params, "fuel_type", "Electric")} aria-current={isFilterActive(params, "fuel_type", "Electric") ? "true" : undefined}>EVs</Link>
           <Link scroll={false} href={filterHref(params, "mileage_max", "100000")} className={quickFilterClass(params, "mileage_max", "100000")} aria-current={isFilterActive(params, "mileage_max", "100000") ? "true" : undefined}>Under 100k mi</Link>
           <Link scroll={false} href={filterHref(params, "body_type", "SUV")} className={quickFilterClass(params, "body_type", "SUV")} aria-current={isFilterActive(params, "body_type", "SUV") ? "true" : undefined}>SUVs</Link>
-          <Link scroll={false} href={filterHref(params, "city", "Buffalo")} className={quickFilterClass(params, "city", "Buffalo")} aria-current={isFilterActive(params, "city", "Buffalo") ? "true" : undefined}>Buffalo</Link>
         </div>
       </nav>
       {nearbyStatus ? <p className="helper-text">{nearbyStatus}</p> : null}

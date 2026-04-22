@@ -77,7 +77,7 @@ def _build_messages(payload: DescriptionFillRequest, retry_plainer: bool = False
                 "for snowy streets unless the provided fields explicitly support that exact claim. "
                 "Do not infer cold-weather ability from city, sedan body type, automatic transmission, "
                 "petrol fuel, or used condition. If no winter-specific facts are provided, do not mention "
-                "winter, snow, cold-weather commuting, traction, or Buffalo weather. "
+                "winter, snow, cold-weather commuting, traction, or city-specific weather. "
                 "Avoid hype, emojis, and external contact info. "
                 f"{extra_instruction}"
                 "Return exactly JSON with a description_ar string.\n\n"

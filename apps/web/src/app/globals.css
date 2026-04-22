@@ -14,7 +14,7 @@
   --brand: #008f86;
   --brand-deep: #124640;
   --brand-light: #d9fbf4;
-  --buffalo-red: #ef3e4a;
+  --redline: #ef3e4a;
   --signal: #f2c94c;
   --ice: #f8fffc;
   --ok: #008f86;
@@ -2075,7 +2075,7 @@ a {
   position: absolute;
   inset: 0 0 auto;
   height: 5px;
-  background: linear-gradient(90deg, var(--brand-deep) 0%, var(--brand) 44%, var(--signal) 62%, var(--buffalo-red) 100%);
+  background: linear-gradient(90deg, var(--brand-deep) 0%, var(--brand) 44%, var(--signal) 62%, var(--redline) 100%);
   opacity: 0.9;
 }
 
