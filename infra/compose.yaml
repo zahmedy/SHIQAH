@@ -39,6 +39,8 @@ services:
     build:
       context: ../apps/api
       dockerfile: Dockerfile
+    volumes:
+      - ../apps/api/app/ml_models:/app/app/ml_models:ro
     command: >
       /bin/sh -c "
       alembic upgrade head &&

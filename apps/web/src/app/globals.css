@@ -2398,6 +2398,10 @@ a {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.field-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .field-grid-4 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -2417,6 +2421,22 @@ a {
   font-family: var(--font-title);
   font-size: 1.15rem;
   letter-spacing: 0.03em;
+}
+
+.field-note-title {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-title);
+  font-size: 1.05rem;
+  letter-spacing: 0.03em;
+}
+
+.price-note-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background:
+    radial-gradient(circle at top right, rgba(0, 143, 134, 0.1), transparent 58%),
+    rgba(255, 255, 255, 0.92);
 }
 
 .compact-actions {
@@ -2809,6 +2829,7 @@ a {
   }
 
   .city-location-grid,
+  .field-grid-2,
   .field-grid-4,
   .suggestion-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2929,6 +2950,7 @@ a {
   .vin-scan-card,
   .city-location-grid,
   .field-grid,
+  .field-grid-2,
   .field-grid-4,
   .suggestion-grid {
     grid-template-columns: 1fr;

@@ -78,7 +78,34 @@ def _map_drivetrain(value: str | None) -> str | None:
     return None
 
 
+def _parse_positive_int(value: str | None) -> int | None:
+    cleaned = _clean_value(value)
+    if not cleaned:
+        return None
+    digits = "".join(character for character in cleaned if character.isdigit())
+    if not digits:
+        return None
+    parsed = int(digits)
+    return parsed if parsed > 0 else None
+
+
+def _parse_positive_float(value: str | None) -> float | None:
+    cleaned = _clean_value(value)
+    if not cleaned:
+        return None
+    normalized = "".join(character for character in cleaned if character.isdigit() or character == ".")
+    if normalized.count(".") > 1 or not normalized:
+        return None
+    parsed = float(normalized)
+    return parsed if parsed > 0 else None
+
+
 def decode_vin(vin: str) -> dict:
+    decoded, _raw = decode_vin_with_raw(vin)
+    return decoded
+
+
+def decode_vin_with_raw(vin: str) -> tuple[dict, dict]:
     encoded_vin = urllib.parse.quote(vin)
     url = f"https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/{encoded_vin}?format=json"
     with urllib.request.urlopen(url, timeout=15) as response:
@@ -89,24 +116,32 @@ def decode_vin(vin: str) -> dict:
     error_code = _clean_value(result.get("ErrorCode"))
     error_text = _clean_value(result.get("ErrorText"))
     if error_code and error_code != "0":
-        return {
-            "vin": vin,
-            "message": error_text or "VIN was detected, but vehicle details could not be decoded.",
-        }
+        return (
+            {
+                "vin": vin,
+                "message": error_text or "VIN was detected, but vehicle details could not be decoded.",
+            },
+            result,
+        )
 
     year = None
     model_year = _clean_value(result.get("ModelYear"))
     if model_year and model_year.isdigit():
         year = int(model_year)
 
-    return {
-        "vin": vin,
-        "make": _title_vehicle_value(result.get("Make")),
-        "model": _title_vehicle_value(result.get("Model")),
-        "year": year,
-        "body_type": _map_body_type(result.get("BodyClass")),
-        "transmission": _map_transmission(result.get("TransmissionStyle")),
-        "fuel_type": _map_fuel_type(result.get("FuelTypePrimary")),
-        "drivetrain": _map_drivetrain(result.get("DriveType")),
-        "message": "VIN detected and decoded.",
-    }
+    return (
+        {
+            "vin": vin,
+            "make": _title_vehicle_value(result.get("Make")),
+            "model": _title_vehicle_value(result.get("Model")),
+            "year": year,
+            "body_type": _map_body_type(result.get("BodyClass")),
+            "transmission": _map_transmission(result.get("TransmissionStyle")),
+            "fuel_type": _map_fuel_type(result.get("FuelTypePrimary")),
+            "drivetrain": _map_drivetrain(result.get("DriveType")),
+            "engine_cylinders": _parse_positive_int(result.get("EngineCylinders")),
+            "engine_volume": _parse_positive_float(result.get("DisplacementL")),
+            "message": "VIN detected and decoded.",
+        },
+        result,
+    )

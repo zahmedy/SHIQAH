@@ -38,6 +38,8 @@ type CarPayload = {
   transmission?: string;
   fuel_type?: string;
   drivetrain?: string;
+  engine_cylinders?: number;
+  engine_volume?: number;
   condition?: string;
   color?: string;
   title_ar: string;
@@ -80,6 +82,8 @@ type FormState = {
   transmission: string;
   fuel_type: string;
   drivetrain: string;
+  engine_cylinders: string;
+  engine_volume: string;
   condition: string;
   color: string;
   title_ar: string;
@@ -107,11 +111,17 @@ type VinScanResponse = {
   transmission?: string | null;
   fuel_type?: string | null;
   drivetrain?: string | null;
+  engine_cylinders?: number | null;
+  engine_volume?: number | null;
   message?: string | null;
 };
 
 type DescriptionFillResponse = {
   description_ar: string;
+};
+
+type PricePredictionResponse = {
+  price_sar: number;
 };
 
 type PendingPhotoPreview = {
@@ -150,6 +160,8 @@ const initialForm: FormState = {
   transmission: "",
   fuel_type: "",
   drivetrain: "",
+  engine_cylinders: "",
+  engine_volume: "",
   condition: "",
   color: "",
   title_ar: "",
@@ -161,6 +173,8 @@ const BODY_TYPE_OPTIONS = ["Sedan", "SUV", "Coupe", "Hatchback", "Pickup", "Van"
 const TRANSMISSION_OPTIONS = ["Automatic", "Manual"];
 const FUEL_TYPE_OPTIONS = ["Petrol", "Hybrid", "Diesel", "Electric"];
 const DRIVETRAIN_OPTIONS = ["FWD", "RWD", "AWD", "4WD"];
+const ENGINE_CYLINDER_OPTIONS = ["3", "4", "5", "6", "8", "10", "12", "16"];
+const ENGINE_VOLUME_OPTIONS = ["1.0", "1.2", "1.5", "1.6", "1.8", "2.0", "2.4", "2.5", "3.0", "3.5", "4.0", "5.0", "6.2"];
 const CONDITION_OPTIONS = ["Used", "New"];
 const COLOR_OPTIONS = [
   "White",
@@ -193,11 +207,13 @@ function field(value?: string | number | null): string {
   return String(value);
 }
 
-function parseOptionalNumber(value: string): number | undefined {
-  if (!value.trim()) return undefined;
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return undefined;
-  return Math.trunc(parsed);
+function parseOptionalInteger(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (!/^-?\d+$/.test(trimmed)) return undefined;
+  const parsed = Number(trimmed);
+  if (!Number.isSafeInteger(parsed)) return undefined;
+  return parsed;
 }
 
 function parseOptionalFloat(value: string): number | undefined {
@@ -377,14 +393,22 @@ function buildPayload(form: FormState): BuildPayloadResult {
     return { ok: false, error: `Year must be between 1980 and ${maxYear}.` };
   }
 
-  const price = parseOptionalNumber(form.price_sar);
+  const price = parseOptionalInteger(form.price_sar);
   if (form.price_sar.trim() && (price === undefined || price <= 0)) {
     return { ok: false, error: "If provided, price must be a positive integer." };
   }
 
-  const mileageMiles = parseOptionalNumber(form.mileage_km);
+  const mileageMiles = parseOptionalInteger(form.mileage_km);
   if (form.mileage_km.trim() && (mileageMiles === undefined || mileageMiles < 0)) {
     return { ok: false, error: "Mileage must be zero or a positive integer." };
+  }
+  const engineCylinders = parseOptionalInteger(form.engine_cylinders);
+  if (form.engine_cylinders.trim() && (engineCylinders === undefined || engineCylinders <= 0)) {
+    return { ok: false, error: "Engine cylinders must be a positive integer." };
+  }
+  const engineVolume = parseOptionalFloat(form.engine_volume);
+  if (form.engine_volume.trim() && (engineVolume === undefined || engineVolume <= 0)) {
+    return { ok: false, error: "Engine volume must be a positive number." };
   }
 
   const latitude = parseOptionalFloat(form.latitude);
@@ -416,6 +440,8 @@ function buildPayload(form: FormState): BuildPayloadResult {
     transmission: form.transmission.trim() || undefined,
     fuel_type: form.fuel_type.trim() || undefined,
     drivetrain: form.drivetrain.trim() || undefined,
+    engine_cylinders: engineCylinders,
+    engine_volume: engineVolume,
     condition: form.condition.trim() || undefined,
     color: form.color.trim() || undefined,
     title_ar: title || `${make} ${model} ${year} for sale`,
@@ -474,6 +500,8 @@ export default function CarDraftForm({
   const [vinStatusTone, setVinStatusTone] = useState<"success" | "error" | "">("");
   const [descriptionFilling, setDescriptionFilling] = useState(false);
   const [descriptionFillStatus, setDescriptionFillStatus] = useState("");
+  const [pricePredicting, setPricePredicting] = useState(false);
+  const [pricePredictStatus, setPricePredictStatus] = useState("");
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const vinInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -526,6 +554,7 @@ export default function CarDraftForm({
     formNote: mode === "create" ? "AutoIntel turns the details into a niche-ready listing." : "Update the details buyers need.",
     sectionBasics: "Basics",
     sectionSpecs: "Details",
+    sectionPricing: "Pricing",
     sectionListing: "Listing",
     currentStatus: "Current status",
     flowPhotos: "Photos",
@@ -569,6 +598,13 @@ export default function CarDraftForm({
     year: "Year *",
     price: "Price (USD)",
     mileage: "Mileage (mi)",
+    pricePredict: "AutoIntel Predict",
+    pricePredicting: "Predicting...",
+    pricePredictNeedsBasics: "Fill make, model, and year first.",
+    pricePredictApplied: "Predicted price applied.",
+    pricePredictFailed: "Could not predict the price.",
+    pricingNoteTitle: "Prediction Note",
+    pricingNoteBody: "Price prediction uses VIN-decoded fields and user-entered details. It is only a prediction, not a guaranteed sale price or appraisal.",
     bodyType: "Body Type",
     selectBodyType: "Select body type",
     transmission: "Transmission",
@@ -577,6 +613,10 @@ export default function CarDraftForm({
     selectFuelType: "Select fuel type",
     drivetrain: "Drivetrain",
     selectDrivetrain: "Select drivetrain",
+    engineCylinders: "Engine Cylinders",
+    engineCylindersHelp: "Pick a common value or enter another positive whole number.",
+    engineVolume: "Engine Volume (L)",
+    engineVolumeHelp: "Pick a common value or enter another positive number in liters.",
     condition: "Condition",
     selectCondition: "Select condition",
     color: "Color",
@@ -686,6 +726,8 @@ export default function CarDraftForm({
       transmission: fromLoadedField(car.transmission),
       fuel_type: fromLoadedField(car.fuel_type),
       drivetrain: fromLoadedField(car.drivetrain),
+      engine_cylinders: fromLoadedField(car.engine_cylinders),
+      engine_volume: fromLoadedField(car.engine_volume),
       condition: fromLoadedField(car.condition),
       color: fromLoadedField(car.color),
       title_ar: fromLoadedField(car.title_ar),
@@ -703,7 +745,9 @@ export default function CarDraftForm({
       data.body_type ||
       data.transmission ||
       data.fuel_type ||
-      data.drivetrain,
+      data.drivetrain ||
+      data.engine_cylinders ||
+      data.engine_volume,
     );
 
     setForm((prev) => ({
@@ -715,6 +759,8 @@ export default function CarDraftForm({
       ...(data.transmission ? { transmission: data.transmission } : {}),
       ...(data.fuel_type ? { fuel_type: data.fuel_type } : {}),
       ...(data.drivetrain ? { drivetrain: data.drivetrain } : {}),
+      ...(data.engine_cylinders ? { engine_cylinders: String(data.engine_cylinders) } : {}),
+      ...(data.engine_volume ? { engine_volume: String(data.engine_volume) } : {}),
     }));
     setManualVin(data.vin);
     setVinStatusTone(hasDecodedFields ? "success" : "error");
@@ -879,8 +925,8 @@ export default function CarDraftForm({
       return;
     }
 
-    const price = parseOptionalNumber(form.price_sar);
-    const mileageMiles = parseOptionalNumber(form.mileage_km);
+    const price = parseOptionalInteger(form.price_sar);
+    const mileageMiles = parseOptionalInteger(form.mileage_km);
 
     setDescriptionFilling(true);
     try {
@@ -925,6 +971,96 @@ export default function CarDraftForm({
       );
     } finally {
       setDescriptionFilling(false);
+    }
+  }
+
+  async function handlePricePredict() {
+    setError("");
+    setSuccess("");
+    setPricePredictStatus("");
+
+    if (!API_BASE) {
+      setPricePredictStatus(text.missingApiBase);
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setNeedsLogin(true);
+      setPricePredictStatus(text.loginRequired);
+      return;
+    }
+
+    const make = form.make.trim();
+    const model = form.model.trim();
+    const year = Number(form.year);
+    const maxYear = new Date().getUTCFullYear() + 1;
+    if (!make || !model || !Number.isInteger(year) || year < 1980 || year > maxYear) {
+      setPricePredictStatus(text.pricePredictNeedsBasics);
+      return;
+    }
+
+    const mileageMiles = parseOptionalInteger(form.mileage_km);
+    const engineCylinders = parseOptionalInteger(form.engine_cylinders);
+    const engineVolume = parseOptionalFloat(form.engine_volume);
+    if (form.mileage_km.trim() && (mileageMiles === undefined || mileageMiles < 0)) {
+      setPricePredictStatus("Mileage must be zero or a positive integer.");
+      return;
+    }
+    if (form.engine_cylinders.trim() && (engineCylinders === undefined || engineCylinders <= 0)) {
+      setPricePredictStatus("Engine cylinders must be a positive integer.");
+      return;
+    }
+    if (form.engine_volume.trim() && (engineVolume === undefined || engineVolume <= 0)) {
+      setPricePredictStatus("Engine volume must be a positive number.");
+      return;
+    }
+
+    setPricePredicting(true);
+    try {
+      const res = await fetch(`${API_BASE}/v1/cars/price/predict`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          city: form.city.trim() || undefined,
+          district: form.district.trim() || undefined,
+          make,
+          model,
+          year,
+          mileage_km: mileageMiles !== undefined && mileageMiles >= 0 ? milesToKm(mileageMiles) : undefined,
+          body_type: form.body_type.trim() || undefined,
+          transmission: form.transmission.trim() || undefined,
+          fuel_type: form.fuel_type.trim() || undefined,
+          drivetrain: form.drivetrain.trim() || undefined,
+          engine_cylinders: engineCylinders,
+          engine_volume: engineVolume,
+          condition: form.condition.trim() || undefined,
+          color: form.color.trim() || undefined,
+          title_ar: form.title_ar.trim() || undefined,
+          description_ar: form.description_ar.trim() || undefined,
+        }),
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        setNeedsLogin(true);
+        throw new Error(text.sessionExpired);
+      }
+      if (!res.ok) {
+        throw new Error(await parseApiError(res));
+      }
+
+      const data = (await res.json()) as PricePredictionResponse;
+      setForm((prev) => ({ ...prev, price_sar: String(data.price_sar) }));
+      setPricePredictStatus(text.pricePredictApplied);
+    } catch (err) {
+      setPricePredictStatus(
+        err instanceof Error ? translateApiMessage(locale, err.message) : text.pricePredictFailed,
+      );
+    } finally {
+      setPricePredicting(false);
     }
   }
 
@@ -1866,14 +2002,25 @@ export default function CarDraftForm({
 
               <div className="city-location-grid">
                 <div className="field-card field-card-main">
-                  <CityField
-                    id="city"
-                    label={text.cityLabel}
-                    value={form.city}
-                    onChange={(city) => setForm((prev) => ({ ...prev, city }))}
-                    helperText={text.cityHelp || undefined}
-                    otherPlaceholder={text.otherCity}
-                  />
+                  <div className="form-grid">
+                    <CityField
+                      id="city"
+                      label={text.cityLabel}
+                      value={form.city}
+                      onChange={(city) => setForm((prev) => ({ ...prev, city }))}
+                      otherPlaceholder={text.otherCity}
+                    />
+                    <div>
+                      <label className="label" htmlFor="district">{text.district}</label>
+                      <input
+                        id="district"
+                        className="input"
+                        value={form.district}
+                        onChange={(e) => setForm((prev) => ({ ...prev, district: e.target.value }))}
+                      />
+                    </div>
+                    <p className="helper-text">{text.cityHelp}</p>
+                  </div>
                 </div>
                 <div className="field-card location-card">
                   <p className="location-card-title">Location</p>
@@ -1909,16 +2056,6 @@ export default function CarDraftForm({
 
               <div className="draft-grid draft-grid-top">
                 <div className="field-card">
-                  <label className="label" htmlFor="district">{text.district}</label>
-                  <input
-                    id="district"
-                    className="input"
-                    value={form.district}
-                    onChange={(e) => setForm((prev) => ({ ...prev, district: e.target.value }))}
-                  />
-                </div>
-
-                <div className="field-card">
                   <MakeModelField
                     makeValue={form.make}
                     modelValue={form.model}
@@ -1928,53 +2065,42 @@ export default function CarDraftForm({
                     modelLabel={text.model}
                   />
                 </div>
-              </div>
-
-              <div className="field-grid field-grid-3">
                 <div className="field-card">
-                  <label className="label" htmlFor="year">{text.year}</label>
-                  <input
-                    id="year"
-                    className="input"
-                    list="year-options"
-                    inputMode="numeric"
-                    placeholder={String(new Date().getUTCFullYear())}
-                    value={form.year}
-                    onChange={(e) => setForm((prev) => ({ ...prev, year: e.target.value }))}
-                    autoComplete="off"
-                  />
-                  <datalist id="year-options">
-                    {Array.from(
-                      { length: new Date().getUTCFullYear() + 2 - 1980 },
-                      (_, i) => new Date().getUTCFullYear() + 1 - i,
-                    ).map((yr) => (
-                      <option key={yr} value={yr} />
-                    ))}
-                  </datalist>
-                </div>
+                  <div className="field-grid field-grid-2">
+                    <div>
+                      <label className="label" htmlFor="year">{text.year}</label>
+                      <input
+                        id="year"
+                        className="input"
+                        list="year-options"
+                        inputMode="numeric"
+                        placeholder={String(new Date().getUTCFullYear())}
+                        value={form.year}
+                        onChange={(e) => setForm((prev) => ({ ...prev, year: e.target.value }))}
+                        autoComplete="off"
+                      />
+                      <datalist id="year-options">
+                        {Array.from(
+                          { length: new Date().getUTCFullYear() + 2 - 1980 },
+                          (_, i) => new Date().getUTCFullYear() + 1 - i,
+                        ).map((yr) => (
+                          <option key={yr} value={yr} />
+                        ))}
+                      </datalist>
+                    </div>
 
-                <div className="field-card">
-                  <label className="label" htmlFor="price">{text.price}</label>
-                  <input
-                    id="price"
-                    className="input"
-                    type="number"
-                    min={1}
-                    value={form.price_sar}
-                    onChange={(e) => setForm((prev) => ({ ...prev, price_sar: e.target.value }))}
-                  />
-                </div>
-
-                <div className="field-card">
-                  <label className="label" htmlFor="mileage">{text.mileage}</label>
-                  <input
-                    id="mileage"
-                    className="input"
-                    type="number"
-                    min={0}
-                    value={form.mileage_km}
-                    onChange={(e) => setForm((prev) => ({ ...prev, mileage_km: e.target.value }))}
-                  />
+                    <div>
+                      <label className="label" htmlFor="mileage">{text.mileage}</label>
+                      <input
+                        id="mileage"
+                        className="input"
+                        type="number"
+                        min={0}
+                        value={form.mileage_km}
+                        onChange={(e) => setForm((prev) => ({ ...prev, mileage_km: e.target.value }))}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </section>
@@ -2056,6 +2182,46 @@ export default function CarDraftForm({
                 </div>
 
                 <div className="field-card">
+                  <label className="label" htmlFor="engineCylinders">{text.engineCylinders}</label>
+                  <input
+                    id="engineCylinders"
+                    className="input"
+                    list="engine-cylinder-options"
+                    inputMode="numeric"
+                    placeholder="4, 6, 8"
+                    value={form.engine_cylinders}
+                    onChange={(e) => setForm((prev) => ({ ...prev, engine_cylinders: e.target.value }))}
+                    autoComplete="off"
+                  />
+                  <datalist id="engine-cylinder-options">
+                    {ENGINE_CYLINDER_OPTIONS.map((option) => (
+                      <option key={option} value={option} />
+                    ))}
+                  </datalist>
+                  <p className="helper-text">{text.engineCylindersHelp}</p>
+                </div>
+
+                <div className="field-card">
+                  <label className="label" htmlFor="engineDisplacement">{text.engineVolume}</label>
+                  <input
+                    id="engineDisplacement"
+                    className="input"
+                    list="engine-volume-options"
+                    inputMode="decimal"
+                    placeholder="2.0, 3.5"
+                    value={form.engine_volume}
+                    onChange={(e) => setForm((prev) => ({ ...prev, engine_volume: e.target.value }))}
+                    autoComplete="off"
+                  />
+                  <datalist id="engine-volume-options">
+                    {ENGINE_VOLUME_OPTIONS.map((option) => (
+                      <option key={option} value={option} />
+                    ))}
+                  </datalist>
+                  <p className="helper-text">{text.engineVolumeHelp}</p>
+                </div>
+
+                <div className="field-card">
                   <label className="label" htmlFor="condition">{text.condition}</label>
                   <select
                     id="condition"
@@ -2087,6 +2253,44 @@ export default function CarDraftForm({
                       </option>
                     ))}
                   </select>
+                </div>
+              </div>
+            </section>
+
+            <section className="field-section">
+              <div className="draft-section-head">
+                <div>
+                  <h2 className="subheading">{text.sectionPricing}</h2>
+                </div>
+              </div>
+
+              <div className="draft-grid">
+                <div className="field-card">
+                  <div className="field-label-action">
+                    <label className="label" htmlFor="price">{text.price}</label>
+                    <button
+                      type="button"
+                      className="field-action-button"
+                      onClick={() => void handlePricePredict()}
+                      disabled={pricePredicting || saving || loading}
+                    >
+                      {pricePredicting ? text.pricePredicting : text.pricePredict}
+                    </button>
+                  </div>
+                  <input
+                    id="price"
+                    className="input"
+                    type="number"
+                    min={1}
+                    value={form.price_sar}
+                    onChange={(e) => setForm((prev) => ({ ...prev, price_sar: e.target.value }))}
+                  />
+                  {pricePredictStatus ? <p className="helper-text">{pricePredictStatus}</p> : null}
+                </div>
+
+                <div className="field-card price-note-card">
+                  <p className="field-note-title">{text.pricingNoteTitle}</p>
+                  <p className="helper-text">{text.pricingNoteBody}</p>
                 </div>
               </div>
             </section>

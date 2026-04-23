@@ -20,6 +20,8 @@ from app.schemas.car import (
     CarPhoto,
     DescriptionFillRequest,
     DescriptionFillResponse,
+    PricePredictionRequest,
+    PricePredictionResponse,
     VinDecodeRequest,
     VinScanRequest,
     VinScanResponse,
@@ -28,11 +30,12 @@ from app.services.opensearch import delete_car, upsert_car
 from app.services.s3 import delete_object
 from app.services.review import build_search_doc, enqueue_auto_review
 from app.services.description import generate_listing_description
-from app.services.vin import decode_vin
+from app.services.pricing import generate_price_prediction
+from app.services.vin import decode_vin_with_raw
 from app.services.vision import detect_vin_from_image, normalize_vin
 
 router = APIRouter(tags=["cars"])
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn.error")
 
 MAX_VIN_IMAGE_BYTES = 8 * 1024 * 1024
 
@@ -59,6 +62,23 @@ def _debug_vin_payload(payload: dict) -> dict:
         **payload,
         "vin": _mask_vin(str(payload.get("vin") or "")),
     }
+
+
+def _debug_raw_vin_decode_payload(payload: dict) -> dict:
+    masked_payload: dict = {}
+    for key, value in payload.items():
+        if "vin" in key.lower():
+            masked_payload[key] = _mask_vin(str(value or ""))
+        else:
+            masked_payload[key] = value
+    return masked_payload
+
+
+def _validate_engine_fields(engine_cylinders: int | None, engine_volume: float | None) -> None:
+    if engine_cylinders is not None and engine_cylinders <= 0:
+        raise HTTPException(status_code=400, detail="Engine cylinders must be a positive integer")
+    if engine_volume is not None and engine_volume <= 0:
+        raise HTTPException(status_code=400, detail="Engine volume must be a positive number")
 
 
 def _load_photos_map(session: Session, car_ids: list[int]) -> dict[int, list[CarPhoto]]:
@@ -134,7 +154,7 @@ def scan_vin_photo(
         logger.info("VIN scan detected VIN: %s", _mask_vin(vin))
 
     try:
-        decoded = decode_vin(vin)
+        decoded, raw_decoded = decode_vin_with_raw(vin)
     except Exception:
         if settings.VIN_SCAN_DEBUG:
             logger.exception("VIN decoder request failed for VIN %s", _mask_vin(vin))
@@ -142,8 +162,10 @@ def scan_vin_photo(
             "vin": vin,
             "message": "VIN detected, but vehicle details could not be decoded.",
         }
+        raw_decoded = {}
 
     if settings.VIN_SCAN_DEBUG:
+        logger.info("VIN scan raw decoded payload: %s", _debug_raw_vin_decode_payload(raw_decoded))
         logger.info("VIN scan decoded payload: %s", _debug_vin_payload(decoded))
 
     return VinScanResponse(**decoded)
@@ -159,13 +181,14 @@ def decode_typed_vin(
         raise HTTPException(status_code=400, detail="Enter a valid 17-character VIN.")
 
     try:
-        decoded = decode_vin(vin)
+        decoded, raw_decoded = decode_vin_with_raw(vin)
     except Exception as exc:
         if settings.VIN_SCAN_DEBUG:
             logger.exception("Typed VIN decoder request failed for VIN %s", _mask_vin(vin))
         raise HTTPException(status_code=502, detail="Failed to decode VIN.") from exc
 
     if settings.VIN_SCAN_DEBUG:
+        logger.info("Typed VIN raw decoded payload: %s", _debug_raw_vin_decode_payload(raw_decoded))
         logger.info("Typed VIN decoded payload: %s", _debug_vin_payload(decoded))
 
     return VinScanResponse(**decoded)
@@ -191,6 +214,29 @@ def fill_car_description(
     return DescriptionFillResponse(description_ar=description)
 
 
+@router.post("/cars/price/predict", response_model=PricePredictionResponse)
+def predict_car_price(
+    payload: PricePredictionRequest,
+    user: User = Depends(get_current_user),
+):
+    if payload.year < 1980 or payload.year > datetime.utcnow().year + 1:
+        raise HTTPException(status_code=400, detail="Invalid year")
+    if payload.mileage_km is not None and payload.mileage_km < 0:
+        raise HTTPException(status_code=400, detail="Mileage must be zero or a positive integer.")
+    _validate_engine_fields(payload.engine_cylinders, payload.engine_volume)
+
+    try:
+        price = generate_price_prediction(payload)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Failed to predict price.") from exc
+
+    return PricePredictionResponse(price_sar=price)
+
+
 @router.post("/cars", response_model=CarOut)
 def create_car(
     payload: CarCreate,
@@ -203,6 +249,7 @@ def create_car(
         raise HTTPException(status_code=400, detail="Invalid year")
     if payload.price_sar is not None and payload.price_sar <= 0:
         raise HTTPException(status_code=400, detail="Invalid price")
+    _validate_engine_fields(payload.engine_cylinders, payload.engine_volume)
     if (payload.latitude is None) != (payload.longitude is None):
         raise HTTPException(status_code=400, detail="Latitude and longitude must be provided together")
     if payload.latitude is not None and not (-90 <= payload.latitude <= 90):
@@ -259,6 +306,11 @@ def update_car(
             raise HTTPException(status_code=400, detail="Invalid year")
     if "price_sar" in data and data["price_sar"] is not None and data["price_sar"] <= 0:
         raise HTTPException(status_code=400, detail="Invalid price")
+    if "engine_cylinders" in data or "engine_volume" in data:
+        _validate_engine_fields(
+            data.get("engine_cylinders", car.engine_cylinders),
+            data.get("engine_volume", car.engine_volume),
+        )
     if "latitude" in data or "longitude" in data:
         next_lat = data.get("latitude", car.latitude)
         next_lon = data.get("longitude", car.longitude)
@@ -390,12 +442,12 @@ def permanently_delete_owner_car(
 
     media_items = session.exec(select(CarMedia).where(CarMedia.car_id == car_id)).all()
     storage_keys = [media.storage_key for media in media_items]
-    chat_messages = session.exec(select(ChatMessage).where(ChatMessage.car_id == car_id)).all()
+    comment_messages = session.exec(select(ChatMessage).where(ChatMessage.car_id == car_id)).all()
     leads = session.exec(select(Lead).where(Lead.car_id == car_id)).all()
 
     for media in media_items:
         session.delete(media)
-    for message in chat_messages:
+    for message in comment_messages:
         session.delete(message)
     for lead in leads:
         session.delete(lead)

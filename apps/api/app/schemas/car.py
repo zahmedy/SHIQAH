@@ -25,6 +25,8 @@ class CarCreate(BaseModel):
     transmission: Optional[str] = None
     fuel_type: Optional[str] = None
     drivetrain: Optional[str] = None
+    engine_cylinders: Optional[int] = None
+    engine_volume: Optional[float] = None
     condition: Optional[str] = None
     color: Optional[str] = None
 
@@ -50,6 +52,8 @@ class CarUpdate(BaseModel):
     transmission: Optional[str] = None
     fuel_type: Optional[str] = None
     drivetrain: Optional[str] = None
+    engine_cylinders: Optional[int] = None
+    engine_volume: Optional[float] = None
     condition: Optional[str] = None
     color: Optional[str] = None
 
@@ -76,6 +80,8 @@ class VinScanResponse(BaseModel):
     transmission: Optional[str] = None
     fuel_type: Optional[str] = None
     drivetrain: Optional[str] = None
+    engine_cylinders: Optional[int] = None
+    engine_volume: Optional[float] = None
     message: Optional[str] = None
 
 
@@ -91,6 +97,8 @@ class DescriptionFillRequest(BaseModel):
     transmission: Optional[str] = None
     fuel_type: Optional[str] = None
     drivetrain: Optional[str] = None
+    engine_cylinders: Optional[int] = None
+    engine_volume: Optional[float] = None
     condition: Optional[str] = None
     color: Optional[str] = None
     title_ar: Optional[str] = None
@@ -98,6 +106,29 @@ class DescriptionFillRequest(BaseModel):
 
 class DescriptionFillResponse(BaseModel):
     description_ar: str
+
+
+class PricePredictionRequest(BaseModel):
+    city: Optional[str] = None
+    district: Optional[str] = None
+    make: str
+    model: str
+    year: int
+    mileage_km: Optional[int] = None
+    body_type: Optional[str] = None
+    transmission: Optional[str] = None
+    fuel_type: Optional[str] = None
+    drivetrain: Optional[str] = None
+    engine_cylinders: Optional[int] = None
+    engine_volume: Optional[float] = None
+    condition: Optional[str] = None
+    color: Optional[str] = None
+    title_ar: Optional[str] = None
+    description_ar: Optional[str] = None
+
+
+class PricePredictionResponse(BaseModel):
+    price_sar: int
 
 
 class CarOut(BaseModel):
@@ -131,6 +162,8 @@ class CarOut(BaseModel):
     transmission: Optional[str]
     fuel_type: Optional[str]
     drivetrain: Optional[str]
+    engine_cylinders: Optional[int]
+    engine_volume: Optional[float]
     condition: Optional[str]
     color: Optional[str]
     photos: list[CarPhoto] = []

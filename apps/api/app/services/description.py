@@ -34,11 +34,22 @@ def _extract_json_object(raw_text: str) -> dict:
 
 
 def _compact_payload(payload: DescriptionFillRequest) -> dict:
-    return {
+    raw = {
         key: value
         for key, value in payload.model_dump().items()
         if value not in (None, "")
     }
+    renamed: dict[str, object] = {}
+    for key, value in raw.items():
+        if key == "price_sar":
+            renamed["price_usd"] = value
+        elif key == "title_ar":
+            renamed["title"] = value
+        elif key == "description_ar":
+            renamed["existing_description"] = value
+        else:
+            renamed[key] = value
+    return renamed
 
 
 def _validate_description(description: str) -> None:
@@ -72,7 +83,8 @@ def _build_messages(payload: DescriptionFillRequest, retry_plainer: bool = False
                 "Draft a concise buyer-facing listing description in English for this car. "
                 "Aim for 55 to 90 words. Use a simple, natural tone. Mention the year, make, "
                 "model, body type, color, transmission, fuel type, mileage, price, and location only "
-                "when those fields are provided. Do not say the car is reliable, dependable, excellent, "
+                "when those fields are provided. All prices are in USD. If price_usd is present, refer to it as USD "
+                "or omit the currency instead of using SAR. Do not say the car is reliable, dependable, excellent, "
                 "great, ideal, sleek, smooth, practical, spacious, comfortable, winter-ready, or good "
                 "for snowy streets unless the provided fields explicitly support that exact claim. "
                 "Do not infer cold-weather ability from city, sedan body type, automatic transmission, "

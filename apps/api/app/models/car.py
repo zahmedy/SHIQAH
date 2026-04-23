@@ -60,6 +60,8 @@ class CarListing(SQLModel, table=True):
     transmission: Optional[str] = Field(default=None, index=True)   # automatic/manual
     fuel_type: Optional[str] = Field(default=None, index=True)      # petrol/hybrid/...
     drivetrain: Optional[str] = Field(default=None, index=True)     # fwd/rwd/awd
+    engine_cylinders: Optional[int] = Field(default=None)
+    engine_volume: Optional[float] = Field(default=None)
     condition: Optional[str] = Field(default=None, index=True)      # used/new
 
     color: Optional[str] = Field(default=None, index=True)

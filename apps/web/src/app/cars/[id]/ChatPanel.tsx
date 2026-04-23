@@ -63,11 +63,11 @@ export default function ChatPanel({ carId }: { carId: number }) {
       setLoading(true);
       setError("");
       try {
-        const [meRes, chatRes] = await Promise.all([
+        const [meRes, commentsRes] = await Promise.all([
           fetch(`${API_BASE}/v1/me`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch(`${API_BASE}/v1/cars/${carId}/chat`, {
+          fetch(`${API_BASE}/v1/cars/${carId}/comments`, {
             headers: { Authorization: `Bearer ${token}` },
             cache: "no-store",
           }),
@@ -76,14 +76,14 @@ export default function ChatPanel({ carId }: { carId: number }) {
         if (!meRes.ok) {
           throw new Error(await parseApiError(meRes));
         }
-        if (!chatRes.ok) {
-          throw new Error(await parseApiError(chatRes));
+        if (!commentsRes.ok) {
+          throw new Error(await parseApiError(commentsRes));
         }
 
         const me = (await meRes.json()) as MeResponse;
-        const chat = (await chatRes.json()) as Message[];
+        const comments = (await commentsRes.json()) as Message[];
         setMeId(me.id);
-        setMessages(chat);
+        setMessages(comments);
       } catch (err) {
         setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.loadChatFailed);
       } finally {
@@ -108,7 +108,7 @@ export default function ChatPanel({ carId }: { carId: number }) {
     setSending(true);
     setError("");
     try {
-      const res = await fetch(`${API_BASE}/v1/cars/${carId}/chat`, {
+      const res = await fetch(`${API_BASE}/v1/cars/${carId}/comments`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

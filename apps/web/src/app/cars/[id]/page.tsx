@@ -33,6 +33,8 @@ type Listing = {
   fuel_type?: string;
   body_type?: string;
   drivetrain?: string;
+  engine_cylinders?: number;
+  engine_volume?: number;
   condition?: string;
   color?: string;
   published_at?: string;
@@ -167,6 +169,14 @@ export default async function CarDetailPage({
           <article className="spec">
             <p className="spec-key">Drivetrain</p>
             <p className="spec-val">{translateValue(locale, car.drivetrain)}</p>
+          </article>
+          <article className="spec">
+            <p className="spec-key">Engine Cylinders</p>
+            <p className="spec-val">{specValue(car.engine_cylinders)}</p>
+          </article>
+          <article className="spec">
+            <p className="spec-key">Engine Volume</p>
+            <p className="spec-val">{car.engine_volume ? `${car.engine_volume} L` : "—"}</p>
           </article>
           <article className="spec">
             <p className="spec-key">Body Type</p>
