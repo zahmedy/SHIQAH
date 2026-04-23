@@ -42,6 +42,7 @@ type CarPayload = {
   color?: string;
   title_ar: string;
   description_ar: string;
+  public_bidding_enabled: boolean;
 };
 
 type CarOut = CarPayload & {
@@ -83,6 +84,7 @@ type FormState = {
   color: string;
   title_ar: string;
   description_ar: string;
+  public_bidding_enabled: boolean;
 };
 
 type PresignResponse = {
@@ -152,6 +154,7 @@ const initialForm: FormState = {
   color: "",
   title_ar: "",
   description_ar: "",
+  public_bidding_enabled: false,
 };
 
 const BODY_TYPE_OPTIONS = ["Sedan", "SUV", "Coupe", "Hatchback", "Pickup", "Van", "Wagon", "Convertible"];
@@ -417,6 +420,7 @@ function buildPayload(form: FormState): BuildPayloadResult {
     color: form.color.trim() || undefined,
     title_ar: title || `${make} ${model} ${year} for sale`,
     description_ar: description,
+    public_bidding_enabled: form.public_bidding_enabled,
   };
 
   return { ok: true, payload };
@@ -577,6 +581,9 @@ export default function CarDraftForm({
     selectCondition: "Select condition",
     color: "Color",
     selectColor: "Select color",
+    publicBidding: "Public bidding",
+    publicBiddingHelp: "Off by default. Turn on only if you want visible public bids on this listing.",
+    publicBiddingEnabled: "Enable public bidding",
     titleLabel: "Title",
     titleHelp: "Example: 2019 RAV4 Hybrid AWD.",
     descriptionLabel: "Listing description *",
@@ -683,6 +690,7 @@ export default function CarDraftForm({
       color: fromLoadedField(car.color),
       title_ar: fromLoadedField(car.title_ar),
       description_ar: fromLoadedField(car.description_ar),
+      public_bidding_enabled: Boolean(car.public_bidding_enabled),
     });
   }
 
@@ -2124,6 +2132,20 @@ export default function CarDraftForm({
                 />
                 <p className="helper-text">{text.descriptionHelp}</p>
                 {descriptionFillStatus ? <p className="helper-text">{descriptionFillStatus}</p> : null}
+              </div>
+
+              <div className="field-card">
+                <p className="label">{text.publicBidding}</p>
+                <label className="field-toggle" htmlFor="public-bidding-enabled">
+                  <input
+                    id="public-bidding-enabled"
+                    type="checkbox"
+                    checked={form.public_bidding_enabled}
+                    onChange={(e) => setForm((prev) => ({ ...prev, public_bidding_enabled: e.target.checked }))}
+                  />
+                  <span>{text.publicBiddingEnabled}</span>
+                </label>
+                <p className="helper-text">{text.publicBiddingHelp}</p>
               </div>
             </section>
 

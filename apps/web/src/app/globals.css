@@ -694,6 +694,21 @@ a {
   gap: 0.45rem;
 }
 
+.field-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2.5rem;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.field-toggle input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--brand);
+}
+
 .home-hero-rail {
   display: grid;
   gap: 0.45rem;

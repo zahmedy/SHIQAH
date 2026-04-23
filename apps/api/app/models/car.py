@@ -66,6 +66,7 @@ class CarListing(SQLModel, table=True):
 
     title_ar: str
     description_ar: str
+    public_bidding_enabled: bool = Field(default=False, index=True)
 
     published_at: Optional[datetime] = Field(default=None, index=True)
     reviewed_at: Optional[datetime] = Field(default=None, index=True)

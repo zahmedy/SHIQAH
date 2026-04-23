@@ -28,6 +28,7 @@ type Listing = {
   mileage_km?: number;
   title_ar: string;
   description_ar: string;
+  public_bidding_enabled: boolean;
   transmission?: string;
   fuel_type?: string;
   body_type?: string;
@@ -224,7 +225,7 @@ export default async function CarDetailPage({
 
         <hr className="separator" />
 
-        <OfferForm carId={car.id} ownerId={car.owner_id} />
+        <OfferForm carId={car.id} ownerId={car.owner_id} publicBiddingEnabled={car.public_bidding_enabled} />
 
         <hr className="separator" />
 

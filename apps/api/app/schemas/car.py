@@ -30,6 +30,7 @@ class CarCreate(BaseModel):
 
     title_ar: Optional[str] = None
     description_ar: str
+    public_bidding_enabled: bool = False
 
 
 class CarUpdate(BaseModel):
@@ -54,6 +55,7 @@ class CarUpdate(BaseModel):
 
     title_ar: Optional[str] = None
     description_ar: Optional[str] = None
+    public_bidding_enabled: Optional[bool] = None
 
 
 class VinScanRequest(BaseModel):
@@ -135,6 +137,7 @@ class CarOut(BaseModel):
 
     title_ar: str
     description_ar: str
+    public_bidding_enabled: bool
 
     published_at: Optional[datetime]
     reviewed_at: Optional[datetime]

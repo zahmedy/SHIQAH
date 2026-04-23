@@ -21,6 +21,7 @@ type OfferSummary = {
   highest_offer_sar: number | null;
   offer_count: number;
   bidding_open: boolean;
+  public_bidding_enabled: boolean;
   accepted_offer: OfferEntry | null;
   offers: OfferEntry[];
 };
@@ -35,6 +36,7 @@ type OwnerOfferSummary = {
   highest_offer_sar: number | null;
   offer_count: number;
   bidding_open: boolean;
+  public_bidding_enabled: boolean;
   accepted_offer: OwnerOfferEntry | null;
   offers: OwnerOfferEntry[];
 };
@@ -51,7 +53,15 @@ function buildWhatsappUrl(phone: string, message: string) {
   return `https://wa.me/${phone.replace("+", "")}?text=${encodeURIComponent(message)}`;
 }
 
-export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: number }) {
+export default function OfferForm({
+  carId,
+  ownerId,
+  publicBiddingEnabled: publicBiddingEnabledProp,
+}: {
+  carId: number;
+  ownerId: number;
+  publicBiddingEnabled: boolean;
+}) {
   const locale = useLocale();
   const [amount, setAmount] = useState("");
   const [token, setToken] = useState("");
@@ -81,6 +91,7 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
     minBid: (amountSar: number) => `For a public bid, your amount must be higher than ${formatPrice(amountSar, locale)}.`,
     publicHint: "Public bids are visible to everyone and raise the current highest bid.",
     privateHint: "Private offers are shared only with the listing owner.",
+    privateOnlyHint: "This seller accepts private offers only. Public bidding is off for this listing.",
     publicBid: "Public Bid",
     privateOffer: "Private Offer",
     publicBadge: "Public",
@@ -123,7 +134,8 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
   const currentSummary = isOwner && ownerSummary ? ownerSummary : summary;
   const acceptedOffer = currentSummary?.accepted_offer ?? null;
   const biddingOpen = currentSummary?.bidding_open ?? true;
-  const minimumBid = (currentSummary?.highest_offer_sar ?? 0) + 1;
+  const publicBiddingEnabled = currentSummary?.public_bidding_enabled ?? publicBiddingEnabledProp;
+  const minimumBid = publicBiddingEnabled ? (currentSummary?.highest_offer_sar ?? 0) + 1 : 1;
   const acceptedOwnerOffer = isOwner && acceptedOffer && isOwnerOfferEntry(acceptedOffer) ? acceptedOffer : null;
   const acceptedBidderLabel = acceptedOwnerOffer?.buyer_user_label || acceptedOwnerOffer?.phone_e164 || null;
   const acceptedBidderPhone = acceptedOwnerOffer?.phone_e164 || null;
@@ -317,6 +329,10 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
       setError(text.lowerThanHighest(minimumBid - 1));
       return;
     }
+    if (nextVisibility === "public" && !publicBiddingEnabled) {
+      setError(text.privateOnlyHint);
+      return;
+    }
 
     if (!token) {
       setError(text.loginRequired);
@@ -423,7 +439,7 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
   return (
     <section className="offer-panel">
       <h3 className="subheading">{isOwner ? text.ownerTitle : text.title}</h3>
-      {currentSummary?.offer_count ? (
+      {publicBiddingEnabled && currentSummary?.offer_count ? (
         <div className="offer-summary spaced-top-sm">
           <p className="offer-summary-label">{text.highestOffer}</p>
           <p className="offer-summary-value">
@@ -526,15 +542,19 @@ export default function OfferForm({ carId, ownerId }: { carId: number; ownerId: 
             />
           </div>
 
-          <p className="helper-text">{text.minBid(minimumBid - 1)}</p>
+          <p className="helper-text">
+            {publicBiddingEnabled ? text.minBid(minimumBid - 1) : text.privateOnlyHint}
+          </p>
 
           <div className="contact-actions">
             <button type="button" className="btn btn-secondary" disabled={submitting} onClick={() => startOffer("private")}>
               {submitting && confirmVisibility === "private" ? text.submitting : text.privateOffer}
             </button>
-            <button type="submit" className="btn btn-primary" disabled={submitting}>
-              {submitting && confirmVisibility === "public" ? text.submitting : text.publicBid}
-            </button>
+            {publicBiddingEnabled ? (
+              <button type="submit" className="btn btn-primary" disabled={submitting}>
+                {submitting && confirmVisibility === "public" ? text.submitting : text.publicBid}
+              </button>
+            ) : null}
           </div>
 
           {error ? <p className="notice error">{error}</p> : null}

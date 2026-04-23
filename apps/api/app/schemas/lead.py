@@ -42,6 +42,7 @@ class OfferSummaryOut(BaseModel):
     highest_offer_sar: Optional[int]
     offer_count: int
     bidding_open: bool
+    public_bidding_enabled: bool
     accepted_offer: Optional[OfferOut]
     offers: list[OfferOut]
 
@@ -61,5 +62,6 @@ class OwnerOfferSummaryOut(BaseModel):
     highest_offer_sar: Optional[int]
     offer_count: int
     bidding_open: bool
+    public_bidding_enabled: bool
     accepted_offer: Optional[OwnerOfferOut]
     offers: list[OwnerOfferOut]

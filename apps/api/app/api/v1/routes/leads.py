@@ -183,6 +183,8 @@ def create_offer(
         raise HTTPException(status_code=400, detail="Bidding is closed for this listing")
 
     if payload.visibility == "public":
+        if not car.public_bidding_enabled:
+            raise HTTPException(status_code=400, detail="Public bidding is disabled for this listing")
         highest_offer = _highest_offer_amount_for_car(session, car_id)
         if highest_offer is not None and payload.amount_sar <= highest_offer:
             raise HTTPException(status_code=400, detail=f"Your bid must be higher than the current highest bid of {highest_offer} USD")
@@ -211,7 +213,7 @@ def get_offers(
     session: Session = Depends(get_session),
     user: User | None = Depends(get_optional_current_user),
 ):
-    _load_active_car(session, car_id)
+    car = _load_active_car(session, car_id)
 
     offer_count = _offer_count_for_car(session, car_id)
     accepted_offer = _accepted_offer_for_car(session, car_id)
@@ -239,6 +241,7 @@ def get_offers(
         highest_offer_sar=highest_offer,
         offer_count=offer_count,
         bidding_open=accepted_offer is None,
+        public_bidding_enabled=car.public_bidding_enabled,
         accepted_offer=_offer_out(accepted_offer) if can_view_accepted_offer and accepted_offer else None,
         offers=[_offer_out(offer) for offer in offers],
     )
@@ -276,6 +279,7 @@ def get_manage_offers(
         highest_offer_sar=highest_offer,
         offer_count=len(offers),
         bidding_open=accepted_offer is None,
+        public_bidding_enabled=car.public_bidding_enabled,
         accepted_offer=_owner_offer_out(accepted_offer, buyers) if accepted_offer else None,
         offers=[_owner_offer_out(offer, buyers) for offer in offers],
     )
