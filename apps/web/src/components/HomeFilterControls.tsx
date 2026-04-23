@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
+import { NICHES, getNiche } from "@/shared/niches";
+
 type HomeFilterParams = {
+  niche?: string;
   city?: string;
   q?: string;
   price_max?: string;
@@ -22,7 +25,8 @@ type HomeFilterControlsProps = {
 };
 
 const NEARBY_RADIUS_KM = "40";
-const QUERY_KEYS = ["q", "city", "price_max", "mileage_max", "fuel_type", "drivetrain", "body_type", "lat", "lon", "radius_km"] as const;
+const QUERY_KEYS = ["niche", "q", "city", "price_max", "mileage_max", "fuel_type", "drivetrain", "body_type", "lat", "lon", "radius_km"] as const;
+const NICHE_FILTER_KEYS = ["price_max", "mileage_max", "fuel_type", "drivetrain", "body_type"] as const;
 
 function buildHomepageHref(params: HomeFilterParams): string {
   const next = new URLSearchParams();
@@ -50,6 +54,16 @@ function filterHref(params: HomeFilterParams, key: keyof HomeFilterParams, value
   return buildHomepageHref(next);
 }
 
+function nicheHref(params: HomeFilterParams, nicheId: string): string {
+  const next = { ...params, niche: nicheId };
+
+  for (const key of NICHE_FILTER_KEYS) {
+    delete next[key];
+  }
+
+  return buildHomepageHref(next);
+}
+
 function isFilterActive(params: HomeFilterParams, key: keyof HomeFilterParams, value: string): boolean {
   return params[key] === value;
 }
@@ -62,6 +76,7 @@ export default function HomeFilterControls({ params }: HomeFilterControlsProps) 
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [nearbyStatus, setNearbyStatus] = useState("");
+  const selectedNiche = getNiche(params.niche);
   const isNearbyActive = Boolean(params.lat && params.lon && params.radius_km === NEARBY_RADIUS_KM);
 
   function handleNearbyClick() {
@@ -106,7 +121,21 @@ export default function HomeFilterControls({ params }: HomeFilterControlsProps) 
   return (
     <div className={isPending ? "home-filter-controls is-updating" : "home-filter-controls"}>
       <nav className="home-quick-filters" aria-label="One-tap filters">
-        <p className="home-quick-filters-label">Start with one tap</p>
+        <p className="home-quick-filters-label">Choose niche</p>
+        <div className="home-quick-filter-list">
+          {NICHES.map((niche) => (
+            <Link
+              key={niche.id}
+              scroll={false}
+              href={nicheHref(params, niche.id)}
+              className={selectedNiche.id === niche.id ? "home-niche-filter-active" : ""}
+              aria-current={selectedNiche.id === niche.id ? "true" : undefined}
+            >
+              {niche.shortName}
+            </Link>
+          ))}
+        </div>
+        <p className="home-quick-filters-label">Quick filters</p>
         <div className="home-quick-filter-list">
           <button
             type="button"
@@ -117,13 +146,17 @@ export default function HomeFilterControls({ params }: HomeFilterControlsProps) 
           >
             Nearby (25 mi)
           </button>
-          <Link scroll={false} href={filterHref(params, "price_max", "30000")} className={quickFilterClass(params, "price_max", "30000")} aria-current={isFilterActive(params, "price_max", "30000") ? "true" : undefined}>Under $30k</Link>
-          <Link scroll={false} href={filterHref(params, "drivetrain", "AWD")} className={quickFilterClass(params, "drivetrain", "AWD")} aria-current={isFilterActive(params, "drivetrain", "AWD") ? "true" : undefined}>AWD</Link>
-          <Link scroll={false} href={filterHref(params, "drivetrain", "4WD")} className={quickFilterClass(params, "drivetrain", "4WD")} aria-current={isFilterActive(params, "drivetrain", "4WD") ? "true" : undefined}>4WD</Link>
-          <Link scroll={false} href={filterHref(params, "fuel_type", "Hybrid")} className={quickFilterClass(params, "fuel_type", "Hybrid")} aria-current={isFilterActive(params, "fuel_type", "Hybrid") ? "true" : undefined}>Hybrids</Link>
-          <Link scroll={false} href={filterHref(params, "fuel_type", "Electric")} className={quickFilterClass(params, "fuel_type", "Electric")} aria-current={isFilterActive(params, "fuel_type", "Electric") ? "true" : undefined}>EVs</Link>
-          <Link scroll={false} href={filterHref(params, "mileage_max", "100000")} className={quickFilterClass(params, "mileage_max", "100000")} aria-current={isFilterActive(params, "mileage_max", "100000") ? "true" : undefined}>Under 100k mi</Link>
-          <Link scroll={false} href={filterHref(params, "body_type", "SUV")} className={quickFilterClass(params, "body_type", "SUV")} aria-current={isFilterActive(params, "body_type", "SUV") ? "true" : undefined}>SUVs</Link>
+          {selectedNiche.quickFilters.map((filter) => (
+            <Link
+              key={`${filter.key}:${filter.value}`}
+              scroll={false}
+              href={filterHref(params, filter.key, filter.value)}
+              className={quickFilterClass(params, filter.key, filter.value)}
+              aria-current={isFilterActive(params, filter.key, filter.value) ? "true" : undefined}
+            >
+              {filter.label}
+            </Link>
+          ))}
         </div>
       </nav>
       {nearbyStatus ? <p className="helper-text">{nearbyStatus}</p> : null}

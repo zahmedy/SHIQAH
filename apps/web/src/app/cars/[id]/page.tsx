@@ -4,7 +4,7 @@ import { apiGet } from "@/lib/api";
 import ListingPhotoGallery from "@/components/ListingPhotoGallery";
 import { formatDateTime, formatDistance, formatListingPrice, translateValue, type Locale } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
-import { winterBadges, winterScore, winterScoreLabel } from "@/shared/winter";
+import { getNiche, nicheBadges, nicheScore, nicheScoreLabel } from "@/shared/niches";
 import ChatPanel from "./ChatPanel";
 import OfferForm from "./OfferForm";
 import OwnerActions from "./OwnerActions";
@@ -79,11 +79,15 @@ function sellerAndTime(locale: Locale, sellerUserId?: string | null, sellerName?
 
 export default async function CarDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ niche?: string }>;
 }) {
   const { id } = await params;
+  const query = await searchParams;
   const locale = await getServerLocale();
+  const selectedNiche = getNiche(query.niche);
 
   let data: PublicCarResponse | null = null;
   let fetchError = "";
@@ -99,14 +103,14 @@ export default async function CarDetailPage({
       <main className="page shell">
         <div className="notice error">{fetchError || "Listing not found."}</div>
         <div className="spaced-top">
-          <Link href="/search" className="btn btn-secondary">Back to search</Link>
+          <Link href={`/search?niche=${selectedNiche.id}`} className="btn btn-secondary">Back to search</Link>
         </div>
       </main>
     );
   }
 
   const car = data.listing;
-  const winterBadgesForCar = winterBadges(car, locale);
+  const nicheBadgesForCar = nicheBadges(car, locale, selectedNiche.id);
 
   return (
     <main className="page shell two-col">
@@ -179,15 +183,15 @@ export default async function CarDetailPage({
 
         <div className="panel panel-soft winter-detail-card">
           <div>
-            <p className="spec-key">Niche Fit</p>
-            <h2 className="subheading">{winterScoreLabel(car)}</h2>
+            <p className="spec-key">{selectedNiche.scoreLabel}</p>
+            <h2 className="subheading">{nicheScoreLabel(car, selectedNiche.id)}</h2>
             <p className="body-copy">
-              Scored {winterScore(car)}/10 from niche signals like drivetrain, fuel type,
+              Scored {nicheScore(car, selectedNiche.id)}/10 from niche signals like drivetrain, fuel type,
               price, mileage, body style, and seller notes.
             </p>
           </div>
           <div className="winter-chip-row" aria-label="Niche signals">
-            {winterBadgesForCar.map((badge) => (
+            {nicheBadgesForCar.map((badge) => (
               <span className="winter-chip" key={badge}>{badge}</span>
             ))}
           </div>

@@ -12,7 +12,7 @@ import {
   type Locale,
 } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
-import { winterBadges, winterScoreLabel } from "@/shared/winter";
+import { NICHES, getNiche, nicheBadges, nicheHref, nicheScoreLabel } from "@/shared/niches";
 
 type SearchItem = {
   id: number | string;
@@ -28,6 +28,7 @@ type SearchItem = {
   fuel_type?: string;
   drivetrain?: string;
   body_type?: string;
+  condition?: string;
   title_ar: string;
   description_ar?: string;
   published_at?: string;
@@ -42,6 +43,7 @@ type SearchResponse = {
 };
 
 type Query = {
+  niche?: string;
   city?: string;
   make?: string;
   model?: string;
@@ -65,6 +67,7 @@ const FUEL_TYPE_OPTIONS = [
 ] as const;
 const DRIVETRAIN_OPTIONS = ["AWD", "4WD", "FWD", "RWD"] as const;
 const BODY_TYPE_OPTIONS = ["SUV", "Hatchback", "Sedan", "Pickup", "Van", "Wagon", "Convertible"] as const;
+const NICHE_RESET_KEYS = ["price_max", "mileage_max", "fuel_type", "drivetrain", "body_type", "sort"] as const;
 
 function locationUserAndTime(locale: Locale, city?: string, district?: string, sellerUserId?: string, publishedAt?: string) {
   const parts = [];
@@ -80,6 +83,16 @@ function locationUserAndTime(locale: Locale, city?: string, district?: string, s
   return parts.join(" • ");
 }
 
+function buildSearchNicheHref(params: Query, nicheId: string): string {
+  const next = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (!value || NICHE_RESET_KEYS.includes(key as (typeof NICHE_RESET_KEYS)[number])) continue;
+    next.set(key, value);
+  }
+  next.set("niche", nicheId);
+  return `/search?${next.toString()}`;
+}
+
 export default async function SearchPage({
   searchParams,
 }: {
@@ -87,10 +100,12 @@ export default async function SearchPage({
 }) {
   const params = await searchParams;
   const locale = await getServerLocale();
+  const selectedNiche = getNiche(params.niche);
   const radiusKm = Number(params.radius_km);
   const initialRadiusKm = Number.isFinite(radiusKm) && radiusKm >= 1 && radiusKm <= 500 ? radiusKm : 50;
 
   const qs = new URLSearchParams();
+  if (params.niche) qs.set("niche", params.niche);
   if (params.city) qs.set("city", params.city);
   if (params.make) qs.set("make", params.make);
   if (params.model) qs.set("model", params.model);
@@ -110,6 +125,7 @@ export default async function SearchPage({
   if (params.lon) qs.set("lon", params.lon);
   if (params.radius_km) qs.set("radius_km", params.radius_km);
 
+  qs.delete("niche");
   const path = qs.toString() ? `/v1/search/cars?${qs.toString()}` : "/v1/search/cars";
 
   let data: SearchResponse = { page: 1, page_size: 20, total: 0, items: [] };
@@ -126,17 +142,35 @@ export default async function SearchPage({
       <section className="hero hero-mini">
         <p className="hero-kicker">AutoIntel Niche Search</p>
         <h1>Search by use case</h1>
-        <p>Start with cold-weather commuter signals: traction, fuel, mileage, price, body, and distance.</p>
+        <p>{selectedNiche.intro}</p>
         <div className="hero-actions">
-          <Link href="/search?price_max=30000&drivetrain=AWD" className="btn btn-secondary">AWD under $30k</Link>
-          <Link href="/search?fuel_type=Hybrid&price_max=30000" className="btn btn-secondary">Hybrids under $30k</Link>
-          <Link href="/search?fuel_type=Electric&price_max=30000" className="btn btn-secondary">Used EVs</Link>
+          {selectedNiche.searchLinks.map((link) => (
+            <Link key={link.label} href={nicheHref("/search", selectedNiche, link.query)} className="btn btn-secondary">
+              {link.label}
+            </Link>
+          ))}
         </div>
       </section>
 
       <section className="search-grid">
         <aside className="panel">
           <form className="filters" method="get">
+            <input type="hidden" name="niche" value={selectedNiche.id} />
+            <div className="niche-picker">
+              <p className="home-quick-filters-label">Niche</p>
+              <div className="home-quick-filter-list">
+                {NICHES.map((niche) => (
+                  <Link
+                    key={niche.id}
+                    href={buildSearchNicheHref(params, niche.id)}
+                    className={selectedNiche.id === niche.id ? "home-niche-filter-active" : ""}
+                    aria-current={selectedNiche.id === niche.id ? "true" : undefined}
+                  >
+                    {niche.shortName}
+                  </Link>
+                ))}
+              </div>
+            </div>
             <NearbySearch initialRadiusKm={initialRadiusKm} />
             {params.lat ? <input type="hidden" name="lat" value={params.lat} /> : null}
             {params.lon ? <input type="hidden" name="lon" value={params.lon} /> : null}
@@ -231,9 +265,9 @@ export default async function SearchPage({
             <div className="listing-grid">
               {data.items.map((car) => {
                 const cover = car.photos?.[0]?.public_url ?? "";
-                const badges = winterBadges(car, locale);
+                const badges = nicheBadges(car, locale, selectedNiche.id);
                 return (
-                  <Link key={car.id} href={`/cars/${car.id}`} className="car-card">
+                  <Link key={car.id} href={`/cars/${car.id}?niche=${selectedNiche.id}`} className="car-card">
                     {cover ? (
                       <img className="car-thumb" src={cover} alt={car.title_ar || `${car.make} ${car.model}`} />
                     ) : (
@@ -241,7 +275,7 @@ export default async function SearchPage({
                     )}
                     <div className="car-body">
                       <h3 className="car-title">{car.title_ar || `${car.make} ${car.model}`}</h3>
-                      <p className="winter-score-pill">{winterScoreLabel(car)}</p>
+                      <p className="winter-score-pill">{nicheScoreLabel(car, selectedNiche.id)}</p>
                       <p className="car-meta">{car.make} {car.model} • {car.year}</p>
                       <p className="car-meta">{formatMileage(car.mileage_km, locale)}</p>
                       <p className="car-meta">

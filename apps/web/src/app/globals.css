@@ -661,7 +661,8 @@ a {
 }
 
 .home-quick-filter-list a.home-quick-filter-active,
-.home-quick-filter-list button.home-quick-filter-active {
+.home-quick-filter-list button.home-quick-filter-active,
+.home-quick-filter-list a.home-niche-filter-active {
   border-color: color-mix(in srgb, var(--brand) 54%, var(--line));
   background: linear-gradient(160deg, var(--brand-light), #ffffff);
   color: var(--brand-deep);
@@ -682,6 +683,15 @@ a {
   color: #ffffff;
   font-size: 0.72rem;
   line-height: 1;
+}
+
+.home-quick-filter-list a.home-niche-filter-active::after {
+  content: none;
+}
+
+.niche-picker {
+  display: grid;
+  gap: 0.45rem;
 }
 
 .home-hero-rail {

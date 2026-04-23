@@ -3,7 +3,7 @@ import HomeListingCard from "@/components/HomeListingCard";
 import HomeFilterControls from "@/components/HomeFilterControls";
 import { formatListingPrice, formatMileage, formatRelativeHours, type Locale } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
-import { winterBadges, winterScoreLabel } from "@/shared/winter";
+import { getNiche, nicheBadges, nicheScoreLabel } from "@/shared/niches";
 
 type HomeListing = {
   id: number | string;
@@ -19,6 +19,7 @@ type HomeListing = {
   fuel_type?: string;
   drivetrain?: string;
   body_type?: string;
+  condition?: string;
   title_ar: string;
   description_ar?: string;
   published_at?: string;
@@ -30,6 +31,7 @@ type HomeSearchResponse = {
 };
 
 type Query = {
+  niche?: string;
   city?: string;
   q?: string;
   price_max?: string;
@@ -80,6 +82,7 @@ function buildHomeSearchPath(params: Query): string {
 
 function hasHomeFilters(params: Query): boolean {
   return Boolean(
+    params.niche ||
     params.city ||
     params.q ||
     params.price_max ||
@@ -98,6 +101,7 @@ export default async function HomePage({
 }) {
   const params = await searchParams;
   const locale = await getServerLocale();
+  const selectedNiche = getNiche(params.niche);
   let listings: HomeListing[] = [];
   let fetchError = "";
   const isFiltered = hasHomeFilters(params);
@@ -118,8 +122,8 @@ export default async function HomePage({
             <span className="home-hero-title-accent">List without the drag.</span>
           </h2>
           <p className="home-hero-sub">
-            AutoIntel turns messy car listings into clear niche signals. First focus:
-            affordable cold-weather commuters.
+            AutoIntel turns messy car listings into clear niche scores. Pick a niche,
+            then compare cars by the details that matter for that use case.
           </p>
 
           <HomeFilterControls params={params} />
@@ -128,20 +132,18 @@ export default async function HomePage({
         <div className="home-hero-rail" aria-label="AutoIntel niche signals">
           <article className="home-hero-stat">
             <p className="home-hero-stat-label">Launch Niche</p>
-            <p className="home-hero-stat-value">Cold-city commuters</p>
-            <p className="home-hero-stat-note">
-              Quick reads on traction, fuel, price, mileage, body style, tires, and seller notes.
-            </p>
+            <p className="home-hero-stat-value">{selectedNiche.name}</p>
+            <p className="home-hero-stat-note">{selectedNiche.intro}</p>
             <div className="home-hero-signal-list" aria-label="Niche signals">
-              <span>AWD / 4WD</span>
-              <span>Hybrid / EV</span>
-              <span>Rust + tires</span>
+              {selectedNiche.signals.map((signal) => (
+                <span key={signal}>{signal}</span>
+              ))}
             </div>
           </article>
         </div>
       </section>
 
-      <h2 id="listings" className="section-title">{isFiltered ? "Niche Matches" : "Fresh Niche Listings"}</h2>
+      <h2 id="listings" className="section-title">{isFiltered ? `${selectedNiche.shortName} Matches` : "Fresh Niche Listings"}</h2>
 
       {fetchError ? (
         <div className="notice error">{fetchError}</div>
@@ -153,7 +155,7 @@ export default async function HomePage({
             return (
               <HomeListingCard
                 key={car.id}
-                href={`/cars/${car.id}`}
+                href={`/cars/${car.id}?niche=${selectedNiche.id}`}
                 title={car.title_ar || `${car.make} ${car.model}`}
                 make={car.make}
                 model={car.model}
@@ -161,8 +163,8 @@ export default async function HomePage({
                 mileageText={formatMileage(car.mileage_km, locale)}
                 priceText={formatListingPrice(car.price_sar, locale)}
                 metaText={locationUserAndTime(locale, car.city, car.district, car.seller_user_id, car.published_at)}
-                winterLabel={winterScoreLabel(car)}
-                badges={winterBadges(car, locale)}
+                winterLabel={nicheScoreLabel(car, selectedNiche.id)}
+                badges={nicheBadges(car, locale, selectedNiche.id)}
                 photos={car.photos}
               />
             );
