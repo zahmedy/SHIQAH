@@ -566,7 +566,6 @@ export default function CarDraftForm({
     vinHelp: "Photo or type the VIN. AutoIntel fills what it can.",
     vinManualLabel: "VIN",
     vinManualPlaceholder: "17-character VIN",
-    vinManualHelp: "Fast decode. No guesswork.",
     vinDecode: "Decode VIN",
     vinDecoding: "Decoding...",
     vinUploadPhoto: "Upload VIN Photo",
@@ -584,7 +583,6 @@ export default function CarDraftForm({
     loginRequiredForDrafts: "Login required to manage drafts.",
     loadingDraft: "Loading draft...",
     cityLabel: "City *",
-    cityHelp: "Where buyers should search for the car.",
     otherCity: "Enter another city",
     useCurrentLocation: "Use my location",
     updateCurrentLocation: "Update location",
@@ -599,13 +597,13 @@ export default function CarDraftForm({
     year: "Year *",
     price: "Price (USD)",
     mileage: "Mileage (mi)",
-    pricePredict: "Predict price",
-    pricePredicting: "Predicting...",
+    pricePredict: "AutoIntel Price",
+    pricePredicting: "Pricing...",
     pricePredictNeedsBasics: "Fill make, model, and year first.",
-    pricePredictApplied: "Predicted price applied.",
-    pricePredictFailed: "Could not predict the price.",
-    pricingNoteTitle: "AI price guidance",
-    pricingNoteBody: "Price prediction uses VIN-decoded fields and user-entered details. It is only a prediction, not a guaranteed sale price or appraisal.",
+    pricePredictApplied: "AutoIntel Price applied.",
+    pricePredictFailed: "Could not run AutoIntel Price.",
+    pricingNoteTitle: "AutoIntel Price",
+    pricingNoteBody: "AutoIntel Price uses VIN-decoded fields and your listing details to suggest a smarter asking price. It is not a guaranteed sale price or appraisal.",
     bodyType: "Body Type",
     selectBodyType: "Select body type",
     transmission: "Transmission",
@@ -621,17 +619,14 @@ export default function CarDraftForm({
     color: "Color",
     selectColor: "Select color",
     publicBidding: "Public bidding",
-    publicBiddingHelp: "Off by default. Turn on only if you want visible public bids on this listing.",
     publicBiddingEnabled: "Enable public bidding",
     titleLabel: "Title",
-    titleHelp: "Example: 2019 RAV4 Hybrid AWD.",
     descriptionLabel: "Listing description *",
-    descriptionHelp: "Keep it honest. Mention condition, maintenance, tires, rust, damage, charging, and standout options.",
-    descriptionAiFill: "AutoIntel Fill",
+    descriptionAiFill: "AutoIntel Description",
     descriptionAiFilling: "Writing...",
     descriptionAiFillNeedsBasics: "Fill make, model, and year first.",
-    descriptionAiFillApplied: "Draft filled. Review before publishing.",
-    descriptionAiFillFailed: "Could not write the draft.",
+    descriptionAiFillApplied: "AutoIntel Description drafted. Review before publishing.",
+    descriptionAiFillFailed: "Could not run AutoIntel Description.",
     photos: "Photos",
     photosHelp: "Add exterior, interior, tires, dash, and any damage.",
     addingPhotos: "Adding...",
@@ -2002,7 +1997,6 @@ export default function CarDraftForm({
                         {vinDecoding ? text.vinDecoding : text.vinDecode}
                       </button>
                     </div>
-                    <p className="helper-text">{text.vinManualHelp}</p>
                   </div>
                   <button
                     type="button"
@@ -2039,7 +2033,6 @@ export default function CarDraftForm({
                         onChange={(e) => setForm((prev) => ({ ...prev, district: e.target.value }))}
                       />
                     </div>
-                    <p className="helper-text">{text.cityHelp}</p>
                   </div>
                 </div>
                 <div className="field-card location-card">
@@ -2329,7 +2322,6 @@ export default function CarDraftForm({
                   value={form.title_ar}
                   onChange={(e) => setForm((prev) => ({ ...prev, title_ar: e.target.value }))}
                 />
-                {text.titleHelp ? <p className="helper-text">{text.titleHelp}</p> : null}
               </div>
 
               <div className="field-card">
@@ -2352,7 +2344,6 @@ export default function CarDraftForm({
                   value={form.description_ar}
                   onChange={(e) => setForm((prev) => ({ ...prev, description_ar: e.target.value }))}
                 />
-                <p className="helper-text">{text.descriptionHelp}</p>
                 {descriptionFillStatus ? <p className="helper-text">{descriptionFillStatus}</p> : null}
               </div>
 
@@ -2367,7 +2358,6 @@ export default function CarDraftForm({
                   />
                   <span>{text.publicBiddingEnabled}</span>
                 </label>
-                <p className="helper-text">{text.publicBiddingHelp}</p>
               </div>
             </section>
 

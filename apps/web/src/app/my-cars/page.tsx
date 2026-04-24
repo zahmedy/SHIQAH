@@ -116,13 +116,11 @@ export default function MyCarsPage() {
     rejectSuccess: (carId: number) => `Car #${carId} rejected.`,
     rejectFailed: "Failed to reject listing.",
     title: "Seller Hub",
-    subtitle: "Start, finish, and publish cars from one clean workspace.",
+    subtitle: "",
     profileKicker: "AutoIntel Seller",
-    createDraft: "Sell a Car",
     loading: "Loading...",
     refresh: "Refresh",
     account: "Account",
-    accountHelp: "This is how buyers recognize you.",
     profileMember: "AutoIntel Member",
     accountSummary: "Seller ID",
     listingsSection: "Your Cars",
@@ -130,7 +128,7 @@ export default function MyCarsPage() {
     adminBadge: "Admin",
     phone: "Phone",
     publicUserId: "Public User ID",
-    userIdHelp: "3-32 chars: `a-z`, `0-9`, `.`, `_`, `-`",
+    userIdHelp: "Use 3-32 lowercase letters, numbers, dots, underscores, or hyphens.",
     saving: "Saving...",
     saveUserId: "Save User ID",
     loginRequiredForCars: "Login is required to view your profile.",
@@ -452,7 +450,7 @@ export default function MyCarsPage() {
         <div className="profile-hero-copy">
           <p className="hero-kicker">{text.profileKicker}</p>
           <h1>{text.title}</h1>
-          <p>{text.subtitle}</p>
+          {text.subtitle ? <p>{text.subtitle}</p> : null}
         </div>
       </section>
 
@@ -462,7 +460,6 @@ export default function MyCarsPage() {
             <div className="profile-section-head">
               <div>
                 <h2 className="subheading">{text.account}</h2>
-                <p className="helper-text">{text.accountHelp}</p>
               </div>
             </div>
             <form className="profile-user-id-form" onSubmit={saveUserId}>
@@ -515,11 +512,6 @@ export default function MyCarsPage() {
         <div className="panel profile-empty">
           <h2 className="subheading">{text.listingsSection}</h2>
           <p className="helper-text">{text.noListingsYet}</p>
-          <div className="hero-actions">
-            <Link href="/my-cars/new" className="btn btn-primary">
-              {text.createDraft}
-            </Link>
-          </div>
         </div>
       )}
 
