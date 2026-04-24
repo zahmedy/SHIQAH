@@ -1481,6 +1481,85 @@ a {
   gap: 0.65rem;
 }
 
+.niche-score-card {
+  gap: 0.85rem;
+}
+
+.niche-score-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.niche-score-meter {
+  flex: 0 0 auto;
+  min-width: 4.6rem;
+  border-radius: 18px;
+  padding: 0.75rem 0.85rem;
+  background: #ffffff;
+  border: 1px solid color-mix(in srgb, var(--brand) 20%, var(--line));
+  color: var(--brand);
+  font-size: 1.25rem;
+  line-height: 1;
+  text-align: center;
+  box-shadow: var(--shadow-xs);
+}
+
+.niche-score-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.55rem;
+}
+
+.niche-score-option {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #ffffff;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.niche-score-option:hover {
+  border-color: color-mix(in srgb, var(--brand) 26%, var(--line));
+  box-shadow: var(--shadow-card);
+  transform: translateY(-1px);
+}
+
+.niche-score-option span {
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.niche-score-option strong {
+  color: var(--brand);
+  font-size: 1.08rem;
+  line-height: 1.1;
+}
+
+.niche-score-option small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.niche-score-option-active {
+  border-color: color-mix(in srgb, var(--brand) 44%, var(--line));
+  background: var(--brand-light);
+}
+
+.niche-score-summary {
+  margin-top: 0.25rem;
+}
+
 /* ─── Profile ─────────────────────────────────────────────────────────── */
 
 .profile-page {

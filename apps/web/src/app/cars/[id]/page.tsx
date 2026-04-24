@@ -2,9 +2,10 @@ import Link from "next/link";
 
 import { apiGet } from "@/lib/api";
 import ListingPhotoGallery from "@/components/ListingPhotoGallery";
+import NicheScoreSelector from "@/components/NicheScoreSelector";
 import { formatDateTime, formatDistance, formatListingPrice, translateValue, type Locale } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
-import { getNiche, nicheBadges, nicheScore, nicheScoreLabel } from "@/shared/niches";
+import { getNiche } from "@/shared/niches";
 import ChatPanel from "./ChatPanel";
 import OfferForm from "./OfferForm";
 import OwnerActions from "./OwnerActions";
@@ -113,8 +114,6 @@ export default async function CarDetailPage({
   }
 
   const car = data.listing;
-  const nicheBadgesForCar = nicheBadges(car, locale, selectedNiche.id);
-
   return (
     <main className="page shell two-col">
       <section className="panel">
@@ -192,21 +191,7 @@ export default async function CarDetailPage({
           </article>
         </div>
 
-        <div className="panel panel-soft winter-detail-card">
-          <div>
-            <p className="spec-key">{selectedNiche.scoreLabel}</p>
-            <h2 className="subheading">{nicheScoreLabel(car, selectedNiche.id)}</h2>
-            <p className="body-copy">
-              Scored {nicheScore(car, selectedNiche.id)}/10 from niche signals like drivetrain, fuel type,
-              price, mileage, body style, and seller notes.
-            </p>
-          </div>
-          <div className="winter-chip-row" aria-label="Niche signals">
-            {nicheBadgesForCar.map((badge) => (
-              <span className="winter-chip" key={badge}>{badge}</span>
-            ))}
-          </div>
-        </div>
+        <NicheScoreSelector listing={car} locale={locale} initialNicheId={selectedNiche.id} />
 
         <div className="panel panel-soft">
           <h2 className="subheading">Description</h2>
