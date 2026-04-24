@@ -49,8 +49,8 @@ export default function LoginPage() {
   const [success, setSuccess] = useState("");
   const normalizedPhone = normalizeUSPhone(phone);
   const text = {
-    title: "Login",
-    note: "Enter a U.S. mobile number, request OTP, then verify. New users will be asked for their name. MVP code is",
+    title: "Sign in to AutoIntel",
+    note: "Use your U.S. mobile number to manage listings, save drafts, and contact sellers. MVP code is",
     missingApiBase: "NEXT_PUBLIC_API_BASE is missing.",
     invalidPhone: "Enter a valid U.S. number, for example (555) 555-0123 or +15555550123.",
     requestOtpFailed: "Failed to request OTP.",
@@ -166,6 +166,7 @@ export default function LoginPage() {
   return (
     <main className="page shell auth-wrap">
       <section className="auth-card">
+        <p className="hero-kicker">Secure seller access</p>
         <h1>{text.title}</h1>
         <p className="auth-note">{text.note} <strong>0000</strong>.</p>
 

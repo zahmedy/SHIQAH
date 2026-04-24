@@ -549,13 +549,13 @@ export default function CarDraftForm({
     saveBeforeMainPhoto: "Save the listing before changing the main photo.",
     mainPhotoUpdated: "Main photo updated.",
     updateMainPhotoFailed: "Failed to update main photo.",
-    createDraftTitle: "Sell Your Car",
+    createDraftTitle: "Sell your car",
     editListingTitle: (id?: number) => `Edit Car #${id ?? ""}`,
-    formNote: mode === "create" ? "AutoIntel turns the details into a niche-ready listing." : "Update the details buyers need.",
-    sectionBasics: "Basics",
-    sectionSpecs: "Details",
-    sectionPricing: "Pricing",
-    sectionListing: "Listing",
+    formNote: mode === "create" ? "Start with photos and basic details. AutoIntel helps with VIN decoding, pricing, and buyer-ready copy." : "Update the details buyers need.",
+    sectionBasics: "Vehicle basics",
+    sectionSpecs: "Condition and specs",
+    sectionPricing: "Price guidance",
+    sectionListing: "Listing copy",
     currentStatus: "Current status",
     flowPhotos: "Photos",
     flowVin: "VIN",
@@ -598,12 +598,12 @@ export default function CarDraftForm({
     year: "Year *",
     price: "Price (USD)",
     mileage: "Mileage (mi)",
-    pricePredict: "AutoIntel Predict",
+    pricePredict: "Predict price",
     pricePredicting: "Predicting...",
     pricePredictNeedsBasics: "Fill make, model, and year first.",
     pricePredictApplied: "Predicted price applied.",
     pricePredictFailed: "Could not predict the price.",
-    pricingNoteTitle: "Prediction Note",
+    pricingNoteTitle: "AI price guidance",
     pricingNoteBody: "Price prediction uses VIN-decoded fields and user-entered details. It is only a prediction, not a guaranteed sale price or appraisal.",
     bodyType: "Body Type",
     selectBodyType: "Select body type",
@@ -614,9 +614,7 @@ export default function CarDraftForm({
     drivetrain: "Drivetrain",
     selectDrivetrain: "Select drivetrain",
     engineCylinders: "Engine Cylinders",
-    engineCylindersHelp: "Pick a common value or enter another positive whole number.",
     engineVolume: "Engine Volume (L)",
-    engineVolumeHelp: "Pick a common value or enter another positive number in liters.",
     condition: "Condition",
     selectCondition: "Select condition",
     color: "Color",
@@ -2188,7 +2186,7 @@ export default function CarDraftForm({
                     className="input"
                     list="engine-cylinder-options"
                     inputMode="numeric"
-                    placeholder="4, 6, 8"
+                    placeholder="6"
                     value={form.engine_cylinders}
                     onChange={(e) => setForm((prev) => ({ ...prev, engine_cylinders: e.target.value }))}
                     autoComplete="off"
@@ -2198,7 +2196,6 @@ export default function CarDraftForm({
                       <option key={option} value={option} />
                     ))}
                   </datalist>
-                  <p className="helper-text">{text.engineCylindersHelp}</p>
                 </div>
 
                 <div className="field-card">
@@ -2208,7 +2205,7 @@ export default function CarDraftForm({
                     className="input"
                     list="engine-volume-options"
                     inputMode="decimal"
-                    placeholder="2.0, 3.5"
+                    placeholder="3.5"
                     value={form.engine_volume}
                     onChange={(e) => setForm((prev) => ({ ...prev, engine_volume: e.target.value }))}
                     autoComplete="off"
@@ -2218,7 +2215,6 @@ export default function CarDraftForm({
                       <option key={option} value={option} />
                     ))}
                   </datalist>
-                  <p className="helper-text">{text.engineVolumeHelp}</p>
                 </div>
 
                 <div className="field-card">

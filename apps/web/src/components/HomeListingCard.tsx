@@ -107,10 +107,18 @@ export default function HomeListingCard({
       </div>
 
       <Link href={href} className="car-body car-card-link">
-        <h3 className="car-title">{title}</h3>
-        {winterLabel ? <p className="winter-score-pill">{winterLabel}</p> : null}
-        <p className="car-meta">{make} {model} • {year}</p>
-        <p className="car-meta">{mileageText}</p>
+        <div className="car-card-head">
+          <p className="car-price">{priceText}</p>
+          {winterLabel ? <p className="winter-score-pill">{winterLabel}</p> : null}
+        </div>
+        <h3 className="car-title">{year} {make} {model}</h3>
+        {title !== `${make} ${model}` && title !== `${year} ${make} ${model}` ? (
+          <p className="car-subtitle">{title}</p>
+        ) : null}
+        <div className="car-facts">
+          <span>{mileageText}</span>
+          <span>{metaText}</span>
+        </div>
         {badges.length ? (
           <div className="winter-chip-row" aria-label="Niche signals">
             {badges.map((badge) => (
@@ -118,10 +126,6 @@ export default function HomeListingCard({
             ))}
           </div>
         ) : null}
-        <div className="car-footer-row">
-          <p className="car-price">{priceText}</p>
-          <p className="car-footer-meta">{metaText}</p>
-        </div>
       </Link>
     </article>
   );

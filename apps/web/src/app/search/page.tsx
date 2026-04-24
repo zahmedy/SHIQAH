@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { apiGet } from "@/lib/api";
 import CityField from "@/components/CityField";
+import HomeListingCard from "@/components/HomeListingCard";
 import MakeModelField from "@/components/MakeModelField";
 import NearbySearch from "@/components/NearbySearch";
 import {
@@ -139,9 +140,9 @@ export default async function SearchPage({
 
   return (
     <main className="page shell">
-      <section className="hero hero-mini">
-        <p className="hero-kicker">AutoIntel Niche Search</p>
-        <h1>Search by use case</h1>
+      <section className="hero hero-mini search-hero">
+        <p className="hero-kicker">Browse cars</p>
+        <h1>Find the right car with cleaner filters.</h1>
         <p>{selectedNiche.intro}</p>
         <div className="hero-actions">
           {selectedNiche.searchLinks.map((link) => (
@@ -253,47 +254,48 @@ export default async function SearchPage({
         </aside>
 
         <section>
-          <div className="panel panel-compact">
-            <strong>{data.total}</strong> cars found
+          <div className="results-bar">
+            <div>
+              <strong>{data.total}</strong> cars found
+              <p>Sorted and filtered for a faster browse.</p>
+            </div>
+            <Link href="/my-cars/new" className="btn btn-secondary">Sell your car</Link>
           </div>
 
           {fetchError ? (
             <div className="notice error">{fetchError}</div>
           ) : data.items.length === 0 ? (
-            <div className="notice">No cars match those filters.</div>
+            <div className="empty-state">
+              <h3>No cars match those filters</h3>
+              <p>Try widening price, mileage, location, or body style.</p>
+              <div className="hero-actions">
+                <Link href="/search" className="btn btn-secondary">Clear filters</Link>
+              </div>
+            </div>
           ) : (
             <div className="listing-grid">
               {data.items.map((car) => {
-                const cover = car.photos?.[0]?.public_url ?? "";
                 const badges = nicheBadges(car, locale, selectedNiche.id);
                 return (
-                  <Link key={car.id} href={`/cars/${car.id}?niche=${selectedNiche.id}`} className="car-card">
-                    {cover ? (
-                      <img className="car-thumb" src={cover} alt={car.title_ar || `${car.make} ${car.model}`} />
-                    ) : (
-                      <div className="car-thumb" aria-hidden="true" />
-                    )}
-                    <div className="car-body">
-                      <h3 className="car-title">{car.title_ar || `${car.make} ${car.model}`}</h3>
-                      <p className="winter-score-pill">{nicheScoreLabel(car, selectedNiche.id)}</p>
-                      <p className="car-meta">{car.make} {car.model} • {car.year}</p>
-                      <p className="car-meta">{formatMileage(car.mileage_km, locale)}</p>
-                      <p className="car-meta">
-                        {[translateValue(locale, car.fuel_type), translateValue(locale, car.drivetrain), translateValue(locale, car.body_type)]
-                          .filter((value) => value !== "—")
-                          .join(" • ") || "Specs not set"}
-                      </p>
-                      <div className="winter-chip-row" aria-label="Niche signals">
-                        {badges.map((badge) => (
-                          <span className="winter-chip" key={badge}>{badge}</span>
-                        ))}
-                      </div>
-                      <div className="car-footer-row">
-                        <p className="car-price">{formatListingPrice(car.price_sar, locale)}</p>
-                        <p className="car-footer-meta">{locationUserAndTime(locale, car.city, car.district, car.seller_user_id, car.published_at)}</p>
-                      </div>
-                    </div>
-                  </Link>
+                  <HomeListingCard
+                    key={car.id}
+                    href={`/cars/${car.id}?niche=${selectedNiche.id}`}
+                    title={car.title_ar || `${car.make} ${car.model}`}
+                    make={car.make}
+                    model={car.model}
+                    year={car.year}
+                    mileageText={formatMileage(car.mileage_km, locale)}
+                    priceText={formatListingPrice(car.price_sar, locale)}
+                    metaText={locationUserAndTime(locale, car.city, car.district, car.seller_user_id, car.published_at)}
+                    winterLabel={nicheScoreLabel(car, selectedNiche.id)}
+                    badges={[
+                      ...badges,
+                      [translateValue(locale, car.fuel_type), translateValue(locale, car.drivetrain), translateValue(locale, car.body_type)]
+                        .filter((value) => value !== "—")
+                        .join(" • "),
+                    ].filter(Boolean)}
+                    photos={car.photos}
+                  />
                 );
               })}
             </div>

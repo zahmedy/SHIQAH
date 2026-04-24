@@ -14,8 +14,8 @@ export default function LogoMark({ className, title = "AutoIntel logo" }: LogoMa
     >
       <defs>
         <linearGradient id="mark-gradient" x1="10" y1="9" x2="54" y2="55" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#00A99D" />
-          <stop offset="1" stopColor="#124640" />
+          <stop stopColor="#2563EB" />
+          <stop offset="1" stopColor="#0F172A" />
         </linearGradient>
       </defs>
 
@@ -25,14 +25,14 @@ export default function LogoMark({ className, title = "AutoIntel logo" }: LogoMa
           d="M20 39.5 29.2 18h4.1l9.2 21.5h-5.3l-1.7-4.3h-8.7l-1.7 4.3H20Zm8.5-8.7h5.3l-2.6-6.8-2.7 6.8Z"
           fill="#FFFFFF"
         />
-        <path d="M43.5 18v21.5" stroke="#EF3E4A" strokeWidth="4.4" strokeLinecap="round" />
+        <path d="M43.5 18v21.5" stroke="#10B981" strokeWidth="4.4" strokeLinecap="round" />
       </g>
 
       <g>
         <text
           x="68"
           y="33"
-          fill="#10211F"
+          fill="#0F172A"
           fontFamily="Rajdhani, Eurostile, Trebuchet MS, sans-serif"
           fontSize="31"
           fontWeight="800"
@@ -43,13 +43,13 @@ export default function LogoMark({ className, title = "AutoIntel logo" }: LogoMa
         <text
           x="70"
           y="49"
-          fill="#637771"
+          fill="#64748B"
           fontFamily="Cairo, Avenir Next, Segoe UI, sans-serif"
           fontSize="10"
           fontWeight="800"
           letterSpacing="0"
         >
-          NICHE CAR SEARCH
+          AI CAR MARKETPLACE
         </text>
       </g>
     </svg>
