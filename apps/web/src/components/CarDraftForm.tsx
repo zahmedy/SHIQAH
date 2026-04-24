@@ -484,6 +484,7 @@ export default function CarDraftForm({
   const [createdId, setCreatedId] = useState<number | null>(null);
   const [photos, setPhotos] = useState<CarPhoto[]>([]);
   const [pendingPreviews, setPendingPreviews] = useState<PendingPhotoPreview[]>([]);
+  const [pendingMainPreviewId, setPendingMainPreviewId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
@@ -638,10 +639,8 @@ export default function CarDraftForm({
     addPhotos: "Add Photos",
     photosMinimumWarning: "Use at least 4 photos before publishing.",
     photosUploadingNow: "Uploading photos.",
-    adding: "Adding",
-    readyToUpload: "Ready to upload",
     mainPhoto: "Main photo",
-    makeMain: "Set Main",
+    makeMain: "Set as main",
     removing: "Removing...",
     remove: "Remove",
     noPhotosYet: "Add photos to start.",
@@ -666,7 +665,7 @@ export default function CarDraftForm({
   const hasPreciseLocation = Boolean(form.latitude.trim() && form.longitude.trim());
   const localizedReviewReason = translateReviewReason(locale, reviewReason);
   const totalPhotoCount = photos.length + pendingPreviews.length;
-  const hasTooFewPhotos = totalPhotoCount < 4;
+  const shouldWarnAboutPhotoCount = totalPhotoCount > 0 && totalPhotoCount < 4;
   const photoActionInProgress = uploading || removingPhotoId !== null || mainPhotoId !== null;
   const viewerItems = useMemo<PhotoViewerItem[]>(
     () => [
@@ -685,6 +684,18 @@ export default function CarDraftForm({
   );
   const activeViewerItem =
     viewerIndex !== null && viewerItems[viewerIndex] ? viewerItems[viewerIndex] : null;
+
+  useEffect(() => {
+    setPendingMainPreviewId((current) => {
+      if (pendingPreviews.length === 0) {
+        return null;
+      }
+      if (current && pendingPreviews.some((preview) => preview.id === current)) {
+        return current;
+      }
+      return photos.length === 0 ? pendingPreviews[0].id : null;
+    });
+  }, [pendingPreviews, photos.length]);
 
   async function fetchCarData(targetCarId: number, token: string): Promise<CarOut> {
     const res = await fetch(`${API_BASE}/v1/cars/${targetCarId}`, {
@@ -1432,6 +1443,7 @@ export default function CarDraftForm({
     let uploadedCount = 0;
     let failedCount = 0;
     const nextPhotos = [...photos];
+    const pendingCoverFile = previewsToClear?.find((preview) => preview.id === pendingMainPreviewId)?.file ?? null;
 
     for (const file of imageFiles) {
       try {
@@ -1463,7 +1475,7 @@ export default function CarDraftForm({
           throw new Error(text.failedUpload(file.name, uploadRes.status));
         }
 
-        const isCover = nextPhotos.length === 0;
+        const isCover = pendingCoverFile ? file === pendingCoverFile : nextPhotos.length === 0;
         const completeRes = await fetch(`${API_BASE}/v1/cars/${targetCarId}/media/complete`, {
           method: "POST",
           headers: {
@@ -1501,7 +1513,8 @@ export default function CarDraftForm({
       }
     }
 
-    setPhotos(nextPhotos);
+    const normalizedPhotos = normalizePhotoOrder(nextPhotos);
+    setPhotos(normalizedPhotos);
     if (uploadedCount > 0) {
       setUploadSuccess(text.photosAdded(uploadedCount));
     }
@@ -1518,7 +1531,7 @@ export default function CarDraftForm({
       );
     }
     setUploading(false);
-    return { uploadedCount, failedCount, totalPhotos: nextPhotos.length };
+    return { uploadedCount, failedCount, totalPhotos: normalizedPhotos.length };
   }
 
   function handlePhotoSelection(files: FileList | null) {
@@ -1849,37 +1862,52 @@ export default function CarDraftForm({
                 {uploading ? <span className="helper-text">{text.photosUploadingNow}</span> : null}
               </div>
 
-              {hasTooFewPhotos ? <p className="notice warning">{text.photosMinimumWarning}</p> : null}
+              {shouldWarnAboutPhotoCount ? <p className="notice warning">{text.photosMinimumWarning}</p> : null}
               {uploadError && <p className="notice error">{uploadError}</p>}
               {uploadSuccess && <p className="notice success">{uploadSuccess}</p>}
 
               {photos.length > 0 || pendingPreviews.length > 0 ? (
                 <div className="upload-photo-grid">
-                  {pendingPreviews.map((preview) => (
-                    <article className="upload-photo-item" key={preview.id}>
-                      <button
-                        type="button"
-                        className="upload-photo-preview"
-                        onClick={() => openViewer(preview.id)}
-                      >
-                        <img src={preview.objectUrl} alt={preview.fileName} loading="lazy" />
-                      </button>
-                      <div className="upload-photo-meta">
-                        <span className="upload-photo-order">{preview.fileName}</span>
-                        <div className="upload-photo-controls">
-                          <span className="status-pill status-draft">{uploading ? text.adding : text.readyToUpload}</span>
+                  {pendingPreviews.map((preview) => {
+                    const isPendingMain = pendingMainPreviewId === preview.id;
+
+                    return (
+                      <article className="upload-photo-item" key={preview.id}>
+                        <button
+                          type="button"
+                          className="upload-photo-preview"
+                          onClick={() => openViewer(preview.id)}
+                        >
+                          <img src={preview.objectUrl} alt={preview.fileName} loading="lazy" />
+                        </button>
+                        {isPendingMain ? (
+                          <span className="upload-photo-main-badge">{text.mainPhoto}</span>
+                        ) : (
                           <button
                             type="button"
-                            className="upload-photo-button"
-                            onClick={() => removePendingPreview(preview.id)}
+                            className="upload-photo-main-action"
+                            onClick={() => setPendingMainPreviewId(preview.id)}
                             disabled={uploading}
                           >
-                            {text.remove}
+                            {text.makeMain}
                           </button>
+                        )}
+                        <div className="upload-photo-meta">
+                          <span className="upload-photo-order">{preview.fileName}</span>
+                          <div className="upload-photo-controls">
+                            <button
+                              type="button"
+                              className="upload-photo-button"
+                              onClick={() => removePendingPreview(preview.id)}
+                              disabled={uploading}
+                            >
+                              {text.remove}
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    </article>
-                  ))}
+                      </article>
+                    );
+                  })}
                   {photos.map((photo) => (
                     <article className="upload-photo-item" key={photo.id}>
                       <button
@@ -1889,20 +1917,21 @@ export default function CarDraftForm({
                       >
                         <img src={photo.public_url} alt={`Car photo ${photo.sort_order + 1}`} loading="lazy" />
                       </button>
+                      {photo.is_cover ? (
+                        <span className="upload-photo-main-badge">{text.mainPhoto}</span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="upload-photo-main-action"
+                          onClick={() => void setMainPhoto(photo.id)}
+                          disabled={photoActionInProgress}
+                        >
+                          {mainPhotoId === photo.id ? text.saving : text.makeMain}
+                        </button>
+                      )}
                       <div className="upload-photo-meta">
                         <span className="upload-photo-order">{text.photoNumber(photo.sort_order + 1)}</span>
                         <div className="upload-photo-controls">
-                          {photo.is_cover ? <span className="status-pill status-active">{text.mainPhoto}</span> : null}
-                          {!photo.is_cover ? (
-                            <button
-                              type="button"
-                              className="upload-photo-button upload-photo-button-neutral"
-                              onClick={() => void setMainPhoto(photo.id)}
-                              disabled={photoActionInProgress}
-                            >
-                              {mainPhotoId === photo.id ? text.saving : text.makeMain}
-                            </button>
-                          ) : null}
                           <button
                             type="button"
                             className="upload-photo-button"

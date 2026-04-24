@@ -2645,11 +2645,14 @@ a {
 .upload-photo-grid {
   margin-top: 0.85rem;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 220px));
   gap: 0.7rem;
+  align-items: start;
+  justify-content: start;
 }
 
 .upload-photo-item {
+  position: relative;
   border: 1px solid var(--line);
   border-radius: 14px;
   overflow: hidden;
@@ -2673,7 +2676,8 @@ a {
 
 .upload-photo-item img {
   width: 100%;
-  height: 120px;
+  aspect-ratio: 4 / 3;
+  height: auto;
   object-fit: cover;
   display: block;
   transition: transform 280ms var(--ease-out);
@@ -2681,6 +2685,47 @@ a {
 
 .upload-photo-item:hover img {
   transform: scale(1.04);
+}
+
+.upload-photo-main-badge,
+.upload-photo-main-action {
+  position: absolute;
+  top: 0.55rem;
+  left: 0.55rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.36rem 0.62rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.14);
+}
+
+.upload-photo-main-badge {
+  background: color-mix(in srgb, var(--success) 92%, #ffffff);
+  color: #ffffff;
+}
+
+.upload-photo-main-action {
+  border: 1px solid rgba(37, 99, 235, 0.24);
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--brand);
+  cursor: pointer;
+  transition: transform 150ms ease, background 150ms ease, opacity 150ms ease;
+}
+
+.upload-photo-main-action:hover {
+  background: #ffffff;
+  transform: translateY(-1px);
+}
+
+.upload-photo-main-action:disabled {
+  cursor: default;
+  opacity: 0.55;
+  transform: none;
 }
 
 .upload-photo-meta {
@@ -3060,7 +3105,7 @@ a {
   }
 
   .upload-photo-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 220px));
   }
 
   .bg-orb-one {
