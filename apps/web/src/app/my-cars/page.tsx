@@ -122,7 +122,7 @@ export default function MyCarsPage() {
     loading: "Loading...",
     refresh: "Refresh",
     account: "Account",
-    accountHelp: "Pick the ID buyers see.",
+    accountHelp: "This is how buyers recognize you.",
     profileMember: "AutoIntel Member",
     accountSummary: "Seller ID",
     listingsSection: "Your Cars",
@@ -453,17 +453,41 @@ export default function MyCarsPage() {
           <p className="hero-kicker">{text.profileKicker}</p>
           <h1>{text.title}</h1>
           <p>{text.subtitle}</p>
-          <div className="hero-actions">
-            <Link href="/my-cars/new" className="btn btn-primary">
-              {text.createDraft}
-            </Link>
-            <button type="button" className="btn btn-secondary" onClick={() => void loadCars()} disabled={loading}>
-              {loading ? text.loading : text.refresh}
-            </button>
-          </div>
         </div>
+      </section>
 
-        {!needsLogin && me ? (
+      {!needsLogin && me && (
+        <section className="profile-account-layout">
+          <div className="panel profile-account-panel profile-account-compact">
+            <div className="profile-section-head">
+              <div>
+                <h2 className="subheading">{text.account}</h2>
+                <p className="helper-text">{text.accountHelp}</p>
+              </div>
+            </div>
+            <form className="profile-user-id-form" onSubmit={saveUserId}>
+              <div className="profile-user-id-field">
+                <label className="label" htmlFor="user-id">{text.publicUserId}</label>
+                <input
+                  id="user-id"
+                  className="input"
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                  placeholder="user-123"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+                <p className="helper-text">{text.userIdHelp}</p>
+              </div>
+              <div className="profile-user-id-actions">
+                <button type="submit" className="btn btn-secondary" disabled={savingUserId}>
+                  {savingUserId ? text.saving : text.saveUserId}
+                </button>
+              </div>
+            </form>
+          </div>
+
           <div className="profile-identity-card">
             <p className="profile-identity-label">{text.accountSummary}</p>
             <h2 className="profile-identity-title">
@@ -475,38 +499,6 @@ export default function MyCarsPage() {
               {isAdmin ? <span>{text.adminBadge}</span> : null}
             </div>
           </div>
-        ) : null}
-      </section>
-
-      {!needsLogin && me && (
-        <section className="panel profile-account-panel profile-account-compact">
-          <div className="profile-section-head">
-            <div>
-              <h2 className="subheading">{text.account}</h2>
-              <p className="helper-text">{text.accountHelp}</p>
-            </div>
-          </div>
-          <form className="profile-user-id-form" onSubmit={saveUserId}>
-            <div className="profile-user-id-field">
-              <label className="label" htmlFor="user-id">{text.publicUserId}</label>
-              <input
-                id="user-id"
-                className="input"
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                placeholder="user-123"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-              />
-              <p className="helper-text">{text.userIdHelp}</p>
-            </div>
-            <div className="profile-user-id-actions">
-              <button type="submit" className="btn btn-primary" disabled={savingUserId}>
-                {savingUserId ? text.saving : text.saveUserId}
-              </button>
-            </div>
-          </form>
         </section>
       )}
 

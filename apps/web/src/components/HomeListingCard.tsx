@@ -40,6 +40,14 @@ function ChevronIcon({ direction }: { direction: "left" | "right" }) {
   );
 }
 
+function normalizeTitle(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\bfor sale\b/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 export default function HomeListingCard({
   href,
   title,
@@ -56,6 +64,13 @@ export default function HomeListingCard({
   const [photoIndex, setPhotoIndex] = useState(0);
   const hasMultiplePhotos = photos.length > 1;
   const activePhoto = photos[photoIndex]?.public_url ?? "";
+  const titleKey = normalizeTitle(title);
+  const generatedTitleKeys = new Set([
+    normalizeTitle(`${make} ${model}`),
+    normalizeTitle(`${year} ${make} ${model}`),
+    normalizeTitle(`${make} ${model} ${year}`),
+  ]);
+  const shouldShowSubtitle = titleKey && !generatedTitleKeys.has(titleKey);
 
   function showPreviousPhoto(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
@@ -112,7 +127,7 @@ export default function HomeListingCard({
           {winterLabel ? <p className="winter-score-pill">{winterLabel}</p> : null}
         </div>
         <h3 className="car-title">{year} {make} {model}</h3>
-        {title !== `${make} ${model}` && title !== `${year} ${make} ${model}` ? (
+        {shouldShowSubtitle ? (
           <p className="car-subtitle">{title}</p>
         ) : null}
         <div className="car-facts">

@@ -636,10 +636,8 @@ export default function CarDraftForm({
     addingPhotos: "Adding...",
     addMorePhotos: "Add Photos",
     addPhotos: "Add Photos",
-    photosReady: (count: number) => `${count} photos ready`,
-    moreNeeded: (count: number) => `${count} more needed`,
+    photosMinimumWarning: "Use at least 4 photos before publishing.",
     photosUploadingNow: "Uploading photos.",
-    choosePhotos: "Uploads when you save.",
     adding: "Adding",
     readyToUpload: "Ready to upload",
     mainPhoto: "Main photo",
@@ -668,8 +666,7 @@ export default function CarDraftForm({
   const hasPreciseLocation = Boolean(form.latitude.trim() && form.longitude.trim());
   const localizedReviewReason = translateReviewReason(locale, reviewReason);
   const totalPhotoCount = photos.length + pendingPreviews.length;
-  const remainingPhotos = Math.max(0, 4 - totalPhotoCount);
-  const hasEnoughPhotos = totalPhotoCount >= 4;
+  const hasTooFewPhotos = totalPhotoCount < 4;
   const photoActionInProgress = uploading || removingPhotoId !== null || mainPhotoId !== null;
   const viewerItems = useMemo<PhotoViewerItem[]>(
     () => [
@@ -1849,14 +1846,10 @@ export default function CarDraftForm({
                 >
                   {uploading ? text.addingPhotos : totalPhotoCount > 0 ? text.addMorePhotos : text.addPhotos}
                 </button>
-                <span className={`status-pill ${hasEnoughPhotos ? "status-active" : "status-pending-review"}`}>
-                  {hasEnoughPhotos ? text.photosReady(totalPhotoCount) : text.moreNeeded(remainingPhotos)}
-                </span>
-                <span className="helper-text">
-                  {uploading ? text.photosUploadingNow : text.choosePhotos}
-                </span>
+                {uploading ? <span className="helper-text">{text.photosUploadingNow}</span> : null}
               </div>
 
+              {hasTooFewPhotos ? <p className="notice warning">{text.photosMinimumWarning}</p> : null}
               {uploadError && <p className="notice error">{uploadError}</p>}
               {uploadSuccess && <p className="notice success">{uploadSuccess}</p>}
 

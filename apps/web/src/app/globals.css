@@ -475,9 +475,9 @@ a {
 .home-hero {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.7fr);
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
   gap: 1rem;
-  padding: clamp(1.25rem, 3vw, 2.2rem);
+  padding: 1.2rem;
   border-radius: 28px;
   border: 1px solid var(--line);
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 62%, #eef4ff 100%);
@@ -510,7 +510,7 @@ a {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 0.85rem;
+  gap: 0.65rem;
   padding: 0.2rem 0;
 }
 
@@ -550,12 +550,12 @@ a {
   display: grid;
   gap: 0.08em;
   font-family: var(--font-title);
-  font-size: 4.4rem;
-  line-height: 0.98;
+  font-size: 3.2rem;
+  line-height: 1.02;
   letter-spacing: 0;
   font-weight: 800;
   color: var(--text);
-  max-width: 12ch;
+  max-width: 14ch;
 }
 
 .home-hero-title span {
@@ -570,9 +570,9 @@ a {
 .home-hero-sub {
   margin: 0;
   color: var(--muted);
-  font-size: 1rem;
-  max-width: 58ch;
-  line-height: 1.62;
+  font-size: 0.95rem;
+  max-width: 54ch;
+  line-height: 1.55;
 }
 
 .home-hero-actions {
@@ -713,7 +713,16 @@ a {
 .home-hero-rail {
   display: grid;
   gap: 0.45rem;
-  align-self: start;
+  align-self: center;
+}
+
+.home-hero-rail .home-filter-controls {
+  margin-top: 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: var(--shadow-xs);
 }
 
 .home-hero-stat {
@@ -1476,34 +1485,25 @@ a {
 
 .profile-page {
   display: grid;
-  gap: 1rem;
+  gap: 0.85rem;
 }
 
 .profile-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.85fr);
+  grid-template-columns: 1fr;
   gap: 1rem;
-  padding: 1.25rem;
-  border: 1px solid rgba(18, 70, 64, 0.16);
+  padding: 1.45rem;
+  border: 1px solid var(--line);
   border-radius: 28px;
-  background:
-    radial-gradient(circle at 10% 12%, rgba(255, 255, 255, 0.18), transparent 34%),
-    radial-gradient(circle at 84% 16%, rgba(242, 201, 76, 0.16), transparent 30%),
-    linear-gradient(140deg, #10211f 0%, #124640 58%, #008f86 100%);
-  color: #ffffff;
-  box-shadow: 0 24px 56px rgba(18, 70, 64, 0.2), 0 0 0 1px rgba(0, 143, 134, 0.1);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 62%, #eef4ff 100%);
+  color: var(--text);
+  box-shadow: var(--shadow-panel);
   position: relative;
   overflow: hidden;
 }
 
 .profile-hero::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(100deg, transparent 0 52%, rgba(239, 62, 74, 0.16) 52% 54%, transparent 54%),
-    repeating-linear-gradient(105deg, rgba(255, 255, 255, 0.08) 0 1px, transparent 1px 18px);
-  pointer-events: none;
+  content: none;
 }
 
 .profile-hero > * {
@@ -1512,20 +1512,20 @@ a {
 }
 
 .profile-hero .hero-kicker {
-  color: rgba(255, 255, 255, 0.62);
+  color: var(--brand);
 }
 
 .profile-hero h1 {
   margin: 0;
   font-family: var(--font-title);
-  font-size: 2.35rem;
-  line-height: 1.04;
+  font-size: 2.1rem;
+  line-height: 1.08;
   letter-spacing: 0.01em;
 }
 
 .profile-hero p {
-  margin: 0.8rem 0 0;
-  color: rgba(255, 255, 255, 0.72);
+  margin: 0.55rem 0 0;
+  color: var(--muted);
   max-width: 54ch;
 }
 
@@ -1534,14 +1534,14 @@ a {
 }
 
 .profile-hero .btn-secondary {
-  background: rgba(255, 255, 255, 0.09);
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.16);
+  background: #ffffff;
+  color: var(--text);
+  border-color: var(--line);
 }
 
 .profile-hero .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.28);
+  background: #f8fafc;
+  border-color: var(--line-strong);
 }
 
 .profile-identity-card {
@@ -1550,11 +1550,10 @@ a {
   align-content: start;
   gap: 0.5rem;
   padding: 1.1rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--line);
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: #ffffff;
+  box-shadow: var(--shadow-card);
 }
 
 .profile-identity-label {
@@ -1563,7 +1562,7 @@ a {
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--brand);
 }
 
 .profile-identity-title {
@@ -1576,7 +1575,7 @@ a {
   margin: 0;
   font-size: 1rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--muted);
 }
 
 .profile-identity-meta {
@@ -1591,10 +1590,10 @@ a {
   align-items: center;
   padding: 0.36rem 0.62rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.86);
+  background: #f8fafc;
+  color: var(--muted);
   font-size: 0.82rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--line);
 }
 
 .profile-stats {
@@ -1602,16 +1601,23 @@ a {
 }
 
 .profile-account-panel {
-  border-radius: 22px;
-  box-shadow: var(--shadow-panel);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.profile-account-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.36fr);
+  gap: 0.85rem;
+  align-items: stretch;
 }
 
 .profile-account-compact {
   display: grid;
-  grid-template-columns: minmax(180px, 0.42fr) minmax(260px, 1fr);
-  gap: 0.9rem;
+  grid-template-columns: minmax(180px, 0.32fr) minmax(260px, 1fr);
+  gap: 1rem;
   align-items: start;
-  padding: 0.9rem 1rem;
+  padding: 1rem;
 }
 
 .profile-account-compact .subheading {
@@ -1666,8 +1672,8 @@ a {
 }
 
 .profile-listing-card {
-  border-radius: 22px;
-  box-shadow: 0 12px 32px rgba(18, 70, 64, 0.09), 0 2px 6px rgba(16, 33, 31, 0.05);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .profile-listing-thumb {
@@ -2040,6 +2046,12 @@ a {
   border-color: color-mix(in srgb, var(--ok) 40%, var(--line));
   color: var(--ok);
   background: color-mix(in srgb, var(--ok) 6%, #ffffff);
+}
+
+.notice.warning {
+  border-color: color-mix(in srgb, #f59e0b 36%, var(--line));
+  color: #92400e;
+  background: color-mix(in srgb, #f59e0b 8%, #ffffff);
 }
 
 .offer-warning {
@@ -2874,6 +2886,7 @@ a {
   .search-grid,
   .two-col,
   .profile-hero,
+  .profile-account-layout,
   .profile-account-compact,
   .profile-user-id-form {
     grid-template-columns: 1fr;

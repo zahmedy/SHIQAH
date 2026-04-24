@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { apiGet } from "@/lib/api";
 import HomeListingCard from "@/components/HomeListingCard";
 import HomeFilterControls from "@/components/HomeFilterControls";
@@ -127,32 +125,10 @@ export default async function HomePage({
           <p className="home-hero-sub">
             AutoIntel helps you turn vehicle details, VIN data, and market signals into a clean listing buyers can trust.
           </p>
-          <div className="home-hero-actions">
-            <Link href="/my-cars/new" className="btn btn-primary">Sell your car</Link>
-            <Link href="/search" className="btn btn-secondary">Browse cars</Link>
-          </div>
-          <div className="home-trust-row" aria-label="AutoIntel seller benefits">
-            <span>VIN-assisted details</span>
-            <span>AI price guidance</span>
-            <span>Buyer-ready listings</span>
-          </div>
-
-          <HomeFilterControls params={params} />
         </div>
 
-        <div className="home-hero-rail" aria-label="AutoIntel trust signals">
-          <article className="home-hero-stat">
-            <p className="home-hero-stat-label">Seller flow</p>
-            <p className="home-hero-stat-value">List with less guesswork</p>
-            <p className="home-hero-stat-note">
-              Add photos, decode the VIN, get pricing help, then publish a focused listing.
-            </p>
-            <div className="home-hero-signal-list" aria-label="Niche signals">
-              <span>1. Upload car photos</span>
-              <span>2. Let AI fill what it can</span>
-              <span>3. Review price and publish</span>
-            </div>
-          </article>
+        <div className="home-hero-rail" aria-label="Homepage filters">
+          <HomeFilterControls params={params} />
         </div>
       </section>
 
@@ -165,8 +141,8 @@ export default async function HomePage({
           <h3>No matching cars yet</h3>
           <p>Try another filter set or start a listing if you are ready to sell.</p>
           <div className="hero-actions">
-            <Link href="/search" className="btn btn-secondary">Browse all cars</Link>
-            <Link href="/my-cars/new" className="btn btn-primary">Sell your car</Link>
+            <a href="/search" className="btn btn-secondary">Browse all cars</a>
+            <a href="/my-cars/new" className="btn btn-primary">Sell your car</a>
           </div>
         </div>
       ) : (

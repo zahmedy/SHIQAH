@@ -75,7 +75,7 @@ export const NICHES: NicheDefinition[] = [
       { label: "Sedans", key: "body_type", value: "Sedan" },
       { label: "Hatchbacks", key: "body_type", value: "Hatchback" },
       { label: "Hybrids", key: "fuel_type", value: "Hybrid" },
-      { label: "Gas", key: "fuel_type", value: "Petrol" },
+      { label: "EV", key: "fuel_type", value: "Electric" },
     ],
     searchLinks: [
       { label: "Under $15k", query: { price_max: String(BUDGET_PRICE) } },
