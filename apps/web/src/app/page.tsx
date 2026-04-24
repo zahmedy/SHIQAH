@@ -117,7 +117,6 @@ export default async function HomePage({
     <main className="page shell">
       <section className="home-hero">
         <div className="home-hero-copy">
-          <p className="home-hero-badge">AI-assisted car selling</p>
           <h1 className="home-hero-title">
             <span>Sell your car faster.</span>
             <span className="home-hero-title-accent">Price it smarter.</span>

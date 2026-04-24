@@ -11,7 +11,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "AutoIntel | Sell and Browse Cars Smarter",
-  description: "AutoIntel helps sellers create better car listings with AI-assisted vehicle details and pricing.",
+  description: "AutoIntel helps sellers create cleaner car listings with vehicle details, pricing tools, and a simple marketplace experience.",
 };
 
 export default async function RootLayout({
