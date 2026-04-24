@@ -259,7 +259,6 @@ export default async function SearchPage({
               <strong>{data.total}</strong> cars found
               <p>Sorted and filtered for a faster browse.</p>
             </div>
-            <Link href="/my-cars/new" className="btn btn-secondary">Sell your car</Link>
           </div>
 
           {fetchError ? (
