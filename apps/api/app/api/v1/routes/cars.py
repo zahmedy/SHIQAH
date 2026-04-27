@@ -222,7 +222,7 @@ def predict_car_price(
 ):
     if payload.year < 1980 or payload.year > datetime.utcnow().year + 1:
         raise HTTPException(status_code=400, detail="Invalid year")
-    if payload.mileage_km is not None and payload.mileage_km < 0:
+    if payload.mileage is not None and payload.mileage < 0:
         raise HTTPException(status_code=400, detail="Mileage must be zero or a positive integer.")
     _validate_engine_fields(payload.engine_cylinders, payload.engine_volume)
 
@@ -235,7 +235,7 @@ def predict_car_price(
     except Exception as exc:
         raise HTTPException(status_code=502, detail="Failed to predict price.") from exc
 
-    return PricePredictionResponse(price_sar=price)
+    return PricePredictionResponse(price=price)
 
 
 @router.post("/cars", response_model=CarOut)
@@ -248,7 +248,7 @@ def create_car(
 
     if payload.year < 1980 or payload.year > datetime.utcnow().year + 1:
         raise HTTPException(status_code=400, detail="Invalid year")
-    if payload.price_sar is not None and payload.price_sar <= 0:
+    if payload.price is not None and payload.price <= 0:
         raise HTTPException(status_code=400, detail="Invalid price")
     _validate_engine_fields(payload.engine_cylinders, payload.engine_volume)
     if (payload.latitude is None) != (payload.longitude is None):
@@ -305,7 +305,7 @@ def update_car(
         y = data["year"]
         if y < 1980 or y > datetime.utcnow().year + 1:
             raise HTTPException(status_code=400, detail="Invalid year")
-    if "price_sar" in data and data["price_sar"] is not None and data["price_sar"] <= 0:
+    if "price" in data and data["price"] is not None and data["price"] <= 0:
         raise HTTPException(status_code=400, detail="Invalid price")
     if "engine_cylinders" in data or "engine_volume" in data:
         _validate_engine_fields(
@@ -423,13 +423,13 @@ def mark_owner_car_sold(
         return to_car_out(car, photos=photos_map.get(car.id, []))
     if car.status != CarStatus.active:
         raise HTTPException(status_code=400, detail="Only active listings can be marked sold")
-    if payload.sold_price_sar is not None and payload.sold_price_sar <= 0:
+    if payload.sold_price is not None and payload.sold_price <= 0:
         raise HTTPException(status_code=400, detail="Invalid sold price")
 
     now = datetime.utcnow()
     car.status = CarStatus.sold
     car.sold_at = now
-    car.sold_price_sar = payload.sold_price_sar
+    car.sold_price = payload.sold_price
     car.updated_at = now
     session.add(car)
     session.commit()

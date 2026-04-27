@@ -2,8 +2,8 @@ import { formatDistance, formatListingPrice, type Locale } from "@/lib/locale";
 
 export type NicheListingSignal = {
   city?: string | null;
-  price_sar?: number | null;
-  mileage_km?: number | null;
+  price?: number | null;
+  mileage?: number | null;
   fuel_type?: string | null;
   drivetrain?: string | null;
   body_type?: string | null;
@@ -118,8 +118,8 @@ function coldWeatherScore(listing: NicheListingSignal): number {
 
   if (drivetrain === "awd" || drivetrain === "4wd") score += 3;
   if (bodyType === "suv" || bodyType === "hatchback" || bodyType === "pickup" || bodyType === "wagon") score += 1;
-  if (listing.price_sar !== undefined && listing.price_sar !== null && listing.price_sar <= AFFORDABLE_PRICE) score += 2;
-  if (listing.mileage_km !== undefined && listing.mileage_km !== null && listing.mileage_km <= LOW_MILEAGE_KM) score += 1;
+  if (listing.price !== undefined && listing.price !== null && listing.price <= AFFORDABLE_PRICE) score += 2;
+  if (listing.mileage !== undefined && listing.mileage !== null && listing.mileage <= LOW_MILEAGE_KM) score += 1;
   if (mentionsWinterReadiness(listing)) score += 1;
 
   return Math.min(score, 10);
@@ -131,8 +131,8 @@ function budgetDailyScore(listing: NicheListingSignal): number {
   const bodyType = normalized(listing.body_type);
   const condition = normalized(listing.condition);
 
-  if (listing.price_sar !== undefined && listing.price_sar !== null && listing.price_sar <= BUDGET_PRICE) score += 3;
-  if (listing.mileage_km !== undefined && listing.mileage_km !== null && listing.mileage_km <= DAILY_MILEAGE_KM) score += 2;
+  if (listing.price !== undefined && listing.price !== null && listing.price <= BUDGET_PRICE) score += 3;
+  if (listing.mileage !== undefined && listing.mileage !== null && listing.mileage <= DAILY_MILEAGE_KM) score += 2;
   if (fuelType === "hybrid" || fuelType === "petrol" || fuelType === "gasoline") score += 1;
   if (bodyType === "sedan" || bodyType === "hatchback" || bodyType === "wagon") score += 2;
   if (condition === "used") score += 1;
@@ -160,10 +160,10 @@ export function nicheBadges(listing: NicheListingSignal, locale: Locale, nicheId
   const bodyType = normalized(listing.body_type);
 
   if (niche.id === "budget_daily_driver") {
-    if (listing.price_sar !== undefined && listing.price_sar !== null && listing.price_sar <= BUDGET_PRICE) {
+    if (listing.price !== undefined && listing.price !== null && listing.price <= BUDGET_PRICE) {
       badges.push(`Under ${formatListingPrice(BUDGET_PRICE, locale)}`);
     }
-    if (listing.mileage_km !== undefined && listing.mileage_km !== null && listing.mileage_km <= DAILY_MILEAGE_KM) {
+    if (listing.mileage !== undefined && listing.mileage !== null && listing.mileage <= DAILY_MILEAGE_KM) {
       badges.push(`Under ${formatDistance(DAILY_MILEAGE_KM, locale)}`);
     }
     if (bodyType === "sedan" || bodyType === "hatchback" || bodyType === "wagon") {
@@ -171,10 +171,10 @@ export function nicheBadges(listing: NicheListingSignal, locale: Locale, nicheId
     }
   } else {
     if (drivetrain === "awd" || drivetrain === "4wd") badges.push(`${listing.drivetrain} winter traction`);
-    if (listing.price_sar !== undefined && listing.price_sar !== null && listing.price_sar <= AFFORDABLE_PRICE) {
+    if (listing.price !== undefined && listing.price !== null && listing.price <= AFFORDABLE_PRICE) {
       badges.push(`Under ${formatListingPrice(AFFORDABLE_PRICE, locale)}`);
     }
-    if (listing.mileage_km !== undefined && listing.mileage_km !== null && listing.mileage_km <= LOW_MILEAGE_KM) {
+    if (listing.mileage !== undefined && listing.mileage !== null && listing.mileage <= LOW_MILEAGE_KM) {
       badges.push(`Under ${formatDistance(LOW_MILEAGE_KM, locale)}`);
     }
   }

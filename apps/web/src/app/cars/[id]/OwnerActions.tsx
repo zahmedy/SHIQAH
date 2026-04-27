@@ -24,7 +24,7 @@ type MeResponse = {
 type SoldResponse = {
   status: string;
   sold_at?: string | null;
-  sold_price_sar?: number | null;
+  sold_price?: number | null;
 };
 
 async function parseApiError(res: Response): Promise<string> {
@@ -100,7 +100,7 @@ export default function OwnerActions({ ownerId, carId, initialStatus }: OwnerAct
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ sold_price_sar: parsedSoldPrice }),
+        body: JSON.stringify({ sold_price: parsedSoldPrice }),
       });
 
       if (!res.ok) {

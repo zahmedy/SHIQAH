@@ -14,8 +14,8 @@ type HomeListing = {
   make: string;
   model: string;
   year: number;
-  price_sar?: number | null;
-  mileage_km?: number;
+  price?: number | null;
+  mileage?: number;
   fuel_type?: string;
   drivetrain?: string;
   body_type?: string;
@@ -155,8 +155,8 @@ export default async function HomePage({
                 make={car.make}
                 model={car.model}
                 year={car.year}
-                mileageText={formatMileage(car.mileage_km, locale)}
-                priceText={formatListingPrice(car.price_sar, locale)}
+                mileageText={formatMileage(car.mileage, locale)}
+                priceText={formatListingPrice(car.price, locale)}
                 metaText={locationUserAndTime(locale, car.city, car.district, car.seller_user_id, car.published_at)}
                 winterLabel={nicheScoreLabel(car, selectedNiche.id)}
                 badges={nicheBadges(car, locale, selectedNiche.id)}

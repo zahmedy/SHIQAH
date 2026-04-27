@@ -32,8 +32,8 @@ type CarPayload = {
   make: string;
   model: string;
   year: number;
-  price_sar?: number | null;
-  mileage_km?: number;
+  price?: number | null;
+  mileage?: number;
   body_type?: string;
   transmission?: string;
   fuel_type?: string;
@@ -76,8 +76,8 @@ type FormState = {
   make: string;
   model: string;
   year: string;
-  price_sar: string;
-  mileage_km: string;
+  price: string;
+  mileage: string;
   body_type: string;
   transmission: string;
   fuel_type: string;
@@ -121,7 +121,7 @@ type DescriptionFillResponse = {
 };
 
 type PricePredictionResponse = {
-  price_sar: number;
+  price: number;
 };
 
 type PendingPhotoPreview = {
@@ -154,8 +154,8 @@ const initialForm: FormState = {
   make: "",
   model: "",
   year: "",
-  price_sar: "",
-  mileage_km: "",
+  price: "",
+  mileage: "",
   body_type: "",
   transmission: "",
   fuel_type: "",
@@ -393,13 +393,13 @@ function buildPayload(form: FormState): BuildPayloadResult {
     return { ok: false, error: `Year must be between 1980 and ${maxYear}.` };
   }
 
-  const price = parseOptionalInteger(form.price_sar);
-  if (form.price_sar.trim() && (price === undefined || price <= 0)) {
+  const price = parseOptionalInteger(form.price);
+  if (form.price.trim() && (price === undefined || price <= 0)) {
     return { ok: false, error: "If provided, price must be a positive integer." };
   }
 
-  const mileageMiles = parseOptionalInteger(form.mileage_km);
-  if (form.mileage_km.trim() && (mileageMiles === undefined || mileageMiles < 0)) {
+  const mileageMiles = parseOptionalInteger(form.mileage);
+  if (form.mileage.trim() && (mileageMiles === undefined || mileageMiles < 0)) {
     return { ok: false, error: "Mileage must be zero or a positive integer." };
   }
   const engineCylinders = parseOptionalInteger(form.engine_cylinders);
@@ -434,8 +434,8 @@ function buildPayload(form: FormState): BuildPayloadResult {
     make,
     model,
     year,
-    price_sar: form.price_sar.trim() ? price : null,
-    mileage_km: mileageMiles === undefined ? undefined : milesToKm(mileageMiles),
+    price: form.price.trim() ? price : null,
+    mileage: mileageMiles === undefined ? undefined : milesToKm(mileageMiles),
     body_type: form.body_type.trim() || undefined,
     transmission: form.transmission.trim() || undefined,
     fuel_type: form.fuel_type.trim() || undefined,
@@ -717,8 +717,8 @@ export default function CarDraftForm({
       year: car.year === DRAFT_PLACEHOLDER_YEAR && car.make === DRAFT_PLACEHOLDER && car.model === DRAFT_PLACEHOLDER
         ? ""
         : field(car.year),
-      price_sar: fromLoadedField(car.price_sar),
-      mileage_km: fromLoadedMileage(car.mileage_km),
+      price: fromLoadedField(car.price),
+      mileage: fromLoadedMileage(car.mileage),
       body_type: fromLoadedField(car.body_type),
       transmission: fromLoadedField(car.transmission),
       fuel_type: fromLoadedField(car.fuel_type),
@@ -922,8 +922,8 @@ export default function CarDraftForm({
       return;
     }
 
-    const price = parseOptionalInteger(form.price_sar);
-    const mileageMiles = parseOptionalInteger(form.mileage_km);
+    const price = parseOptionalInteger(form.price);
+    const mileageMiles = parseOptionalInteger(form.mileage);
 
     setDescriptionFilling(true);
     try {
@@ -939,8 +939,8 @@ export default function CarDraftForm({
           make,
           model,
           year,
-          price_sar: price && price > 0 ? price : undefined,
-          mileage_km: mileageMiles !== undefined && mileageMiles >= 0 ? milesToKm(mileageMiles) : undefined,
+          price: price && price > 0 ? price : undefined,
+          mileage: mileageMiles !== undefined && mileageMiles >= 0 ? milesToKm(mileageMiles) : undefined,
           body_type: form.body_type.trim() || undefined,
           transmission: form.transmission.trim() || undefined,
           fuel_type: form.fuel_type.trim() || undefined,
@@ -997,10 +997,10 @@ export default function CarDraftForm({
       return;
     }
 
-    const mileageMiles = parseOptionalInteger(form.mileage_km);
+    const mileageMiles = parseOptionalInteger(form.mileage);
     const engineCylinders = parseOptionalInteger(form.engine_cylinders);
     const engineVolume = parseOptionalFloat(form.engine_volume);
-    if (form.mileage_km.trim() && (mileageMiles === undefined || mileageMiles < 0)) {
+    if (form.mileage.trim() && (mileageMiles === undefined || mileageMiles < 0)) {
       setPricePredictStatus("Mileage must be zero or a positive integer.");
       return;
     }
@@ -1027,7 +1027,7 @@ export default function CarDraftForm({
           make,
           model,
           year,
-          mileage_km: mileageMiles !== undefined && mileageMiles >= 0 ? milesToKm(mileageMiles) : undefined,
+          mileage: mileageMiles !== undefined && mileageMiles >= 0 ? milesToKm(mileageMiles) : undefined,
           body_type: form.body_type.trim() || undefined,
           transmission: form.transmission.trim() || undefined,
           fuel_type: form.fuel_type.trim() || undefined,
@@ -1050,7 +1050,7 @@ export default function CarDraftForm({
       }
 
       const data = (await res.json()) as PricePredictionResponse;
-      setForm((prev) => ({ ...prev, price_sar: String(data.price_sar) }));
+      setForm((prev) => ({ ...prev, price: String(data.price) }));
       setPricePredictStatus(text.pricePredictApplied);
     } catch (err) {
       setPricePredictStatus(
@@ -2099,8 +2099,8 @@ export default function CarDraftForm({
                         className="input"
                         type="number"
                         min={0}
-                        value={form.mileage_km}
-                        onChange={(e) => setForm((prev) => ({ ...prev, mileage_km: e.target.value }))}
+                        value={form.mileage}
+                        onChange={(e) => setForm((prev) => ({ ...prev, mileage: e.target.value }))}
                       />
                     </div>
                   </div>
@@ -2283,8 +2283,8 @@ export default function CarDraftForm({
                     className="input"
                     type="number"
                     min={1}
-                    value={form.price_sar}
-                    onChange={(e) => setForm((prev) => ({ ...prev, price_sar: e.target.value }))}
+                    value={form.price}
+                    onChange={(e) => setForm((prev) => ({ ...prev, price: e.target.value }))}
                   />
                   {pricePredictStatus ? <p className="helper-text">{pricePredictStatus}</p> : null}
                 </div>

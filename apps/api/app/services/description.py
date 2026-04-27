@@ -41,7 +41,7 @@ def _compact_payload(payload: DescriptionFillRequest) -> dict:
     }
     renamed: dict[str, object] = {}
     for key, value in raw.items():
-        if key == "price_sar":
+        if key == "price":
             renamed["price_usd"] = value
         elif key == "title_ar":
             renamed["title"] = value

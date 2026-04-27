@@ -66,10 +66,10 @@ def search_cars(
         r = {}
         if price_min is not None: r["gte"] = price_min
         if price_max is not None: r["lte"] = price_max
-        filters.append({"range": {"price_sar": r}})
+        filters.append({"range": {"price": r}})
 
     if mileage_max is not None:
-        filters.append({"range": {"mileage_km": {"lte": mileage_max}}})
+        filters.append({"range": {"mileage": {"lte": mileage_max}}})
     if lat is not None and lon is not None:
         distance_km = radius_km or 50
         location_should: list[dict] = [
@@ -116,11 +116,11 @@ def search_cars(
     if sort == "newest":
         body["sort"] = [{"published_at": {"order": "desc"}}]
     elif sort == "price_asc":
-        body["sort"] = [{"price_sar": {"order": "asc", "missing": "_last"}}]
+        body["sort"] = [{"price": {"order": "asc", "missing": "_last"}}]
     elif sort == "price_desc":
-        body["sort"] = [{"price_sar": {"order": "desc", "missing": "_last"}}]
+        body["sort"] = [{"price": {"order": "desc", "missing": "_last"}}]
     elif sort == "mileage_asc":
-        body["sort"] = [{"mileage_km": {"order": "asc", "missing": "_last"}}]
+        body["sort"] = [{"mileage": {"order": "asc", "missing": "_last"}}]
 
     try:
         res = c.search(index=settings.OPENSEARCH_INDEX, body=body)

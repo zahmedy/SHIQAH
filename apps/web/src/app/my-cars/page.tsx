@@ -34,9 +34,9 @@ type MyCar = {
   make: string;
   model: string;
   year: number;
-  price_sar?: number | null;
-  sold_price_sar?: number | null;
-  mileage_km?: number;
+  price?: number | null;
+  sold_price?: number | null;
+  mileage?: number;
   title_ar: string;
   photos: CarPhoto[];
   created_at: string;
@@ -579,12 +579,12 @@ export default function MyCarsPage() {
                     <p className="car-meta">{car.make} {car.model} • {car.year}</p>
                     <div className="profile-listing-facts">
                       <p className="car-meta">{car.city || text.cityNotSet}{car.district ? `, ${car.district}` : ""}</p>
-                      <p className="car-meta">{formatMileage(car.mileage_km, locale)}</p>
+                      <p className="car-meta">{formatMileage(car.mileage, locale)}</p>
                       <p className="car-meta">{text.createdOn(formatShortDate(car.created_at, locale))}</p>
                       {car.sold_at ? <p className="car-meta">{text.soldOn(formatShortDate(car.sold_at, locale))}</p> : null}
-                      {car.sold_price_sar ? <p className="car-meta">{text.soldPrice(formatListingPrice(car.sold_price_sar, locale))}</p> : null}
+                      {car.sold_price ? <p className="car-meta">{text.soldPrice(formatListingPrice(car.sold_price, locale))}</p> : null}
                     </div>
-                    <p className="car-price">{formatListingPrice(car.price_sar, locale)}</p>
+                    <p className="car-price">{formatListingPrice(car.price, locale)}</p>
 
                     {car.review_reason ? (
                       <p className="car-meta card-note">

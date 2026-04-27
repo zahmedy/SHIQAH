@@ -20,8 +20,8 @@ def ensure_index() -> None:
                         "fuel_type": {"type": "keyword"},
                         "drivetrain": {"type": "keyword"},
                         "body_type": {"type": "keyword"},
-                        "price_sar": {"type": "integer"},
-                        "mileage_km": {"type": "integer"},
+                        "price": {"type": "integer"},
+                        "mileage": {"type": "integer"},
                     }
                 },
             )
@@ -40,8 +40,8 @@ def ensure_index() -> None:
                 "make": {"type": "keyword"},
                 "model": {"type": "keyword"},
                 "year": {"type": "integer"},
-                "price_sar": {"type": "integer"},
-                "mileage_km": {"type": "integer"},
+                "price": {"type": "integer"},
+                "mileage": {"type": "integer"},
                 "body_type": {"type": "keyword"},
                 "transmission": {"type": "keyword"},
                 "fuel_type": {"type": "keyword"},

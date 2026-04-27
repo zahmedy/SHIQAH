@@ -53,9 +53,9 @@ class CarListing(SQLModel, table=True):
     ml_raw: Optional[str] = Field(default=None)                     # raw JSON/string payload for debugging
     ml_updated_at: Optional[datetime] = Field(default=None, index=True)
 
-    price_sar: Optional[int] = Field(default=None, index=True)
-    sold_price_sar: Optional[int] = Field(default=None, index=True)
-    mileage_km: Optional[int] = Field(default=None, index=True)
+    price: Optional[int] = Field(default=None, index=True)
+    sold_price: Optional[int] = Field(default=None, index=True)
+    mileage: Optional[int] = Field(default=None, index=True)
 
     body_type: Optional[str] = Field(default=None, index=True)      # sedan/suv/pickup
     transmission: Optional[str] = Field(default=None, index=True)   # automatic/manual

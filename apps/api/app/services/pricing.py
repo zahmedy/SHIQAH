@@ -430,7 +430,7 @@ def _build_model_input(payload: PricePredictionRequest) -> pd.DataFrame:
     transmission = _normalize_transmission(payload.transmission)
     drivetrain = _normalize_drivetrain(payload.drivetrain)
     fuel_type = _normalize_fuel_type(payload.fuel_type)
-    mileage_value = float(payload.mileage_km or 0.0)
+    mileage_value = float(payload.mileage or 0.0)
     car_age = max(0.0, float(REFERENCE_YEAR - payload.year))
     miles_per_year = mileage_value / max(1.0, car_age)
     engine_volume = _normalize_engine_volume(payload.engine_volume)
@@ -459,7 +459,7 @@ def _build_deploy_model_input(payload: PricePredictionRequest) -> pd.DataFrame:
         "make": payload.make,
         "model": payload.model,
         "year": payload.year,
-        "mileage_km": payload.mileage_km,
+        "mileage": payload.mileage,
         "body_type": payload.body_type,
         "transmission": payload.transmission,
         "fuel_type": payload.fuel_type,

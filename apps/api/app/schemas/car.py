@@ -18,8 +18,8 @@ class CarCreate(BaseModel):
     model: str
     year: int
 
-    price_sar: Optional[int] = None
-    mileage_km: Optional[int] = None
+    price: Optional[int] = None
+    mileage: Optional[int] = None
 
     body_type: Optional[str] = None
     transmission: Optional[str] = None
@@ -45,8 +45,8 @@ class CarUpdate(BaseModel):
     model: Optional[str] = None
     year: Optional[int] = None
 
-    price_sar: Optional[int] = None
-    mileage_km: Optional[int] = None
+    price: Optional[int] = None
+    mileage: Optional[int] = None
 
     body_type: Optional[str] = None
     transmission: Optional[str] = None
@@ -63,7 +63,7 @@ class CarUpdate(BaseModel):
 
 
 class MarkSoldRequest(BaseModel):
-    sold_price_sar: Optional[int] = None
+    sold_price: Optional[int] = None
 
 
 class VinScanRequest(BaseModel):
@@ -95,8 +95,8 @@ class DescriptionFillRequest(BaseModel):
     make: str
     model: str
     year: int
-    price_sar: Optional[int] = None
-    mileage_km: Optional[int] = None
+    price: Optional[int] = None
+    mileage: Optional[int] = None
     body_type: Optional[str] = None
     transmission: Optional[str] = None
     fuel_type: Optional[str] = None
@@ -118,7 +118,7 @@ class PricePredictionRequest(BaseModel):
     make: str
     model: str
     year: int
-    mileage_km: Optional[int] = None
+    mileage: Optional[int] = None
     body_type: Optional[str] = None
     transmission: Optional[str] = None
     fuel_type: Optional[str] = None
@@ -132,7 +132,7 @@ class PricePredictionRequest(BaseModel):
 
 
 class PricePredictionResponse(BaseModel):
-    price_sar: int
+    price: int
 
 
 class CarOut(BaseModel):
@@ -159,9 +159,9 @@ class CarOut(BaseModel):
     ml_raw: Optional[str]
     ml_updated_at: Optional[datetime]
 
-    price_sar: Optional[int]
-    sold_price_sar: Optional[int]
-    mileage_km: Optional[int]
+    price: Optional[int]
+    sold_price: Optional[int]
+    mileage: Optional[int]
 
     body_type: Optional[str]
     transmission: Optional[str]

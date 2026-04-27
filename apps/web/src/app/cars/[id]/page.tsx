@@ -26,9 +26,9 @@ type Listing = {
   make: string;
   model: string;
   year: number;
-  price_sar?: number | null;
-  sold_price_sar?: number | null;
-  mileage_km?: number;
+  price?: number | null;
+  sold_price?: number | null;
+  mileage?: number;
   title_ar: string;
   description_ar: string;
   public_bidding_enabled: boolean;
@@ -124,7 +124,7 @@ export default async function CarDetailPage({
           <h1 className="listing-title">{car.title_ar}</h1>
           <div className="listing-price-row">
             <p className="car-price-meta">{sellerAndTime(locale, data.seller.user_id, data.seller.name, car.published_at)}</p>
-            <p className="car-price">{formatListingPrice(car.price_sar, locale)}</p>
+            <p className="car-price">{formatListingPrice(car.price, locale)}</p>
           </div>
           <OwnerActions ownerId={car.owner_id} carId={car.id} initialStatus={car.status} />
         </header>
@@ -150,7 +150,7 @@ export default async function CarDetailPage({
           </article>
           <article className="spec">
             <p className="spec-key">Mileage</p>
-            <p className="spec-val">{car.mileage_km ? formatDistance(car.mileage_km, locale) : "—"}</p>
+            <p className="spec-val">{car.mileage ? formatDistance(car.mileage, locale) : "—"}</p>
           </article>
           <article className="spec">
             <p className="spec-key">City</p>
