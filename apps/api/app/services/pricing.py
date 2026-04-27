@@ -1,73 +1,37 @@
 from __future__ import annotations
 
 from functools import lru_cache
-import json
 from pathlib import Path
 import re
+import sys
 import warnings
 
 import joblib
-import numpy as np
+import pandas as pd
 from sklearn.exceptions import InconsistentVersionWarning
+from sklearn.base import BaseEstimator, TransformerMixin
 
+from app.ml_models.pricing_preprocessing import DEPLOY_INPUT_COLUMNS
 from app.schemas.car import PricePredictionRequest
 
-MODEL_PATH = Path(__file__).resolve().parent.parent / "ml_models" / "pricing_model.pkl"
-MODEL_TE_METADATA_PATH = Path(__file__).resolve().parent.parent / "ml_models" / "pricing_model_te.json"
-MODEL_TE_GLOBAL_MEAN = 16237.695134782474
+MODEL_PATH = Path(__file__).resolve().parent.parent / "ml_models" / "car_price_pipeline.pkl"
 REFERENCE_YEAR = 2026
 
-FEATURE_NAMES = (
+PIPELINE_FEATURE_NAMES = (
+    "Manufacturer",
+    "Model",
     "Prod. year",
+    "Category",
+    "Fuel type",
     "Engine volume",
     "Mileage",
     "Cylinders",
     "Gear box type",
+    "Drive wheels",
+    "Color",
     "car_age",
     "Engine Displacement",
     "Miles per year",
-    "Manufacturer_Audi",
-    "Manufacturer_BMW",
-    "Manufacturer_Chevrolet",
-    "Manufacturer_Ford",
-    "Manufacturer_Honda",
-    "Manufacturer_Hyundai",
-    "Manufacturer_Kia",
-    "Manufacturer_Lexus",
-    "Manufacturer_Mazda",
-    "Manufacturer_Mercedes-Benz",
-    "Manufacturer_Mitsubishi",
-    "Manufacturer_Nissan",
-    "Manufacturer_Subaru",
-    "Manufacturer_Toyota",
-    "Manufacturer_Volkswagen",
-    "Manufacturer_other",
-    "Color_Beige",
-    "Color_Black",
-    "Color_Blue",
-    "Color_Brown",
-    "Color_Gold",
-    "Color_Gray",
-    "Color_Green",
-    "Color_Orange",
-    "Color_Purple",
-    "Color_Red",
-    "Color_Silver",
-    "Color_White",
-    "Category_Coupe",
-    "Category_Hatchback",
-    "Category_Pickup",
-    "Category_SUV",
-    "Category_Sedan",
-    "Category_Van",
-    "Category_Wagon",
-    "Fuel type_Diesel",
-    "Fuel type_Hybrid",
-    "Fuel type_Petrol",
-    "Drive wheels_AWD",
-    "Drive wheels_FWD",
-    "Drive wheels_RWD",
-    "Model_te",
 )
 
 COLOR_MAP = {
@@ -92,6 +56,14 @@ COLOR_MAP = {
 }
 
 BODY_TYPE_MAP = {
+    "Sedan": "Sedan",
+    "SUV": "SUV",
+    "Coupe": "Coupe",
+    "Hatchback": "Hatchback",
+    "Pickup": "Pickup",
+    "Van": "Van",
+    "Wagon": "Wagon",
+    "Convertible": "Convertible",
     "Jeep": "SUV",
     "Hatchback": "Hatchback",
     "Sedan": "Sedan",
@@ -131,6 +103,8 @@ FUEL_TYPE_MAP = {
     "Hybrid": "Hybrid",
     "Plug-in Hybrid": "Hybrid",
     "Petrol": "Petrol",
+    "Gasoline": "Petrol",
+    "Gas": "Petrol",
     "Diesel": "Diesel",
     "CNG": "Petrol",
     "LPG": "Petrol",
@@ -395,10 +369,40 @@ def _normalize_engine_volume(value: float | None) -> float:
     return float(value)
 
 
+class ModelTargetEncoder(BaseEstimator, TransformerMixin):
+    """Runtime copy of the custom transformer saved inside car_price_pipeline.pkl."""
+
+    def __init__(self, alpha=10):
+        self.alpha = alpha
+
+    def fit(self, X, y):
+        X = X.copy()
+        y = pd.Series(y, index=X.index, name="Price")
+        stats = pd.DataFrame({"Model": X["Model"], "Price": y})
+
+        model_counts = stats.groupby("Model")["Price"].count()
+        model_means = stats.groupby("Model")["Price"].mean()
+        self.global_mean_ = y.mean()
+        self.model_te_ = (
+            (model_means * model_counts) + (self.global_mean_ * self.alpha)
+        ) / (model_counts + self.alpha)
+        return self
+
+    def transform(self, X):
+        X = X.copy()
+        X["Model_te"] = X["Model"].map(self.model_te_).fillna(self.global_mean_)
+        return X[["Model_te"]]
+
+
 @lru_cache(maxsize=1)
 def _load_model():
     if not MODEL_PATH.exists():
         raise RuntimeError(f"Pricing model not found at {MODEL_PATH}.")
+
+    # The notebook saved ModelTargetEncoder from __main__. Registering it here
+    # lets joblib unpickle the existing artifact. Future training should move
+    # custom transformers into an importable module before dumping the model.
+    setattr(sys.modules["__main__"], "ModelTargetEncoder", ModelTargetEncoder)
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", InconsistentVersionWarning)
@@ -408,52 +412,17 @@ def _load_model():
     # reduces memory pressure when the forest is very large.
     if hasattr(model, "n_jobs"):
         model.n_jobs = 1
+    model_step = getattr(model, "named_steps", {}).get("model")
+    if hasattr(model_step, "n_jobs"):
+        model_step.n_jobs = 1
 
     expected_features = tuple(getattr(model, "feature_names_in_", ()))
-    if expected_features and expected_features != FEATURE_NAMES:
-        raise RuntimeError("Pricing model features do not match the API feature map.")
+    if expected_features and expected_features not in (PIPELINE_FEATURE_NAMES, tuple(DEPLOY_INPUT_COLUMNS)):
+        raise RuntimeError("Pricing model pipeline inputs do not match the API input map.")
     return model
 
 
-@lru_cache(maxsize=1)
-def _load_model_te_metadata() -> tuple[float, dict[str, float]]:
-    if not MODEL_TE_METADATA_PATH.exists():
-        return MODEL_TE_GLOBAL_MEAN, {}
-
-    with MODEL_TE_METADATA_PATH.open("r", encoding="utf-8") as f:
-        payload = json.load(f)
-
-    if not isinstance(payload, dict):
-        raise RuntimeError("pricing_model_te.json must be a JSON object.")
-
-    raw_global_mean = payload.get("global_mean", MODEL_TE_GLOBAL_MEAN)
-    raw_model_means = payload.get("model_means", {})
-    if not isinstance(raw_model_means, dict):
-        raise RuntimeError("pricing_model_te.json model_means must be an object.")
-
-    global_mean = float(raw_global_mean)
-    model_means = {
-        str(key).strip(): float(value)
-        for key, value in raw_model_means.items()
-        if str(key).strip()
-    }
-    return global_mean, model_means
-
-
-def _resolve_model_te(model_name: str) -> float:
-    global_mean, model_means = _load_model_te_metadata()
-    direct_match = model_means.get(model_name)
-    if direct_match is not None:
-        return direct_match
-
-    lowered_name = model_name.lower()
-    for key, value in model_means.items():
-        if key.lower() == lowered_name:
-            return value
-    return global_mean
-
-
-def _build_feature_vector(payload: PricePredictionRequest) -> np.ndarray:
+def _build_model_input(payload: PricePredictionRequest) -> pd.DataFrame:
     make = _normalize_make(payload.make)
     model_name = _canonicalize_model(make, payload.model) or "other"
     color = _normalize_color(payload.color)
@@ -467,52 +436,51 @@ def _build_feature_vector(payload: PricePredictionRequest) -> np.ndarray:
     engine_volume = _normalize_engine_volume(payload.engine_volume)
     cylinders = float(payload.engine_cylinders or 0.0)
 
-    features = {name: 0.0 for name in FEATURE_NAMES}
-    features["Prod. year"] = float(payload.year)
-    features["Engine volume"] = engine_volume
-    features["Mileage"] = mileage_value
-    features["Cylinders"] = cylinders
-    features["Gear box type"] = GEARBOX_VALUE_MAP.get(transmission, 0.0)
-    features["car_age"] = car_age
-    features["Engine Displacement"] = engine_volume * cylinders
-    features["Miles per year"] = miles_per_year
-    features["Model_te"] = _resolve_model_te(model_name)
+    return pd.DataFrame([{
+        "Manufacturer": make or "other",
+        "Model": model_name,
+        "Prod. year": float(payload.year),
+        "Category": body_type,
+        "Fuel type": fuel_type,
+        "Engine volume": engine_volume,
+        "Mileage": mileage_value,
+        "Cylinders": cylinders,
+        "Gear box type": transmission,
+        "Drive wheels": drivetrain,
+        "Color": color,
+        "car_age": car_age,
+        "Engine Displacement": engine_volume * cylinders,
+        "Miles per year": miles_per_year,
+    }], columns=PIPELINE_FEATURE_NAMES)
 
-    if make:
-        key = f"Manufacturer_{make}"
-        features[key if key in features else "Manufacturer_other"] = 1.0
-    else:
-        features["Manufacturer_other"] = 1.0
 
-    if color:
-        key = f"Color_{color}"
-        if key in features:
-            features[key] = 1.0
-
-    if body_type:
-        key = f"Category_{body_type}"
-        if key in features:
-            features[key] = 1.0
-
-    if fuel_type:
-        key = f"Fuel type_{fuel_type}"
-        if key in features:
-            features[key] = 1.0
-
-    if drivetrain:
-        key = f"Drive wheels_{drivetrain}"
-        if key in features:
-            features[key] = 1.0
-
-    return np.array([[features[name] for name in FEATURE_NAMES]], dtype=float)
+def _build_deploy_model_input(payload: PricePredictionRequest) -> pd.DataFrame:
+    return pd.DataFrame([{
+        "make": payload.make,
+        "model": payload.model,
+        "year": payload.year,
+        "mileage_km": payload.mileage_km,
+        "body_type": payload.body_type,
+        "transmission": payload.transmission,
+        "fuel_type": payload.fuel_type,
+        "drivetrain": payload.drivetrain,
+        "engine_cylinders": payload.engine_cylinders,
+        "engine_volume": payload.engine_volume,
+        "color": payload.color,
+    }], columns=DEPLOY_INPUT_COLUMNS)
 
 
 def generate_price_prediction(payload: PricePredictionRequest) -> int:
     model = _load_model()
-    feature_vector = _build_feature_vector(payload)
+    expected_features = tuple(getattr(model, "feature_names_in_", ()))
+    model_input = (
+        _build_deploy_model_input(payload)
+        if expected_features == tuple(DEPLOY_INPUT_COLUMNS)
+        else _build_model_input(payload)
+    )
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
-        predicted_price = float(model.predict(feature_vector)[0])
+        predicted_price = float(model.predict(model_input)[0])
     if predicted_price <= 0:
         raise RuntimeError("Pricing model returned an invalid prediction.")
     return int(round(predicted_price))
