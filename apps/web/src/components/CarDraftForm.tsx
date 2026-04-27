@@ -551,17 +551,13 @@ export default function CarDraftForm({
     mainPhotoUpdated: "Main photo updated.",
     updateMainPhotoFailed: "Failed to update main photo.",
     createDraftTitle: "Sell your car",
-    editListingTitle: (id?: number) => `Edit Car #${id ?? ""}`,
+    editListingTitle: "Edit listing",
     formNote: mode === "create" ? "Start with photos and basic details. AutoIntel helps with VIN decoding, pricing, and buyer-ready copy." : "Update the details buyers need.",
     sectionBasics: "Vehicle basics",
     sectionSpecs: "Condition and specs",
     sectionPricing: "Price guidance",
     sectionListing: "Listing copy",
     currentStatus: "Current status",
-    flowPhotos: "Photos",
-    flowVin: "VIN",
-    flowDetails: "Details",
-    flowPublish: "Publish",
     vinTitle: "AutoIntel VIN",
     vinHelp: "Photo or type the VIN. AutoIntel fills what it can.",
     vinManualLabel: "VIN",
@@ -1790,7 +1786,7 @@ export default function CarDraftForm({
     }
   }
 
-  const title = mode === "create" ? text.createDraftTitle : text.editListingTitle(carId);
+  const title = mode === "create" ? text.createDraftTitle : text.editListingTitle;
 
   return (
     <main className="page shell auth-wrap">
@@ -1799,12 +1795,6 @@ export default function CarDraftForm({
           <div>
             <h1>{title}</h1>
             <p className="auth-note">{text.formNote}</p>
-            <div className="draft-flow-steps" aria-label="AutoIntel seller flow">
-              <span>{text.flowPhotos}</span>
-              <span>{text.flowVin}</span>
-              <span>{text.flowDetails}</span>
-              <span>{text.flowPublish}</span>
-            </div>
           </div>
           {status ? (
             <div className="draft-status-chip">
