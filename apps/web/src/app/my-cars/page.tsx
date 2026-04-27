@@ -35,10 +35,12 @@ type MyCar = {
   model: string;
   year: number;
   price_sar?: number | null;
+  sold_price_sar?: number | null;
   mileage_km?: number;
   title_ar: string;
   photos: CarPhoto[];
   created_at: string;
+  sold_at?: string | null;
 };
 
 type MeResponse = {
@@ -135,6 +137,8 @@ export default function MyCarsPage() {
     noListingsYet: "No cars yet.",
     cityNotSet: "Location not set",
     createdOn: (value: string) => `Created ${value}`,
+    soldOn: (value: string) => `Sold ${value}`,
+    soldPrice: (value: string) => `Sold for ${value}`,
     review: "Review",
     previousPhoto: "Previous photo",
     nextPhoto: "Next photo",
@@ -577,6 +581,8 @@ export default function MyCarsPage() {
                       <p className="car-meta">{car.city || text.cityNotSet}{car.district ? `, ${car.district}` : ""}</p>
                       <p className="car-meta">{formatMileage(car.mileage_km, locale)}</p>
                       <p className="car-meta">{text.createdOn(formatShortDate(car.created_at, locale))}</p>
+                      {car.sold_at ? <p className="car-meta">{text.soldOn(formatShortDate(car.sold_at, locale))}</p> : null}
+                      {car.sold_price_sar ? <p className="car-meta">{text.soldPrice(formatListingPrice(car.sold_price_sar, locale))}</p> : null}
                     </div>
                     <p className="car-price">{formatListingPrice(car.price_sar, locale)}</p>
 

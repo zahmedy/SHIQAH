@@ -20,6 +20,7 @@ from app.schemas.car import (
     CarPhoto,
     DescriptionFillRequest,
     DescriptionFillResponse,
+    MarkSoldRequest,
     PricePredictionRequest,
     PricePredictionResponse,
     VinDecodeRequest,
@@ -392,6 +393,7 @@ def submit_car(
 
     car.status = CarStatus.pending_review
     car.updated_at = datetime.utcnow()
+    car.sold_at = None
     car.reviewed_at = None
     car.review_source = None
     car.review_reason = None
@@ -400,6 +402,39 @@ def submit_car(
     session.commit()
     enqueue_auto_review(car.id)
     session.refresh(car)
+    photos_map = _load_photos_map(session, [car.id])
+    return to_car_out(car, photos=photos_map.get(car.id, []))
+
+
+@router.post("/cars/{car_id}/sold", response_model=CarOut)
+def mark_owner_car_sold(
+    car_id: int,
+    payload: MarkSoldRequest,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
+    car = session.exec(select(CarListing).where(CarListing.id == car_id)).first()
+    if not car:
+        raise HTTPException(status_code=404, detail="Not found")
+    ensure_owner(car, user)
+
+    if car.status == CarStatus.sold:
+        photos_map = _load_photos_map(session, [car.id])
+        return to_car_out(car, photos=photos_map.get(car.id, []))
+    if car.status != CarStatus.active:
+        raise HTTPException(status_code=400, detail="Only active listings can be marked sold")
+    if payload.sold_price_sar is not None and payload.sold_price_sar <= 0:
+        raise HTTPException(status_code=400, detail="Invalid sold price")
+
+    now = datetime.utcnow()
+    car.status = CarStatus.sold
+    car.sold_at = now
+    car.sold_price_sar = payload.sold_price_sar
+    car.updated_at = now
+    session.add(car)
+    session.commit()
+    session.refresh(car)
+    delete_car(str(car_id))
     photos_map = _load_photos_map(session, [car.id])
     return to_car_out(car, photos=photos_map.get(car.id, []))
 

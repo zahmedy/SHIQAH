@@ -54,6 +54,7 @@ class CarListing(SQLModel, table=True):
     ml_updated_at: Optional[datetime] = Field(default=None, index=True)
 
     price_sar: Optional[int] = Field(default=None, index=True)
+    sold_price_sar: Optional[int] = Field(default=None, index=True)
     mileage_km: Optional[int] = Field(default=None, index=True)
 
     body_type: Optional[str] = Field(default=None, index=True)      # sedan/suv/pickup
@@ -71,6 +72,7 @@ class CarListing(SQLModel, table=True):
     public_bidding_enabled: bool = Field(default=False, index=True)
 
     published_at: Optional[datetime] = Field(default=None, index=True)
+    sold_at: Optional[datetime] = Field(default=None, index=True)
     reviewed_at: Optional[datetime] = Field(default=None, index=True)
     review_source: Optional[str] = Field(default=None)
     review_reason: Optional[str] = Field(default=None)

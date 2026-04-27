@@ -62,6 +62,10 @@ class CarUpdate(BaseModel):
     public_bidding_enabled: Optional[bool] = None
 
 
+class MarkSoldRequest(BaseModel):
+    sold_price_sar: Optional[int] = None
+
+
 class VinScanRequest(BaseModel):
     image_base64: str
     content_type: str = "image/jpeg"
@@ -156,6 +160,7 @@ class CarOut(BaseModel):
     ml_updated_at: Optional[datetime]
 
     price_sar: Optional[int]
+    sold_price_sar: Optional[int]
     mileage_km: Optional[int]
 
     body_type: Optional[str]
@@ -173,6 +178,7 @@ class CarOut(BaseModel):
     public_bidding_enabled: bool
 
     published_at: Optional[datetime]
+    sold_at: Optional[datetime]
     reviewed_at: Optional[datetime]
     review_source: Optional[str]
     review_reason: Optional[str]

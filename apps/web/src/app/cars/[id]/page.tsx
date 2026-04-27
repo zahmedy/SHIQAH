@@ -20,12 +20,14 @@ type Photo = {
 type Listing = {
   id: number;
   owner_id: number;
+  status: string;
   city: string;
   district?: string;
   make: string;
   model: string;
   year: number;
   price_sar?: number | null;
+  sold_price_sar?: number | null;
   mileage_km?: number;
   title_ar: string;
   description_ar: string;
@@ -39,6 +41,7 @@ type Listing = {
   condition?: string;
   color?: string;
   published_at?: string;
+  sold_at?: string | null;
   photos: Photo[];
 };
 
@@ -123,7 +126,7 @@ export default async function CarDetailPage({
             <p className="car-price-meta">{sellerAndTime(locale, data.seller.user_id, data.seller.name, car.published_at)}</p>
             <p className="car-price">{formatListingPrice(car.price_sar, locale)}</p>
           </div>
-          <OwnerActions ownerId={car.owner_id} carId={car.id} />
+          <OwnerActions ownerId={car.owner_id} carId={car.id} initialStatus={car.status} />
         </header>
 
         {car.photos?.length ? (
