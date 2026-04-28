@@ -13,6 +13,15 @@ docker compose -f infra/compose.yaml up --build
 - MinIO API: `http://localhost:9000`
 - MinIO Console: `http://localhost:9001`
 
+## Retrain Pricing Model
+
+Run this from the API environment after Postgres is running. It appends eligible `carlisting` rows to `app_ready.csv`, reruns the notebook, and replaces `car_price_pipeline.pkl` only after the notebook succeeds.
+
+```bash
+cd apps/api
+python -m app.tasks.retrain_pricing_model
+```
+
 ```
 autointel/
   apps/

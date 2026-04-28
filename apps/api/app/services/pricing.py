@@ -11,11 +11,24 @@ import pandas as pd
 from sklearn.exceptions import InconsistentVersionWarning
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from app.ml_models.pricing_preprocessing import DEPLOY_INPUT_COLUMNS
 from app.schemas.car import PricePredictionRequest
 
 MODEL_PATH = Path(__file__).resolve().parent.parent / "ml_models" / "car_price_pipeline.pkl"
 REFERENCE_YEAR = 2026
+
+DEPLOY_INPUT_COLUMNS = [
+    "make",
+    "model",
+    "year",
+    "mileage",
+    "body_type",
+    "transmission",
+    "fuel_type",
+    "drivetrain",
+    "engine_cylinders",
+    "engine_volume",
+    "color",
+]
 
 PIPELINE_FEATURE_NAMES = (
     "Manufacturer",
