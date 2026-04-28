@@ -4,6 +4,7 @@ from opensearchpy.exceptions import TransportError
 from sqlmodel import Session, select
 
 from app.db.session import get_session
+from app.models.car import CarListing
 from app.models.user import User
 from app.services.opensearch import client, ensure_index
 from app.services.city_proximity import nearby_cities
@@ -154,6 +155,20 @@ def search_cars(
     total = res["hits"]["total"]["value"] if isinstance(res["hits"]["total"], dict) else res["hits"]["total"]
 
     items = [h["_source"] for h in hits]
+    listing_ids = {
+        int(item["id"])
+        for item in items
+        if item.get("id") is not None and str(item.get("id")).isdigit()
+    }
+    listings_by_id: dict[int, CarListing] = {}
+    if listing_ids:
+        listings = session.exec(select(CarListing).where(CarListing.id.in_(listing_ids))).all()
+        listings_by_id = {
+            listing.id: listing
+            for listing in listings
+            if listing.id is not None
+        }
+
     owner_ids = {
         int(item["owner_id"])
         for item in items
@@ -169,6 +184,20 @@ def search_cars(
         }
 
     for item in items:
+        item_id = item.get("id")
+        listing = listings_by_id.get(int(item_id)) if item_id is not None and str(item_id).isdigit() else None
+        if listing:
+            item["price"] = listing.price
+            item["mileage"] = listing.mileage
+            item["make"] = listing.make
+            item["model"] = listing.model
+            item["year"] = listing.year
+            item["body_type"] = listing.body_type
+            item["transmission"] = listing.transmission
+            item["fuel_type"] = listing.fuel_type
+            item["drivetrain"] = listing.drivetrain
+            item["condition"] = listing.condition
+
         owner_id = item.get("owner_id")
         if owner_id is None:
             continue
