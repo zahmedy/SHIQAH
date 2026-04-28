@@ -49,4 +49,4 @@ ENV/
 
 node_modules/
 **/node_modules/
-.next
+.nextapps/api/app/ml_models/car_price_pipeline.pkl
