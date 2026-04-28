@@ -9,8 +9,6 @@ from sqlmodel import Session, select, func
 from app.core.deps import get_current_user
 from app.core.config import settings
 from app.db.session import get_session
-from app.models.chat import ChatMessage
-from app.models.lead import Lead
 from app.models.user import User
 from app.models.car import CarListing, CarStatus, CarMedia
 from app.schemas.car import (
@@ -28,7 +26,6 @@ from app.schemas.car import (
     VinScanResponse,
 )
 from app.services.opensearch import delete_car, upsert_car
-from app.services.s3 import delete_object
 from app.services.review import build_search_doc, enqueue_auto_review
 from app.services.description import generate_listing_description
 from app.services.niche_scoring import score_listing_for_all_niches
@@ -354,7 +351,9 @@ def my_cars(
     user: User = Depends(get_current_user),
 ):
     cars = session.exec(
-        select(CarListing).where(CarListing.owner_id == user.id).order_by(CarListing.created_at.desc())
+        select(CarListing)
+        .where(CarListing.owner_id == user.id, CarListing.status != CarStatus.expired)
+        .order_by(CarListing.created_at.desc())
     ).all()
     car_ids = [car.id for car in cars]
     photos_map = _load_photos_map(session, car_ids)
@@ -461,7 +460,6 @@ def archive_owner_car(
     session.add(car)
     session.commit()
     session.refresh(car)
-    delete_car(str(car_id))
     photos_map = _load_photos_map(session, [car.id])
     return to_car_out(car, photos=photos_map.get(car.id, []))
 
@@ -477,27 +475,9 @@ def permanently_delete_owner_car(
         raise HTTPException(status_code=404, detail="Not found")
     ensure_owner(car, user)
 
-    media_items = session.exec(select(CarMedia).where(CarMedia.car_id == car_id)).all()
-    storage_keys = [media.storage_key for media in media_items]
-    comment_messages = session.exec(select(ChatMessage).where(ChatMessage.car_id == car_id)).all()
-    leads = session.exec(select(Lead).where(Lead.car_id == car_id)).all()
-
-    for media in media_items:
-        session.delete(media)
-    for message in comment_messages:
-        session.delete(message)
-    for lead in leads:
-        session.delete(lead)
-
-    session.flush()
-    session.delete(car)
+    car.status = CarStatus.expired
+    car.updated_at = datetime.utcnow()
+    session.add(car)
     session.commit()
-
-    delete_car(str(car_id))
-    for storage_key in storage_keys:
-        try:
-            delete_object(storage_key)
-        except Exception:
-            pass
 
     return {"ok": True}

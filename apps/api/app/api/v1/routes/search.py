@@ -4,7 +4,7 @@ from opensearchpy.exceptions import TransportError
 from sqlmodel import Session, select
 
 from app.db.session import get_session
-from app.models.car import CarListing
+from app.models.car import CarListing, CarStatus
 from app.models.user import User
 from app.services.opensearch import client, ensure_index
 from app.services.city_proximity import nearby_cities
@@ -173,7 +173,7 @@ def search_cars(
         listings_by_id = {
             listing.id: listing
             for listing in listings
-            if listing.id is not None
+            if listing.id is not None and listing.status == CarStatus.active
         }
 
     owner_ids = {
@@ -193,18 +193,20 @@ def search_cars(
     for item in items:
         item_id = item.get("id")
         listing = listings_by_id.get(int(item_id)) if item_id is not None and str(item_id).isdigit() else None
-        if listing:
-            item["price"] = listing.price
-            item["mileage"] = listing.mileage
-            item["make"] = listing.make
-            item["model"] = listing.model
-            item["year"] = listing.year
-            item["body_type"] = listing.body_type
-            item["transmission"] = listing.transmission
-            item["fuel_type"] = listing.fuel_type
-            item["drivetrain"] = listing.drivetrain
-            item["condition"] = listing.condition
-            item["niche_scores"] = score_listing_for_all_niches(listing)
+        if not listing:
+            continue
+
+        item["price"] = listing.price
+        item["mileage"] = listing.mileage
+        item["make"] = listing.make
+        item["model"] = listing.model
+        item["year"] = listing.year
+        item["body_type"] = listing.body_type
+        item["transmission"] = listing.transmission
+        item["fuel_type"] = listing.fuel_type
+        item["drivetrain"] = listing.drivetrain
+        item["condition"] = listing.condition
+        item["niche_scores"] = score_listing_for_all_niches(listing)
 
         owner_id = item.get("owner_id")
         if owner_id is None:
@@ -212,5 +214,13 @@ def search_cars(
         seller_user_id = seller_user_ids.get(int(owner_id))
         if seller_user_id:
             item["seller_user_id"] = seller_user_id
+
+    items = [
+        item
+        for item in items
+        if item.get("id") is not None
+        and str(item.get("id")).isdigit()
+        and int(item["id"]) in listings_by_id
+    ]
 
     return {"page": page, "page_size": page_size, "total": total, "items": items}

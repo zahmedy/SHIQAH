@@ -530,7 +530,6 @@ export default function CarDraftForm({
     [mode, carId, createdId],
   );
   const isReviewLocked = status === "active" || status === "pending_review";
-  const isArchived = status === "expired";
   const text = {
     saveChanges: "Save",
     saveDraft: "Save Draft",
@@ -551,11 +550,8 @@ export default function CarDraftForm({
     listingSubmitted: "Listing submitted.",
     submitListingFailed: "Failed to submit listing.",
     saveBeforeDelete: "Save the listing before deleting it.",
-    archiveConfirm: "Archive this listing? It will be hidden from the public page and search, and you can restore it later.",
-    permanentDeleteConfirm: "Delete this listing permanently? This will permanently remove the listing, photos, messages, and offers.",
-    draftDeleted: "Draft permanently deleted.",
-    listingArchived: "Listing archived.",
-    listingDeleted: "Listing permanently deleted.",
+    hideConfirm: "Hide this listing? It will disappear from search and your profile.",
+    listingHidden: "Listing hidden.",
     deleteFailed: "Failed to complete the action.",
     selectPhotosFirst: "Select one or more photos first.",
     imagesOnly: "Only image files are allowed.",
@@ -642,6 +638,7 @@ export default function CarDraftForm({
     descriptionAiFillNeedsBasics: "Fill make, model, and year first.",
     descriptionAiFillApplied: "AutoIntel Description drafted. Review before publishing.",
     descriptionAiFillFailed: "Could not run AutoIntel Description.",
+    descriptionScoringHint: "More verified details improve niche scoring.",
     descriptionHighlights: "Seller-confirmed highlights",
     photos: "Photos",
     photosHelp: "Add exterior, interior, tires, dash, and any damage.",
@@ -663,10 +660,8 @@ export default function CarDraftForm({
     submitting: "Submitting...",
     saveAndSubmit: "Publish",
     deleting: "Deleting...",
-    archiving: "Archiving...",
-    archiveListing: "Archive",
-    deleteDraft: "Delete Permanently",
-    deleteListing: "Delete",
+    hiding: "Hiding...",
+    hideListing: "Delete",
     backToMyCars: "Back",
     editCreatedDraft: "Edit Created Draft",
     descriptionTooShort: "Description is too short for approval. Add more detail.",
@@ -1380,15 +1375,15 @@ export default function CarDraftForm({
       return;
     }
 
-    const confirmed = window.confirm(isArchived ? text.permanentDeleteConfirm : text.archiveConfirm);
+    const confirmed = window.confirm(text.hideConfirm);
     if (!confirmed) {
       return;
     }
 
     setDeleting(true);
     try {
-      const res = await fetch(`${API_BASE}/v1/cars/${activeCarId}${isArchived ? "/permanent" : "/archive"}`, {
-        method: isArchived ? "DELETE" : "POST",
+      const res = await fetch(`${API_BASE}/v1/cars/${activeCarId}/archive`, {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -1403,7 +1398,7 @@ export default function CarDraftForm({
         throw new Error(await parseApiError(res));
       }
 
-      redirectToMyCars("success", isArchived ? text.listingDeleted : text.listingArchived);
+      redirectToMyCars("success", text.listingHidden);
     } catch (err) {
       setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.deleteFailed);
     } finally {
@@ -2356,6 +2351,7 @@ export default function CarDraftForm({
                   value={form.description_ar}
                   onChange={(e) => setForm((prev) => ({ ...prev, description_ar: e.target.value }))}
                 />
+                <p className="helper-text">{text.descriptionScoringHint}</p>
                 <div className="niche-picker spaced-top-sm">
                   <p className="home-quick-filters-label">{text.descriptionHighlights}</p>
                   <div className="home-quick-filter-list">
@@ -2461,12 +2457,12 @@ export default function CarDraftForm({
               ) : null}
               {activeCarId ? (
                 <button
-                  className={`btn ${isArchived ? "btn-danger" : "btn-secondary"}`}
+                  className="btn btn-secondary"
                   type="button"
                   disabled={deleting || saving || loading || uploading}
                   onClick={() => void handleDeleteListing()}
                 >
-                  {deleting ? (isArchived ? text.deleting : text.archiving) : (isArchived ? text.deleteListing : text.archiveListing)}
+                  {deleting ? text.hiding : text.hideListing}
                 </button>
               ) : null}
               <Link href="/my-cars" className="btn btn-secondary">{text.backToMyCars}</Link>
