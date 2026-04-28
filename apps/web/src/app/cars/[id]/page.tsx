@@ -5,7 +5,7 @@ import ListingPhotoGallery from "@/components/ListingPhotoGallery";
 import NicheScoreSelector from "@/components/NicheScoreSelector";
 import { formatDateTime, formatDistance, formatListingPrice, translateValue, type Locale } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
-import { getNiche } from "@/shared/niches";
+import { getNiche, type NicheScoreResult } from "@/shared/niches";
 import ChatPanel from "./ChatPanel";
 import OfferForm from "./OfferForm";
 import OwnerActions from "./OwnerActions";
@@ -43,6 +43,7 @@ type Listing = {
   published_at?: string;
   sold_at?: string | null;
   photos: Photo[];
+  niche_scores?: Record<string, NicheScoreResult>;
 };
 
 type PublicCarResponse = {

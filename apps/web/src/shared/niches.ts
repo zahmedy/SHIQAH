@@ -1,14 +1,25 @@
-import { formatDistance, formatListingPrice, type Locale } from "@/lib/locale";
-
 export type NicheListingSignal = {
   city?: string | null;
-  price?: number | null;
+  make?: string | null;
+  model?: string | null;
   mileage?: number | null;
   fuel_type?: string | null;
   drivetrain?: string | null;
   body_type?: string | null;
   condition?: string | null;
   description_ar?: string | null;
+  niche_scores?: Record<string, NicheScoreResult>;
+};
+
+export type NicheScoreConfidence = "low" | "medium" | "high";
+
+export type NicheScoreResult = {
+  score: number;
+  confidence: NicheScoreConfidence;
+  label: "Strong niche fit" | "Good niche fit" | "Basic niche fit" | "Weak niche fit";
+  reasons: string[];
+  warnings: string[];
+  missing_signals: string[];
 };
 
 export type NicheQuickFilter = {
@@ -35,8 +46,6 @@ const AFFORDABLE_PRICE = 30000;
 const BUDGET_PRICE = 15000;
 const LOW_MILEAGE_MILES = 100000;
 const DAILY_MILEAGE_MILES = 120000;
-const LOW_MILEAGE_KM = LOW_MILEAGE_MILES * 1.60934;
-const DAILY_MILEAGE_KM = DAILY_MILEAGE_MILES * 1.60934;
 
 export const DEFAULT_NICHE_ID = "cold_weather_commuter";
 
@@ -47,7 +56,7 @@ export const NICHES: NicheDefinition[] = [
     shortName: "Cold weather",
     intro: "Affordable cars for snow, cold starts, short commutes, and rough winter weeks.",
     scoreLabel: "Cold-weather fit",
-    signals: ["AWD / 4WD", "Tires + rust", "Lower miles"],
+    signals: ["AWD / 4WD", "Winter equipment", "Lower miles"],
     quickFilters: [
       { label: "Under $30k", key: "price_max", value: String(AFFORDABLE_PRICE) },
       { label: "AWD", key: "drivetrain", value: "AWD" },
@@ -68,7 +77,7 @@ export const NICHES: NicheDefinition[] = [
     shortName: "Budget daily",
     intro: "Simple, affordable cars for daily errands, work commutes, and first-time buyers.",
     scoreLabel: "Daily-driver fit",
-    signals: ["Low price", "Lower miles", "Easy body styles"],
+    signals: ["Lower miles", "Efficient fuel", "Easy body styles"],
     quickFilters: [
       { label: "Under $15k", key: "price_max", value: String(BUDGET_PRICE) },
       { label: "Under 120k mi", key: "mileage_max", value: String(DAILY_MILEAGE_MILES) },
@@ -94,94 +103,39 @@ export function nicheHref(pathname: string, niche: NicheDefinition, query: Recor
   return `${pathname}?${qs.toString()}`;
 }
 
-function normalized(value?: string | null): string {
-  return (value ?? "").trim().toLowerCase();
+function emptyNicheScore(): NicheScoreResult {
+  return {
+    score: 0,
+    confidence: "low",
+    label: "Weak niche fit",
+    reasons: [],
+    warnings: [],
+    missing_signals: ["Niche score unavailable"],
+  };
 }
 
-function mentionsWinterReadiness(listing: NicheListingSignal): boolean {
-  const text = normalized(listing.description_ar);
-  return [
-    "snow tire",
-    "winter tire",
-    "heated seat",
-    "garage",
-    "rust",
-    "battery warranty",
-    "remote start",
-  ].some((term) => text.includes(term));
-}
-
-function coldWeatherScore(listing: NicheListingSignal): number {
-  let score = 0;
-  const drivetrain = normalized(listing.drivetrain);
-  const bodyType = normalized(listing.body_type);
-
-  if (drivetrain === "awd" || drivetrain === "4wd") score += 3;
-  if (bodyType === "suv" || bodyType === "hatchback" || bodyType === "pickup" || bodyType === "wagon") score += 1;
-  if (listing.price !== undefined && listing.price !== null && listing.price <= AFFORDABLE_PRICE) score += 2;
-  if (listing.mileage !== undefined && listing.mileage !== null && listing.mileage <= LOW_MILEAGE_KM) score += 1;
-  if (mentionsWinterReadiness(listing)) score += 1;
-
-  return Math.min(score, 10);
-}
-
-function budgetDailyScore(listing: NicheListingSignal): number {
-  let score = 0;
-  const fuelType = normalized(listing.fuel_type);
-  const bodyType = normalized(listing.body_type);
-  const condition = normalized(listing.condition);
-
-  if (listing.price !== undefined && listing.price !== null && listing.price <= BUDGET_PRICE) score += 3;
-  if (listing.mileage !== undefined && listing.mileage !== null && listing.mileage <= DAILY_MILEAGE_KM) score += 2;
-  if (fuelType === "hybrid" || fuelType === "petrol" || fuelType === "gasoline") score += 1;
-  if (bodyType === "sedan" || bodyType === "hatchback" || bodyType === "wagon") score += 2;
-  if (condition === "used") score += 1;
-
-  return Math.min(score, 10);
+export function nicheScoreDetails(listing: NicheListingSignal, nicheId?: string | null): NicheScoreResult {
+  const niche = getNiche(nicheId);
+  return listing.niche_scores?.[niche.id] ?? emptyNicheScore();
 }
 
 export function nicheScore(listing: NicheListingSignal, nicheId?: string | null): number {
-  const niche = getNiche(nicheId);
-  if (niche.id === "budget_daily_driver") return budgetDailyScore(listing);
-  return coldWeatherScore(listing);
+  return nicheScoreDetails(listing, nicheId).score;
 }
 
 export function nicheScoreLabel(listing: NicheListingSignal, nicheId?: string | null): string {
-  const score = nicheScore(listing, nicheId);
-  if (score >= 7) return "Strong niche fit";
-  if (score >= 4) return "Good niche fit";
-  return "Basic match";
+  return nicheScoreDetails(listing, nicheId).label;
 }
 
-export function nicheBadges(listing: NicheListingSignal, locale: Locale, nicheId?: string | null): string[] {
-  const niche = getNiche(nicheId);
-  const badges: string[] = [];
-  const drivetrain = normalized(listing.drivetrain);
-  const bodyType = normalized(listing.body_type);
-
-  if (niche.id === "budget_daily_driver") {
-    if (listing.price !== undefined && listing.price !== null && listing.price <= BUDGET_PRICE) {
-      badges.push(`Under ${formatListingPrice(BUDGET_PRICE, locale)}`);
-    }
-    if (listing.mileage !== undefined && listing.mileage !== null && listing.mileage <= DAILY_MILEAGE_KM) {
-      badges.push(`Under ${formatDistance(DAILY_MILEAGE_KM, locale)}`);
-    }
-    if (bodyType === "sedan" || bodyType === "hatchback" || bodyType === "wagon") {
-      badges.push(`${listing.body_type} daily body`);
-    }
-  } else {
-    if (drivetrain === "awd" || drivetrain === "4wd") badges.push(`${listing.drivetrain} winter traction`);
-    if (listing.price !== undefined && listing.price !== null && listing.price <= AFFORDABLE_PRICE) {
-      badges.push(`Under ${formatListingPrice(AFFORDABLE_PRICE, locale)}`);
-    }
-    if (listing.mileage !== undefined && listing.mileage !== null && listing.mileage <= LOW_MILEAGE_KM) {
-      badges.push(`Under ${formatDistance(LOW_MILEAGE_KM, locale)}`);
-    }
+export function nicheBadges(listing: NicheListingSignal, _locale: unknown, nicheId?: string | null): string[] {
+  const details = nicheScoreDetails(listing, nicheId);
+  if (details.reasons.length) {
+    return details.reasons.slice(0, 3);
   }
 
-  if (badges.length === 0) {
-    badges.push(nicheScoreLabel(listing, niche.id));
+  if (details.warnings.length) {
+    return details.warnings.slice(0, 3);
   }
 
-  return badges.slice(0, 3);
+  return [details.label];
 }

@@ -7,6 +7,7 @@ from app.db.session import get_session
 from app.models.car import CarListing, CarStatus, CarMedia
 from app.schemas.car import CarOut, CarPhoto, PublicCarDetailOut
 from app.models.user import User
+from app.services.niche_scoring import score_listing_for_all_niches
 
 router = APIRouter(prefix="/public", tags=["public"])
 
@@ -29,6 +30,7 @@ def public_car_detail(car_id: int, session: Session = Depends(get_session)):
         CarPhoto(id=p.id, public_url=p.public_url, sort_order=p.sort_order, is_cover=p.is_cover)
         for p in photos
     ]
+    data["niche_scores"] = score_listing_for_all_niches(car)
     out = CarOut(**data)
 
     seller_phone = seller.phone_e164 if seller else None

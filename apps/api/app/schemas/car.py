@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class CarPhoto(BaseModel):
     id: int
@@ -135,6 +135,15 @@ class PricePredictionResponse(BaseModel):
     price: int
 
 
+class NicheScoreOut(BaseModel):
+    score: int
+    confidence: str
+    label: str
+    reasons: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    missing_signals: list[str] = Field(default_factory=list)
+
+
 class CarOut(BaseModel):
     id: int
     status: str
@@ -171,7 +180,7 @@ class CarOut(BaseModel):
     engine_volume: Optional[float]
     condition: Optional[str]
     color: Optional[str]
-    photos: list[CarPhoto] = []
+    photos: list[CarPhoto] = Field(default_factory=list)
 
     title_ar: str
     description_ar: str
@@ -184,6 +193,7 @@ class CarOut(BaseModel):
     review_reason: Optional[str]
     created_at: datetime
     updated_at: datetime
+    niche_scores: dict[str, NicheScoreOut] = Field(default_factory=dict)
 
 
 class PublicSellerOut(BaseModel):

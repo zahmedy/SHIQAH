@@ -31,6 +31,7 @@ from app.services.opensearch import delete_car, upsert_car
 from app.services.s3 import delete_object
 from app.services.review import build_search_doc, enqueue_auto_review
 from app.services.description import generate_listing_description
+from app.services.niche_scoring import score_listing_for_all_niches
 from app.services.pricing import generate_price_prediction
 from app.services.vin import decode_vin_with_raw
 from app.services.vision import detect_vin_from_image, normalize_vin
@@ -113,6 +114,7 @@ def to_car_out(car: CarListing, photos: list[CarPhoto] | None = None) -> CarOut:
     elif status is not None:
         data["status"] = str(status)
     data["photos"] = photos or []
+    data["niche_scores"] = score_listing_for_all_niches(car)
     return CarOut(**data)
 
 

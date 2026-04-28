@@ -3,7 +3,7 @@ import HomeListingCard from "@/components/HomeListingCard";
 import HomeFilterControls from "@/components/HomeFilterControls";
 import { formatListingPrice, formatMileage, formatRelativeHours, type Locale } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
-import { getNiche, nicheBadges, nicheScoreLabel } from "@/shared/niches";
+import { getNiche, nicheBadges, nicheScoreLabel, type NicheScoreResult } from "@/shared/niches";
 
 type HomeListing = {
   id: number | string;
@@ -24,6 +24,7 @@ type HomeListing = {
   description_ar?: string;
   published_at?: string;
   photos?: Array<{ public_url: string }>;
+  niche_scores?: Record<string, NicheScoreResult>;
 };
 
 type HomeSearchResponse = {

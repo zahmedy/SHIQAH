@@ -7,7 +7,7 @@ import {
   NICHES,
   getNiche,
   nicheBadges,
-  nicheScore,
+  nicheScoreDetails,
   nicheScoreLabel,
   type NicheListingSignal,
 } from "@/shared/niches";
@@ -23,7 +23,7 @@ export default function NicheScoreSelector({ listing, locale, initialNicheId }: 
   const selectedNiche = getNiche(selectedNicheId);
   const nicheScores = NICHES.map((niche) => ({
     ...niche,
-    score: nicheScore(listing, niche.id),
+    details: nicheScoreDetails(listing, niche.id),
     fitLabel: nicheScoreLabel(listing, niche.id),
   }));
   const selectedScore = nicheScores.find((niche) => niche.id === selectedNiche.id) ?? nicheScores[0];
@@ -36,10 +36,10 @@ export default function NicheScoreSelector({ listing, locale, initialNicheId }: 
           <p className="spec-key">Choose niche</p>
           <h2 className="subheading">See how this car fits different buyers</h2>
           <p className="body-copy">
-            Scores use listing details like drivetrain, fuel type, price, mileage, body style, and seller notes.
+            Scores use fit signals like drivetrain, fuel type, mileage, body style, condition, and seller notes. Price is scored separately.
           </p>
         </div>
-        <strong className="niche-score-meter">{selectedScore.score}/10</strong>
+        <strong className="niche-score-meter">{selectedScore.details.score}/100</strong>
       </div>
 
       <div className="niche-score-options" aria-label="Choose niche score">
@@ -52,7 +52,7 @@ export default function NicheScoreSelector({ listing, locale, initialNicheId }: 
             onClick={() => setSelectedNicheId(niche.id)}
           >
             <span>{niche.shortName}</span>
-            <strong>{niche.score}/10</strong>
+            <strong>{niche.details.score}/100</strong>
             <small>{niche.fitLabel}</small>
           </button>
         ))}
@@ -61,7 +61,7 @@ export default function NicheScoreSelector({ listing, locale, initialNicheId }: 
       <div>
         <p className="spec-key">{selectedNiche.scoreLabel}</p>
         <p className="body-copy niche-score-summary">
-          {selectedScore.fitLabel} for {selectedNiche.name.toLowerCase()}.
+          {selectedScore.fitLabel} for {selectedNiche.name.toLowerCase()} with {selectedScore.details.confidence} signal confidence.
         </p>
       </div>
       <div className="winter-chip-row" aria-label="Niche signals">

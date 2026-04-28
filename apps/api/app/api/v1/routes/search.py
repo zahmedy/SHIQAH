@@ -9,6 +9,7 @@ from app.models.user import User
 from app.services.opensearch import client, ensure_index
 from app.services.city_proximity import nearby_cities
 from app.core.config import settings
+from app.services.niche_scoring import score_listing_for_all_niches
 from app.services.search_intent import parse_search_intent
 
 router = APIRouter(prefix="/search", tags=["search"])
@@ -197,6 +198,7 @@ def search_cars(
             item["fuel_type"] = listing.fuel_type
             item["drivetrain"] = listing.drivetrain
             item["condition"] = listing.condition
+            item["niche_scores"] = score_listing_for_all_niches(listing)
 
         owner_id = item.get("owner_id")
         if owner_id is None:

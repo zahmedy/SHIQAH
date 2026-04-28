@@ -13,7 +13,15 @@ import {
   type Locale,
 } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
-import { DEFAULT_NICHE_ID, NICHES, getNiche, nicheBadges, nicheHref, nicheScoreLabel } from "@/shared/niches";
+import {
+  DEFAULT_NICHE_ID,
+  NICHES,
+  getNiche,
+  nicheBadges,
+  nicheHref,
+  nicheScoreLabel,
+  type NicheScoreResult,
+} from "@/shared/niches";
 
 type SearchItem = {
   id: number | string;
@@ -34,6 +42,7 @@ type SearchItem = {
   description_ar?: string;
   published_at?: string;
   photos?: Array<{ public_url: string }>;
+  niche_scores?: Record<string, NicheScoreResult>;
 };
 
 type SearchResponse = {
