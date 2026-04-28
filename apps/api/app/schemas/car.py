@@ -106,6 +106,8 @@ class DescriptionFillRequest(BaseModel):
     condition: Optional[str] = None
     color: Optional[str] = None
     title_ar: Optional[str] = None
+    description_ar: Optional[str] = None
+    seller_highlights: list[str] = Field(default_factory=list)
 
 
 class DescriptionFillResponse(BaseModel):

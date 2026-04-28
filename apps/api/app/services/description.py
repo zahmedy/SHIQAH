@@ -37,7 +37,7 @@ def _compact_payload(payload: DescriptionFillRequest) -> dict:
     raw = {
         key: value
         for key, value in payload.model_dump().items()
-        if value not in (None, "")
+        if value not in (None, "", [])
     }
     renamed: dict[str, object] = {}
     for key, value in raw.items():
@@ -74,6 +74,7 @@ def _build_messages(payload: DescriptionFillRequest, retry_plainer: bool = False
                 "like a careful seller wrote it. Do not invent features, service records, "
                 "accident history, warranty, seller contact info, reliability, ownership claims, "
                 "winter capability, or mechanical condition. "
+                "Seller highlights are facts only when included in the provided fields. "
                 "Return JSON only."
             ),
         },
@@ -84,7 +85,10 @@ def _build_messages(payload: DescriptionFillRequest, retry_plainer: bool = False
                 "Aim for 55 to 90 words. Use a simple, natural tone. Mention the year, make, "
                 "model, body type, color, transmission, fuel type, mileage, price, and location only "
                 "when those fields are provided. All prices are in USD. If price_usd is present, refer to it as USD "
-                "or omit the currency instead of using SAR. Do not say the car is reliable, dependable, excellent, "
+                "or omit the currency instead of using SAR. Include seller_highlights naturally when provided, especially "
+                "winter tires, heated seats, remote start, garage-kept, service records, one-owner, clean title, "
+                "no-accident, new-tire, or recent-maintenance facts. If existing_description is provided, preserve its "
+                "factual details and clean up the wording. Do not say the car is reliable, dependable, excellent, "
                 "great, ideal, sleek, smooth, practical, spacious, comfortable, winter-ready, or good "
                 "for snowy streets unless the provided fields explicitly support that exact claim. "
                 "Do not infer cold-weather ability from city, sedan body type, automatic transmission, "

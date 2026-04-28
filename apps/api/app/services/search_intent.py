@@ -4,9 +4,29 @@ import re
 from typing import Any
 
 
-BUDGET_PRICE_MAX = 15000
 LOW_MILEAGE_MAX = 80000
 NEWER_YEAR_MIN = 2020
+
+SMART_BOOSTS = {
+    "winter": [
+        {"terms": {"drivetrain": ["AWD", "4WD"]}, "boost": 4},
+        {"terms": {"body_type": ["SUV", "Wagon", "Pickup", "Hatchback"]}, "boost": 2},
+        {"multi_match": {"query": "winter snow tire tires heated seats garage rust battery remote start", "fields": ["title_ar^2", "description_ar"]}, "boost": 3},
+    ],
+    "daily_driver": [
+        {"range": {"mileage": {"lte": 193121}}, "boost": 3},
+        {"terms": {"body_type": ["Sedan", "Hatchback", "Wagon", "SUV"]}, "boost": 2},
+        {"terms": {"fuel_type": ["Hybrid", "Petrol", "Electric"]}, "boost": 2},
+        {"multi_match": {"query": "maintenance service records one owner clean title no accident new tires", "fields": ["title_ar^2", "description_ar"]}, "boost": 2},
+    ],
+    "family": [
+        {"terms": {"body_type": ["SUV", "Van", "Wagon", "Sedan"]}, "boost": 3},
+    ],
+    "efficient": [
+        {"terms": {"fuel_type": ["Hybrid", "Electric", "Petrol"]}, "boost": 3},
+        {"terms": {"body_type": ["Sedan", "Hatchback", "Wagon"]}, "boost": 2},
+    ],
+}
 
 ALLOWED_BODY_TYPES = {
     "sedan": "Sedan",
@@ -119,9 +139,26 @@ def _remove_phrase(text: str, phrase: str | None) -> str:
 
 
 def _cleanup_keywords(text: str) -> list[str]:
-    cleaned = re.sub(r"\b(cars?|vehicles?|autos?|please|show|find|search|for|me|near|around)\b", " ", text, flags=re.IGNORECASE)
+    cleaned = re.sub(
+        r"\b(cars?|vehicles?|autos?|please|show|find|search|for|me|near|around|friendly)\b",
+        " ",
+        text,
+        flags=re.IGNORECASE,
+    )
     cleaned = re.sub(r"\s+", " ", cleaned).strip(" ,.-")
     return [cleaned] if cleaned else []
+
+
+def _boost_clause(boost: dict[str, Any]) -> dict[str, Any]:
+    clause = {key: value for key, value in boost.items() if key != "boost"}
+    return {"constant_score": {"filter": clause, "boost": boost["boost"]}}
+
+
+def build_smart_should_clauses(boost_names: list[str]) -> list[dict[str, Any]]:
+    clauses: list[dict[str, Any]] = []
+    for name in boost_names:
+        clauses.extend(_boost_clause(boost) for boost in SMART_BOOSTS.get(name, []))
+    return clauses
 
 
 def parse_search_intent(query: str | None) -> dict[str, Any]:
@@ -133,10 +170,41 @@ def parse_search_intent(query: str | None) -> dict[str, Any]:
     keyword_source = query
 
     if re.search(r"\b(budget|cheap|affordable|inexpensive|low price|low-price)\b", normalized):
-        intent["price_max"] = BUDGET_PRICE_MAX
         intent["sort"] = "price_asc"
+        intent.setdefault("boosts", []).append("daily_driver")
         keyword_source = re.sub(
             r"\b(budget|friendly|cheap|affordable|inexpensive|low price|low-price)\b",
+            " ",
+            keyword_source,
+            flags=re.IGNORECASE,
+        )
+
+    if re.search(r"\b(winter|snow|cold weather|cold-weather|heated seats?|remote start|garage kept|garage-kept)\b", normalized):
+        intent.setdefault("boosts", []).append("winter")
+        keyword_source = re.sub(
+            r"\b(winter|snow|cold weather|cold-weather|heated seats?|remote start|garage kept|garage-kept|ready|friendly)\b",
+            " ",
+            keyword_source,
+            flags=re.IGNORECASE,
+        )
+
+    if re.search(r"\b(daily driver|commuter|first car|first-time buyer|reliable|practical)\b", normalized):
+        intent.setdefault("boosts", []).append("daily_driver")
+        keyword_source = re.sub(
+            r"\b(daily driver|commuter|first car|first-time buyer|reliable|practical)\b",
+            " ",
+            keyword_source,
+            flags=re.IGNORECASE,
+        )
+
+    if re.search(r"\b(family|kids|school run|school-run)\b", normalized):
+        intent.setdefault("boosts", []).append("family")
+        keyword_source = re.sub(r"\b(family|kids|school run|school-run)\b", " ", keyword_source, flags=re.IGNORECASE)
+
+    if re.search(r"\b(fuel efficient|fuel-efficient|gas saver|economical|efficient)\b", normalized):
+        intent.setdefault("boosts", []).append("efficient")
+        keyword_source = re.sub(
+            r"\b(fuel efficient|fuel-efficient|gas saver|economical|efficient)\b",
             " ",
             keyword_source,
             flags=re.IGNORECASE,
@@ -215,5 +283,7 @@ def parse_search_intent(query: str | None) -> dict[str, Any]:
     keywords = _cleanup_keywords(keyword_source)
     if keywords:
         intent["keywords"] = keywords
+    if "boosts" in intent:
+        intent["boosts"] = list(dict.fromkeys(intent["boosts"]))
 
     return intent

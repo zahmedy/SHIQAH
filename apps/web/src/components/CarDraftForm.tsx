@@ -120,6 +120,11 @@ type DescriptionFillResponse = {
   description_ar: string;
 };
 
+type DescriptionHighlight = {
+  label: string;
+  value: string;
+};
+
 type PricePredictionResponse = {
   price: number;
 };
@@ -187,6 +192,19 @@ const COLOR_OPTIONS = [
   "Brown",
   "Beige",
   "Gold",
+];
+
+const DESCRIPTION_HIGHLIGHTS: DescriptionHighlight[] = [
+  { label: "Winter tires", value: "winter tires" },
+  { label: "Heated seats", value: "heated seats" },
+  { label: "Remote start", value: "remote start" },
+  { label: "Garage kept", value: "garage kept" },
+  { label: "Service records", value: "service records" },
+  { label: "One owner", value: "one owner" },
+  { label: "Clean title", value: "clean title" },
+  { label: "No accidents", value: "no accidents" },
+  { label: "New tires", value: "new tires" },
+  { label: "Recent maintenance", value: "recent maintenance" },
 ];
 
 const DRAFT_PLACEHOLDER = "__garaj_draft_placeholder__";
@@ -501,6 +519,7 @@ export default function CarDraftForm({
   const [vinStatusTone, setVinStatusTone] = useState<"success" | "error" | "">("");
   const [descriptionFilling, setDescriptionFilling] = useState(false);
   const [descriptionFillStatus, setDescriptionFillStatus] = useState("");
+  const [descriptionHighlights, setDescriptionHighlights] = useState<string[]>([]);
   const [pricePredicting, setPricePredicting] = useState(false);
   const [pricePredictStatus, setPricePredictStatus] = useState("");
   const photoInputRef = useRef<HTMLInputElement | null>(null);
@@ -623,6 +642,7 @@ export default function CarDraftForm({
     descriptionAiFillNeedsBasics: "Fill make, model, and year first.",
     descriptionAiFillApplied: "AutoIntel Description drafted. Review before publishing.",
     descriptionAiFillFailed: "Could not run AutoIntel Description.",
+    descriptionHighlights: "Seller-confirmed highlights",
     photos: "Photos",
     photosHelp: "Add exterior, interior, tires, dash, and any damage.",
     addingPhotos: "Adding...",
@@ -948,6 +968,8 @@ export default function CarDraftForm({
           condition: form.condition.trim() || undefined,
           color: form.color.trim() || undefined,
           title_ar: form.title_ar.trim() || undefined,
+          description_ar: form.description_ar.trim() || undefined,
+          seller_highlights: descriptionHighlights,
         }),
       });
 
@@ -2334,6 +2356,30 @@ export default function CarDraftForm({
                   value={form.description_ar}
                   onChange={(e) => setForm((prev) => ({ ...prev, description_ar: e.target.value }))}
                 />
+                <div className="niche-picker spaced-top-sm">
+                  <p className="home-quick-filters-label">{text.descriptionHighlights}</p>
+                  <div className="home-quick-filter-list">
+                    {DESCRIPTION_HIGHLIGHTS.map((highlight) => {
+                      const active = descriptionHighlights.includes(highlight.value);
+                      return (
+                        <button
+                          key={highlight.value}
+                          type="button"
+                          className={active ? "home-quick-filter-active" : ""}
+                          onClick={() => {
+                            setDescriptionHighlights((current) =>
+                              active
+                                ? current.filter((value) => value !== highlight.value)
+                                : [...current, highlight.value],
+                            );
+                          }}
+                        >
+                          {highlight.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
                 {descriptionFillStatus ? <p className="helper-text">{descriptionFillStatus}</p> : null}
               </div>
 

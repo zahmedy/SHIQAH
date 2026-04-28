@@ -10,7 +10,7 @@ from app.services.opensearch import client, ensure_index
 from app.services.city_proximity import nearby_cities
 from app.core.config import settings
 from app.services.niche_scoring import score_listing_for_all_niches
-from app.services.search_intent import parse_search_intent
+from app.services.search_intent import build_smart_should_clauses, parse_search_intent
 
 router = APIRouter(prefix="/search", tags=["search"])
 
@@ -123,6 +123,7 @@ def search_cars(
                 "fields": ["title_ar", "description_ar", "seller_name", "make", "model", "city"],
             }
         })
+    should = build_smart_should_clauses(intent.get("boosts", []))
 
     body = {
         "from": (page - 1) * page_size,
@@ -134,9 +135,14 @@ def search_cars(
             }
         }
     }
+    if should:
+        body["query"]["bool"]["should"] = should
 
     if sort == "newest":
-        body["sort"] = [{"published_at": {"order": "desc"}}]
+        if should:
+            body["sort"] = [{"_score": {"order": "desc"}}, {"published_at": {"order": "desc"}}]
+        else:
+            body["sort"] = [{"published_at": {"order": "desc"}}]
     elif sort == "price_asc":
         body["sort"] = [{"price": {"order": "asc", "missing": "_last"}}]
     elif sort == "price_desc":
