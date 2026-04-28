@@ -13,7 +13,7 @@ import {
   type Locale,
 } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
-import { NICHES, getNiche, nicheBadges, nicheHref, nicheScoreLabel } from "@/shared/niches";
+import { DEFAULT_NICHE_ID, NICHES, getNiche, nicheBadges, nicheHref, nicheScoreLabel } from "@/shared/niches";
 
 type SearchItem = {
   id: number | string;
@@ -69,6 +69,22 @@ const FUEL_TYPE_OPTIONS = [
 const DRIVETRAIN_OPTIONS = ["AWD", "4WD", "FWD", "RWD"] as const;
 const BODY_TYPE_OPTIONS = ["SUV", "Hatchback", "Sedan", "Pickup", "Van", "Wagon", "Convertible"] as const;
 const NICHE_RESET_KEYS = ["price_max", "mileage_max", "fuel_type", "drivetrain", "body_type", "sort"] as const;
+const LOW_RESULT_THRESHOLD = 3;
+const FILTER_KEYS = [
+  "city",
+  "make",
+  "model",
+  "q",
+  "price_max",
+  "mileage_max",
+  "fuel_type",
+  "drivetrain",
+  "body_type",
+  "sort",
+  "lat",
+  "lon",
+  "radius_km",
+] as const;
 
 function locationUserAndTime(locale: Locale, city?: string, district?: string, sellerUserId?: string, publishedAt?: string) {
   const parts = [];
@@ -92,6 +108,11 @@ function buildSearchNicheHref(params: Query, nicheId: string): string {
   }
   next.set("niche", nicheId);
   return `/search?${next.toString()}`;
+}
+
+function hasActiveFilters(params: Query): boolean {
+  if (params.niche && params.niche !== DEFAULT_NICHE_ID) return true;
+  return FILTER_KEYS.some((key) => Boolean(params[key]));
 }
 
 export default async function SearchPage({
@@ -137,6 +158,7 @@ export default async function SearchPage({
   } catch (err) {
     fetchError = err instanceof Error ? err.message : "Failed to load search results.";
   }
+  const showClearFilters = hasActiveFilters(params) && data.total > 0 && data.total <= LOW_RESULT_THRESHOLD;
 
   return (
     <main className="page shell">
@@ -259,6 +281,9 @@ export default async function SearchPage({
               <strong>{data.total}</strong> cars found
               <p>Sorted and filtered for a faster browse.</p>
             </div>
+            {showClearFilters ? (
+              <Link href="/search" className="btn btn-secondary">Clear filters</Link>
+            ) : null}
           </div>
 
           {fetchError ? (
