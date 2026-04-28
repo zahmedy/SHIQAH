@@ -8,6 +8,7 @@ from app.models.user import User
 from app.services.opensearch import client, ensure_index
 from app.services.city_proximity import nearby_cities
 from app.core.config import settings
+from app.services.search_intent import parse_search_intent
 
 router = APIRouter(prefix="/search", tags=["search"])
 
@@ -37,6 +38,24 @@ def search_cars(
     page_size: int = Query(default=20, ge=1, le=50),
     session: Session = Depends(get_session),
 ):
+    intent = parse_search_intent(q)
+    intent_keywords = " ".join(intent.get("keywords", []))
+
+    city = city or intent.get("city")
+    make = make or intent.get("make")
+    model = model or intent.get("model")
+    year_min = year_min if year_min is not None else intent.get("year_min")
+    year_max = year_max if year_max is not None else intent.get("year_max")
+    price_min = price_min if price_min is not None else intent.get("price_min")
+    price_max = price_max if price_max is not None else intent.get("price_max")
+    mileage_max = mileage_max if mileage_max is not None else intent.get("mileage_max")
+    transmission = transmission or intent.get("transmission")
+    fuel_type = fuel_type or intent.get("fuel_type")
+    drivetrain = drivetrain or intent.get("drivetrain")
+    body_type = body_type or intent.get("body_type")
+    if sort == "newest" and intent.get("sort"):
+        sort = intent["sort"]
+
     try:
         ensure_index()
         c = client()
@@ -94,11 +113,12 @@ def search_cars(
         })
 
     must: list[dict] = []
-    if q:
+    text_query = intent_keywords if intent else q
+    if text_query:
         must.append({
             "multi_match": {
-                "query": q,
-                "fields": ["title_ar", "description_ar"],
+                "query": text_query,
+                "fields": ["title_ar", "description_ar", "seller_name", "make", "model", "city"],
             }
         })
 
