@@ -590,14 +590,14 @@ export default function MyCarsPage() {
       {error && <div className="notice error">{error}</div>}
       {success && <div className="notice success">{success}</div>}
 
-      {!loading && !needsLogin && !error && visibleCars.length === 0 && (
+      {!loading && !needsLogin && !error && cars.length === 0 && (
         <div className="panel profile-empty">
           <h2 className="subheading">{text.listingsSection}</h2>
-          <p className="helper-text">{cars.length ? text.noVisibleListings : text.noListingsYet}</p>
+          <p className="helper-text">{text.noListingsYet}</p>
         </div>
       )}
 
-      {!loading && !needsLogin && visibleCars.length > 0 && (
+      {!loading && !needsLogin && cars.length > 0 && (
         <section className="spaced-top">
           <div className="profile-section-head">
             <div>
@@ -631,8 +631,14 @@ export default function MyCarsPage() {
               </div>
             ) : null}
           </div>
-          <div className="profile-listing-grid">
-            {visibleCars.map((car) => {
+
+          {visibleCars.length === 0 ? (
+            <div className="panel profile-empty">
+              <p className="helper-text">{text.noVisibleListings}</p>
+            </div>
+          ) : (
+            <div className="profile-listing-grid">
+              {visibleCars.map((car) => {
               const photos = getOrderedPhotos(car.photos);
               const photoIndex = Math.min(photoIndexes[car.id] ?? 0, Math.max(photos.length - 1, 0));
               const activePhoto = photos[photoIndex]?.public_url || "";
@@ -763,8 +769,9 @@ export default function MyCarsPage() {
                   </div>
                 </article>
               );
-            })}
-          </div>
+              })}
+            </div>
+          )}
         </section>
       )}
     </main>
