@@ -2,7 +2,7 @@ import base64
 import binascii
 import logging
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select, func
 
@@ -37,6 +37,7 @@ router = APIRouter(tags=["cars"])
 logger = logging.getLogger("uvicorn.error")
 
 MAX_VIN_IMAGE_BYTES = 8 * 1024 * 1024
+ARCHIVE_RESTORE_WINDOW_DAYS = 30
 
 
 def ensure_owner(car: CarListing, user: User):
@@ -347,13 +348,15 @@ def update_car(
 
 @router.get("/seller/cars", response_model=list[CarOut])
 def my_cars(
+    include_archived: bool = False,
     session: Session = Depends(get_session),
     user: User = Depends(get_current_user),
 ):
+    statement = select(CarListing).where(CarListing.owner_id == user.id)
+    if not include_archived:
+        statement = statement.where(CarListing.status != CarStatus.expired)
     cars = session.exec(
-        select(CarListing)
-        .where(CarListing.owner_id == user.id, CarListing.status != CarStatus.expired)
-        .order_by(CarListing.created_at.desc())
+        statement.order_by(CarListing.created_at.desc())
     ).all()
     car_ids = [car.id for car in cars]
     photos_map = _load_photos_map(session, car_ids)
@@ -455,8 +458,11 @@ def archive_owner_car(
         photos_map = _load_photos_map(session, [car.id])
         return to_car_out(car, photos=photos_map.get(car.id, []))
 
+    now = datetime.utcnow()
+    car.status_before_archive = car.status.value if isinstance(car.status, CarStatus) else str(car.status)
+    car.archived_at = now
     car.status = CarStatus.expired
-    car.updated_at = datetime.utcnow()
+    car.updated_at = now
     session.add(car)
     session.commit()
     session.refresh(car)
@@ -475,9 +481,45 @@ def permanently_delete_owner_car(
         raise HTTPException(status_code=404, detail="Not found")
     ensure_owner(car, user)
 
+    now = datetime.utcnow()
+    if car.status != CarStatus.expired:
+        car.status_before_archive = car.status.value if isinstance(car.status, CarStatus) else str(car.status)
+    car.archived_at = now
     car.status = CarStatus.expired
-    car.updated_at = datetime.utcnow()
+    car.updated_at = now
     session.add(car)
     session.commit()
 
     return {"ok": True}
+
+
+@router.post("/cars/{car_id}/restore", response_model=CarOut)
+def restore_archived_owner_car(
+    car_id: int,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
+    car = session.exec(select(CarListing).where(CarListing.id == car_id)).first()
+    if not car:
+        raise HTTPException(status_code=404, detail="Not found")
+    ensure_owner(car, user)
+
+    if car.status != CarStatus.expired:
+        raise HTTPException(status_code=400, detail="Only archived listings can be restored")
+    if car.status_before_archive != CarStatus.active.value:
+        raise HTTPException(status_code=400, detail="Only listings deleted while active can be restored")
+    if not car.archived_at:
+        raise HTTPException(status_code=400, detail="This archived listing cannot be restored")
+    if car.archived_at < datetime.utcnow() - timedelta(days=ARCHIVE_RESTORE_WINDOW_DAYS):
+        raise HTTPException(status_code=400, detail="Archived listings can only be restored for 30 days")
+
+    car.status = CarStatus.active
+    car.archived_at = None
+    car.status_before_archive = None
+    car.updated_at = datetime.utcnow()
+    session.add(car)
+    session.commit()
+    session.refresh(car)
+    upsert_car(str(car.id), build_search_doc(session, car))
+    photos_map = _load_photos_map(session, [car.id])
+    return to_car_out(car, photos=photos_map.get(car.id, []))

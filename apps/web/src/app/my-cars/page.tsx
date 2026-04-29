@@ -41,6 +41,8 @@ type MyCar = {
   photos: CarPhoto[];
   created_at: string;
   sold_at?: string | null;
+  archived_at?: string | null;
+  status_before_archive?: string | null;
 };
 
 type MeResponse = {
@@ -96,12 +98,14 @@ export default function MyCarsPage() {
   const [needsLogin, setNeedsLogin] = useState(false);
   const [submittingId, setSubmittingId] = useState<number | null>(null);
   const [adminActionId, setAdminActionId] = useState<number | null>(null);
+  const [restoringId, setRestoringId] = useState<number | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [me, setMe] = useState<MeResponse | null>(null);
   const [userId, setUserId] = useState("");
   const [savingUserId, setSavingUserId] = useState(false);
   const [photoIndexes, setPhotoIndexes] = useState<Record<number, number>>({});
   const [showSoldCars, setShowSoldCars] = useState(true);
+  const [showArchivedCars, setShowArchivedCars] = useState(false);
   const text = {
     missingApiBase: "NEXT_PUBLIC_API_BASE is missing.",
     sessionExpired: "Your session is missing or expired. Please login again.",
@@ -118,6 +122,8 @@ export default function MyCarsPage() {
     rejectionReasonDefault: "Needs manual fixes",
     rejectSuccess: (carId: number) => `Car #${carId} rejected.`,
     rejectFailed: "Failed to reject listing.",
+    restoreSuccess: (carId: number) => `Car #${carId} restored.`,
+    restoreFailed: "Failed to restore listing.",
     title: "Seller Hub",
     subtitle: "",
     profileKicker: "AutoIntel Seller",
@@ -141,6 +147,7 @@ export default function MyCarsPage() {
     createdOn: (value: string) => `Created ${value}`,
     soldOn: (value: string) => `Sold ${value}`,
     soldPrice: (value: string) => `Sold for ${value}`,
+    archivedOn: (value: string) => `Archived ${value}`,
     review: "Review",
     previousPhoto: "Previous photo",
     nextPhoto: "Next photo",
@@ -155,13 +162,22 @@ export default function MyCarsPage() {
     openPublicListing: "View",
     publicPageAfterActive: "Visible after publishing.",
     showSoldCars: "Show sold cars",
+    showArchivedCars: "Show archived cars",
+    restoreListing: "Restore",
+    restoring: "Restoring...",
+    archiveRestoreUnavailable: "Archived listing cannot be restored.",
     currentStatus: "Current status",
   };
 
   const canLoad = useMemo(() => Boolean(API_BASE), []);
   const visibleCars = useMemo(
-    () => (showSoldCars ? cars : cars.filter((car) => car.status !== "sold")),
-    [cars, showSoldCars],
+    () =>
+      cars.filter((car) => {
+        if (!showSoldCars && car.status === "sold") return false;
+        if (!showArchivedCars && car.status === "expired") return false;
+        return true;
+      }),
+    [cars, showArchivedCars, showSoldCars],
   );
 
   const loadCars = useCallback(async () => {
@@ -207,7 +223,7 @@ export default function MyCarsPage() {
       setUserId(me.user_id || "");
       setIsAdmin(me.role === "admin");
 
-      const res = await fetch(`${API_BASE}/v1/seller/cars`, {
+      const res = await fetch(`${API_BASE}/v1/seller/cars?include_archived=true`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -445,6 +461,61 @@ export default function MyCarsPage() {
     }
   }
 
+  function canRestoreArchivedListing(car: MyCar): boolean {
+    if (car.status !== "expired" || car.status_before_archive !== "active" || !car.archived_at) {
+      return false;
+    }
+    const archivedAt = new Date(car.archived_at).getTime();
+    if (!Number.isFinite(archivedAt)) {
+      return false;
+    }
+    return Date.now() - archivedAt <= 30 * 24 * 60 * 60 * 1000;
+  }
+
+  async function restoreCar(carId: number) {
+    setError("");
+    setSuccess("");
+
+    if (!canLoad || !API_BASE) {
+      setError(text.missingApiBase);
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setNeedsLogin(true);
+      setError(text.loginRequired);
+      return;
+    }
+
+    setRestoringId(carId);
+    try {
+      const res = await fetch(`${API_BASE}/v1/cars/${carId}/restore`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        setNeedsLogin(true);
+        throw new Error(text.sessionExpired);
+      }
+
+      if (!res.ok) {
+        throw new Error(await parseApiError(res));
+      }
+
+      const restored = (await res.json()) as MyCar;
+      setCars((prev) => prev.map((car) => (car.id === carId ? restored : car)));
+      setSuccess(text.restoreSuccess(carId));
+    } catch (err) {
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.restoreFailed);
+    } finally {
+      setRestoringId(null);
+    }
+  }
+
   function showListingPhoto(carId: number, photoCount: number, direction: -1 | 1) {
     setPhotoIndexes((prev) => {
       const current = prev[carId] ?? 0;
@@ -533,16 +604,31 @@ export default function MyCarsPage() {
               <h2 className="subheading">{text.listingsSection}</h2>
               <p className="helper-text">{text.listingsSectionHelp}</p>
             </div>
-            {cars.some((car) => car.status === "sold") ? (
-              <label className="field-toggle profile-sold-toggle" htmlFor="show-sold-cars">
-                <input
-                  id="show-sold-cars"
-                  type="checkbox"
-                  checked={showSoldCars}
-                  onChange={(event) => setShowSoldCars(event.target.checked)}
-                />
-                <span>{text.showSoldCars}</span>
-              </label>
+            {cars.some((car) => car.status === "sold" || car.status === "expired") ? (
+              <div className="profile-listing-toggles">
+                {cars.some((car) => car.status === "sold") ? (
+                  <label className="field-toggle profile-sold-toggle" htmlFor="show-sold-cars">
+                    <input
+                      id="show-sold-cars"
+                      type="checkbox"
+                      checked={showSoldCars}
+                      onChange={(event) => setShowSoldCars(event.target.checked)}
+                    />
+                    <span>{text.showSoldCars}</span>
+                  </label>
+                ) : null}
+                {cars.some((car) => car.status === "expired") ? (
+                  <label className="field-toggle profile-sold-toggle" htmlFor="show-archived-cars">
+                    <input
+                      id="show-archived-cars"
+                      type="checkbox"
+                      checked={showArchivedCars}
+                      onChange={(event) => setShowArchivedCars(event.target.checked)}
+                    />
+                    <span>{text.showArchivedCars}</span>
+                  </label>
+                ) : null}
+              </div>
             ) : null}
           </div>
           <div className="profile-listing-grid">
@@ -601,6 +687,7 @@ export default function MyCarsPage() {
                       <p className="car-meta">{text.createdOn(formatShortDate(car.created_at, locale))}</p>
                       {car.sold_at ? <p className="car-meta">{text.soldOn(formatShortDate(car.sold_at, locale))}</p> : null}
                       {car.sold_price ? <p className="car-meta">{text.soldPrice(formatListingPrice(car.sold_price, locale))}</p> : null}
+                      {car.archived_at ? <p className="car-meta">{text.archivedOn(formatShortDate(car.archived_at, locale))}</p> : null}
                     </div>
                     <p className="car-price">{formatListingPrice(car.price, locale)}</p>
 
@@ -611,11 +698,22 @@ export default function MyCarsPage() {
                     ) : null}
 
                     <div className="profile-card-actions">
-                  {(car.status === "draft" || car.status === "pending_review" || car.status === "rejected" || car.status === "active" || car.status === "expired") && (
+                  {(car.status === "draft" || car.status === "pending_review" || car.status === "rejected" || car.status === "active") && (
                     <Link href={`/my-cars/${car.id}/edit`} className="btn btn-secondary">
                       {car.status === "rejected" ? text.fixAndResubmit : text.editListing}
                     </Link>
                   )}
+
+                      {car.status === "expired" && canRestoreArchivedListing(car) ? (
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          disabled={restoringId === car.id}
+                          onClick={() => void restoreCar(car.id)}
+                        >
+                          {restoringId === car.id ? text.restoring : text.restoreListing}
+                        </button>
+                      ) : null}
 
                       {car.status === "draft" && (
                         <button
@@ -656,8 +754,11 @@ export default function MyCarsPage() {
                       ) : null}
                     </div>
 
-                    {["draft", "pending_review", "rejected", "expired"].includes(car.status) ? (
+                    {["draft", "pending_review", "rejected"].includes(car.status) ? (
                       <p className="car-meta card-note">{text.publicPageAfterActive}</p>
+                    ) : null}
+                    {car.status === "expired" && !canRestoreArchivedListing(car) ? (
+                      <p className="car-meta card-note">{text.archiveRestoreUnavailable}</p>
                     ) : null}
                   </div>
                 </article>

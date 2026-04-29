@@ -1986,6 +1986,13 @@ a {
   font-size: 0.85rem;
 }
 
+.profile-listing-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
 .profile-empty {
   display: grid;
   gap: 0.8rem;

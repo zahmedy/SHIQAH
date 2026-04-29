@@ -73,6 +73,8 @@ class CarListing(SQLModel, table=True):
 
     published_at: Optional[datetime] = Field(default=None, index=True)
     sold_at: Optional[datetime] = Field(default=None, index=True)
+    archived_at: Optional[datetime] = Field(default=None, index=True)
+    status_before_archive: Optional[str] = Field(default=None, index=True)
     reviewed_at: Optional[datetime] = Field(default=None, index=True)
     review_source: Optional[str] = Field(default=None)
     review_reason: Optional[str] = Field(default=None)

@@ -553,6 +553,7 @@ export default function CarDraftForm({
     saveBeforeDelete: "Save the listing before deleting it.",
     deleteConfirmTitle: "Delete listing?",
     deleteConfirmBody: "This listing will be archived and can be restored for 30 days.",
+    deleteConfirmBodyNoRestore: "This listing will be archived and removed from your profile.",
     deleteConfirmCancel: "Cancel",
     deleteConfirmAction: "Delete listing",
     listingHidden: "Listing archived.",
@@ -2479,7 +2480,7 @@ export default function CarDraftForm({
                 />
                 <div className="sold-modal-card">
                   <h2 id="delete-confirm-title" className="subheading">{text.deleteConfirmTitle}</h2>
-                  <p className="helper-text">{text.deleteConfirmBody}</p>
+                  <p className="helper-text">{status === "active" ? text.deleteConfirmBody : text.deleteConfirmBodyNoRestore}</p>
                   <div className="sold-modal-actions">
                     <button
                       type="button"

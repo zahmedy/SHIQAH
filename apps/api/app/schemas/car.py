@@ -190,6 +190,8 @@ class CarOut(BaseModel):
 
     published_at: Optional[datetime]
     sold_at: Optional[datetime]
+    archived_at: Optional[datetime]
+    status_before_archive: Optional[str]
     reviewed_at: Optional[datetime]
     review_source: Optional[str]
     review_reason: Optional[str]
