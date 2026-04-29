@@ -596,18 +596,18 @@ export default function CarDraftForm({
     sectionListing: "Listing copy",
     currentStatus: "Current status",
     vinTitle: "AutoIntel VIN",
-    vinHelp: "Photo or type the VIN. Review detected details before applying.",
+    vinHelp: "Take a close, clear VIN photo or type it manually.",
     vinManualLabel: "VIN",
     vinManualPlaceholder: "17-character VIN",
     vinDecode: "Decode VIN",
     vinDecoding: "Decoding...",
-    vinUploadPhoto: "Upload VIN Photo",
+    vinUploadPhoto: "Use camera or upload",
     vinScanning: "Reading VIN...",
     vinReadyForReview: (vin: string) => `VIN ${vin} detected. Confirm the details before applying.`,
     vinApplied: (vin: string) => `VIN ${vin} confirmed. Details applied.`,
     vinDetectedOnly: (vin: string) => `VIN ${vin} detected, but details were not decoded.`,
-    vinConfirmTitle: "Confirm detected details",
-    vinConfirmHelp: "Only apply these details if they match the vehicle.",
+    vinConfirmTitle: "Review before applying",
+    vinConfirmHelp: "Check the VIN and vehicle details.",
     vinApplyDetails: "Apply details",
     vinClearDetection: "Clear",
     vinScanFailed: "Failed to read VIN photo.",
@@ -2031,6 +2031,7 @@ export default function CarDraftForm({
                   className="upload-file-input"
                   type="file"
                   accept="image/*"
+                  capture="environment"
                   onChange={(e) => {
                     void handleVinPhotoSelection(e.target.files);
                     e.currentTarget.value = "";
@@ -2067,7 +2068,7 @@ export default function CarDraftForm({
                   </div>
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="btn btn-secondary vin-camera-button"
                     onClick={() => vinInputRef.current?.click()}
                     disabled={vinScanning || vinDecoding}
                   >
@@ -2086,7 +2087,7 @@ export default function CarDraftForm({
                       <p className="helper-text">{text.vinConfirmHelp}</p>
                     </div>
                     <dl className="vin-confirmation-grid">
-                      {pendingVinRows.map(([label, value]) => (
+                      {pendingVinRows.slice(0, 6).map(([label, value]) => (
                         <div key={label}>
                           <dt>{label}</dt>
                           <dd>{value}</dd>
