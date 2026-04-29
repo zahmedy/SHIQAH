@@ -127,14 +127,34 @@ export function nicheScoreLabel(listing: NicheListingSignal, nicheId?: string | 
   return nicheScoreDetails(listing, nicheId).label;
 }
 
+function meaningfulBadge(value: string): boolean {
+  const tag = value.trim();
+  if (!tag || tag.length > 42) return false;
+
+  const genericPhrases = [
+    "fuel type is common",
+    "fits routine commuting",
+    "condition aligns",
+    "can work",
+    "still workable",
+    "seller notes mention",
+    "limited",
+    "has limited",
+  ];
+  const normalized = tag.toLowerCase();
+  return !genericPhrases.some((phrase) => normalized.includes(phrase));
+}
+
 export function nicheBadges(listing: NicheListingSignal, _locale: unknown, nicheId?: string | null): string[] {
   const details = nicheScoreDetails(listing, nicheId);
-  if (details.reasons.length) {
-    return details.reasons.slice(0, 3);
+  const reasons = details.reasons.filter(meaningfulBadge);
+  if (reasons.length) {
+    return reasons.slice(0, 3);
   }
 
-  if (details.warnings.length) {
-    return details.warnings.slice(0, 3);
+  const warnings = details.warnings.filter(meaningfulBadge);
+  if (warnings.length) {
+    return warnings.slice(0, 3);
   }
 
   return [details.label];

@@ -44,6 +44,10 @@ def _format_miles(kilometers: float) -> str:
     return f"{miles:,} mi"
 
 
+def _display_value(value: Any) -> str:
+    return str(value or "").strip()
+
+
 def _listing_text(listing: Any) -> str:
     return _normalized(f"{_get(listing, 'title_ar')} {_get(listing, 'description_ar')}")
 
@@ -126,22 +130,37 @@ def _finalize_score(signals: list[ScoreSignal]) -> dict[str, Any]:
         "score": score,
         "confidence": _confidence_from_signals(signals),
         "label": _label_for_score(score),
-        "reasons": [
+        "reasons": _unique_compact_tags(
             signal.reason
             for signal in sorted(signals, key=lambda item: item.weight * item.value, reverse=True)
             if signal.reason
-        ],
-        "warnings": [
+        ),
+        "warnings": _unique_compact_tags(
             signal.warning
             for signal in sorted(signals, key=lambda item: item.weight, reverse=True)
             if signal.warning
-        ],
+        ),
         "missing_signals": [
             signal.missing
             for signal in sorted(signals, key=lambda item: item.weight, reverse=True)
             if signal.missing
         ],
     }
+
+
+def _unique_compact_tags(values: Any) -> list[str]:
+    tags: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        tag = str(value or "").strip()
+        if not tag or len(tag) > 42:
+            continue
+        key = tag.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        tags.append(tag)
+    return tags
 
 
 def _cold_weather_scorecard(listing: Any) -> dict[str, Any]:
@@ -154,47 +173,47 @@ def _cold_weather_scorecard(listing: Any) -> dict[str, Any]:
     if not _has_value(_get(listing, "drivetrain")):
         signals.append(ScoreSignal(weight=34, value=0, missing="Drivetrain not listed"))
     elif drivetrain in {"awd", "4wd"}:
-        signals.append(ScoreSignal(weight=34, value=1, reason=f"{_get(listing, 'drivetrain')} traction"))
+        signals.append(ScoreSignal(weight=34, value=1, reason=f"{_display_value(_get(listing, 'drivetrain'))} traction"))
     elif drivetrain == "fwd":
-        signals.append(ScoreSignal(weight=34, value=0.45, reason="FWD is manageable in winter with proper tires"))
+        signals.append(ScoreSignal(weight=34, value=0.45, reason="FWD"))
     else:
-        signals.append(ScoreSignal(weight=34, value=-0.35, warning="RWD is a weaker fit for winter commuting"))
+        signals.append(ScoreSignal(weight=34, value=-0.35, warning="RWD winter caution"))
 
     if not _has_value(_get(listing, "body_type")):
         signals.append(ScoreSignal(weight=18, value=0, missing="Body style not listed"))
     elif body_type in {"suv", "wagon", "pickup"}:
-        signals.append(ScoreSignal(weight=18, value=1, reason=f"{_get(listing, 'body_type')} body suits rough-weather utility"))
+        signals.append(ScoreSignal(weight=18, value=1, reason=_display_value(_get(listing, "body_type"))))
     elif body_type in {"hatchback", "sedan"}:
-        signals.append(ScoreSignal(weight=18, value=0.65, reason=f"{_get(listing, 'body_type')} body is usable for commuting"))
+        signals.append(ScoreSignal(weight=18, value=0.65, reason=_display_value(_get(listing, "body_type"))))
     elif body_type == "convertible":
-        signals.append(ScoreSignal(weight=18, value=-0.4, warning="Convertible body is a poor cold-weather fit"))
+        signals.append(ScoreSignal(weight=18, value=-0.4, warning="Convertible"))
     else:
-        signals.append(ScoreSignal(weight=18, value=0.25, warning=f"{_get(listing, 'body_type')} body has limited winter-utility signal"))
+        signals.append(ScoreSignal(weight=18, value=0.25))
 
     if mileage is None:
         signals.append(ScoreSignal(weight=18, value=0, missing="Mileage not listed"))
     elif mileage <= LOW_MILEAGE_KM:
         signals.append(ScoreSignal(weight=18, value=1, reason=f"Under {_format_miles(LOW_MILEAGE_KM)}"))
     elif mileage <= LOW_MILEAGE_KM * 1.35:
-        signals.append(ScoreSignal(weight=18, value=0.45, reason="Moderate mileage for winter use"))
+        signals.append(ScoreSignal(weight=18, value=0.45))
     else:
-        signals.append(ScoreSignal(weight=18, value=-0.25, warning="High mileage weakens cold-weather confidence"))
+        signals.append(ScoreSignal(weight=18, value=-0.25, warning="High mileage"))
 
     if _mentions_winter_readiness(listing):
-        signals.append(ScoreSignal(weight=18, value=1, reason="Seller notes mention winter-relevant equipment or care"))
+        signals.append(ScoreSignal(weight=18, value=1, reason="Winter details"))
     else:
         signals.append(ScoreSignal(weight=18, value=0, missing="No winter tire, rust, garage, battery, or remote-start note"))
 
     if not _has_value(_get(listing, "fuel_type")):
         signals.append(ScoreSignal(weight=12, value=0, missing="Fuel type not listed"))
     elif fuel_type in {"hybrid", "petrol", "gasoline"}:
-        signals.append(ScoreSignal(weight=12, value=0.9, reason=f"{_get(listing, 'fuel_type')} powertrain fits routine commuting"))
+        signals.append(ScoreSignal(weight=12, value=0.9, reason="Hybrid" if fuel_type == "hybrid" else None))
     elif fuel_type == "diesel":
-        signals.append(ScoreSignal(weight=12, value=0.45, warning="Diesel can need more cold-start context"))
+        signals.append(ScoreSignal(weight=12, value=0.45, warning="Diesel cold-start check"))
     elif fuel_type == "electric":
-        signals.append(ScoreSignal(weight=12, value=0.55, warning="EV range and charging access matter more in cold weather"))
+        signals.append(ScoreSignal(weight=12, value=0.55, warning="EV winter range check"))
     else:
-        signals.append(ScoreSignal(weight=12, value=0.2, warning="Fuel type has limited cold-weather signal"))
+        signals.append(ScoreSignal(weight=12, value=0.2))
 
     return _finalize_score(signals)
 
@@ -211,45 +230,45 @@ def _budget_daily_scorecard(listing: Any) -> dict[str, Any]:
     elif mileage <= DAILY_MILEAGE_KM:
         signals.append(ScoreSignal(weight=26, value=1, reason=f"Under {_format_miles(DAILY_MILEAGE_KM)}"))
     elif mileage <= DAILY_MILEAGE_KM * 1.25:
-        signals.append(ScoreSignal(weight=26, value=0.45, reason="Mileage is still workable for daily use"))
+        signals.append(ScoreSignal(weight=26, value=0.45))
     else:
-        signals.append(ScoreSignal(weight=26, value=-0.25, warning="High mileage weakens daily-driver confidence"))
+        signals.append(ScoreSignal(weight=26, value=-0.25, warning="High mileage"))
 
     if not _has_value(_get(listing, "body_type")):
         signals.append(ScoreSignal(weight=24, value=0, missing="Body style not listed"))
     elif body_type in {"sedan", "hatchback", "wagon"}:
-        signals.append(ScoreSignal(weight=24, value=1, reason=f"{_get(listing, 'body_type')} body is easy to live with daily"))
+        signals.append(ScoreSignal(weight=24, value=1, reason=_display_value(_get(listing, "body_type"))))
     elif body_type in {"suv", "van"}:
-        signals.append(ScoreSignal(weight=24, value=0.55, reason=f"{_get(listing, 'body_type')} body can work as a daily driver"))
+        signals.append(ScoreSignal(weight=24, value=0.55, reason=_display_value(_get(listing, "body_type"))))
     elif body_type == "pickup":
-        signals.append(ScoreSignal(weight=24, value=0.25, warning="Pickup body may be less efficient for daily errands"))
+        signals.append(ScoreSignal(weight=24, value=0.25, warning="Pickup efficiency check"))
     else:
-        signals.append(ScoreSignal(weight=24, value=0.15, warning=f"{_get(listing, 'body_type')} body is less typical for budget daily use"))
+        signals.append(ScoreSignal(weight=24, value=0.15))
 
     if not _has_value(_get(listing, "fuel_type")):
         signals.append(ScoreSignal(weight=22, value=0, missing="Fuel type not listed"))
     elif fuel_type == "hybrid":
-        signals.append(ScoreSignal(weight=22, value=1, reason="Hybrid fuel type supports lower running costs"))
+        signals.append(ScoreSignal(weight=22, value=1, reason="Hybrid"))
     elif fuel_type in {"petrol", "gasoline"}:
-        signals.append(ScoreSignal(weight=22, value=0.75, reason=f"{_get(listing, 'fuel_type')} fuel type is common and practical"))
+        signals.append(ScoreSignal(weight=22, value=0.75))
     elif fuel_type == "electric":
-        signals.append(ScoreSignal(weight=22, value=0.65, reason="Electric fuel type can be efficient with reliable charging"))
+        signals.append(ScoreSignal(weight=22, value=0.65, reason="Electric"))
     elif fuel_type == "diesel":
-        signals.append(ScoreSignal(weight=22, value=0.35, warning="Diesel may add ownership complexity for short daily trips"))
+        signals.append(ScoreSignal(weight=22, value=0.35, warning="Diesel short-trip check"))
     else:
-        signals.append(ScoreSignal(weight=22, value=0.2, warning="Fuel type has limited daily-driver signal"))
+        signals.append(ScoreSignal(weight=22, value=0.2))
 
     if not _has_value(_get(listing, "condition")):
         signals.append(ScoreSignal(weight=12, value=0, missing="Condition not listed"))
     elif condition == "used":
-        signals.append(ScoreSignal(weight=12, value=0.85, reason="Used condition aligns with daily-driver shopping"))
+        signals.append(ScoreSignal(weight=12, value=0.85))
     elif condition == "new":
-        signals.append(ScoreSignal(weight=12, value=0.55, reason="New condition can work, with separate value review"))
+        signals.append(ScoreSignal(weight=12, value=0.55))
     else:
-        signals.append(ScoreSignal(weight=12, value=0.35, warning="Condition needs buyer review"))
+        signals.append(ScoreSignal(weight=12, value=0.35))
 
     if _mentions_clean_ownership_signal(listing):
-        signals.append(ScoreSignal(weight=16, value=1, reason="Seller notes mention maintenance, title, ownership, or tire care"))
+        signals.append(ScoreSignal(weight=16, value=1, reason="Service / ownership details"))
     else:
         signals.append(ScoreSignal(weight=16, value=0, missing="No maintenance, title, ownership, or tire-care note"))
 
