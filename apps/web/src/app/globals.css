@@ -3047,6 +3047,10 @@ a {
   margin-top: 0.75rem;
 }
 
+.upload-camera-button {
+  min-height: 2.9rem;
+}
+
 .upload-actions .helper-text {
   margin-top: 0;
 }
@@ -3520,6 +3524,7 @@ a {
   }
 
   .vin-manual-row .field-action-button,
+  .upload-camera-button,
   .vin-camera-button,
   .vin-confirmation-actions .btn,
   .vin-confirmation-actions .field-action-button {

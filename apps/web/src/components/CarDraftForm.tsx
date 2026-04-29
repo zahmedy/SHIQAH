@@ -668,10 +668,10 @@ export default function CarDraftForm({
     descriptionScoringHint: "More verified details improve niche scoring.",
     descriptionHighlights: "Seller-confirmed highlights",
     photos: "Photos",
-    photosHelp: "Add exterior, interior, tires, dash, and any damage.",
+    photosHelp: "Use your camera or upload from your device.",
     addingPhotos: "Adding...",
-    addMorePhotos: "Add Photos",
-    addPhotos: "Add Photos",
+    addMorePhotos: "Use camera or upload",
+    addPhotos: "Use camera or upload",
     photosMinimumWarning: "Use at least 4 photos before publishing.",
     photosUploadingNow: "Uploading photos.",
     mainPhoto: "Main photo",
@@ -1896,6 +1896,7 @@ export default function CarDraftForm({
               <div className="draft-section-head">
                 <div>
                   <h2 className="subheading">{text.photos}</h2>
+                  <p className="helper-text">{text.photosHelp}</p>
                 </div>
               </div>
 
@@ -1904,6 +1905,7 @@ export default function CarDraftForm({
                 className="upload-file-input"
                 type="file"
                 accept="image/*"
+                capture="environment"
                 multiple
                 onChange={(e) => {
                   handlePhotoSelection(e.target.files);
@@ -1915,7 +1917,7 @@ export default function CarDraftForm({
               <div className="upload-actions">
                 <button
                   type="button"
-                  className="btn btn-primary"
+                  className="btn btn-primary upload-camera-button"
                   onClick={() => photoInputRef.current?.click()}
                   disabled={photoActionInProgress}
                 >
