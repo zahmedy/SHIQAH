@@ -22,10 +22,11 @@ export type NicheScoreResult = {
   missing_signals: string[];
 };
 
+export type NicheFilterQuery = Partial<Record<"price_max" | "mileage_max" | "fuel_type" | "drivetrain" | "body_type" | "sort", string>>;
+
 export type NicheQuickFilter = {
   label: string;
-  key: "price_max" | "mileage_max" | "fuel_type" | "drivetrain" | "body_type";
-  value: string;
+  query: NicheFilterQuery;
 };
 
 export type NicheDefinition = {
@@ -38,14 +39,15 @@ export type NicheDefinition = {
   quickFilters: NicheQuickFilter[];
   searchLinks: Array<{
     label: string;
-    query: Record<string, string>;
+    query: NicheFilterQuery;
   }>;
 };
 
 const AFFORDABLE_PRICE = 30000;
-const BUDGET_PRICE = 15000;
+const BUDGET_PRICE = 20000;
 const LOW_MILEAGE_MILES = 100000;
 const DAILY_MILEAGE_MILES = 120000;
+const VALUE_PRICE = 25000;
 
 export const DEFAULT_NICHE_ID = "cold_weather_commuter";
 
@@ -58,17 +60,17 @@ export const NICHES: NicheDefinition[] = [
     scoreLabel: "Cold-weather fit",
     signals: ["AWD / 4WD", "Winter equipment", "Lower miles"],
     quickFilters: [
-      { label: "Under $30k", key: "price_max", value: String(AFFORDABLE_PRICE) },
-      { label: "AWD", key: "drivetrain", value: "AWD" },
-      { label: "4WD", key: "drivetrain", value: "4WD" },
-      { label: "Under 100k mi", key: "mileage_max", value: String(LOW_MILEAGE_MILES) },
-      { label: "SUVs", key: "body_type", value: "SUV" },
-      { label: "Wagons", key: "body_type", value: "Wagon" },
+      { label: "Winter value", query: { price_max: String(AFFORDABLE_PRICE), mileage_max: String(LOW_MILEAGE_MILES), sort: "price_asc" } },
+      { label: "AWD under $30k", query: { price_max: String(AFFORDABLE_PRICE), drivetrain: "AWD", sort: "price_asc" } },
+      { label: "4WD SUVs", query: { drivetrain: "4WD", body_type: "SUV" } },
+      { label: "Low-mile AWD", query: { mileage_max: String(LOW_MILEAGE_MILES), drivetrain: "AWD", sort: "mileage_asc" } },
+      { label: "SUVs under $30k", query: { price_max: String(AFFORDABLE_PRICE), body_type: "SUV", sort: "price_asc" } },
+      { label: "Wagons under 100k", query: { mileage_max: String(LOW_MILEAGE_MILES), body_type: "Wagon", sort: "mileage_asc" } },
     ],
     searchLinks: [
-      { label: "AWD under $30k", query: { price_max: String(AFFORDABLE_PRICE), drivetrain: "AWD" } },
-      { label: "4WD under $30k", query: { price_max: String(AFFORDABLE_PRICE), drivetrain: "4WD" } },
-      { label: "Wagons under 100k mi", query: { mileage_max: String(LOW_MILEAGE_MILES), body_type: "Wagon" } },
+      { label: "Winter value", query: { price_max: String(AFFORDABLE_PRICE), mileage_max: String(LOW_MILEAGE_MILES), sort: "price_asc" } },
+      { label: "AWD under $30k", query: { price_max: String(AFFORDABLE_PRICE), drivetrain: "AWD", sort: "price_asc" } },
+      { label: "Low-mile AWD", query: { mileage_max: String(LOW_MILEAGE_MILES), drivetrain: "AWD", sort: "mileage_asc" } },
     ],
   },
   {
@@ -79,17 +81,17 @@ export const NICHES: NicheDefinition[] = [
     scoreLabel: "Daily-driver fit",
     signals: ["Lower miles", "Efficient fuel", "Easy body styles"],
     quickFilters: [
-      { label: "Under $15k", key: "price_max", value: String(BUDGET_PRICE) },
-      { label: "Under 120k mi", key: "mileage_max", value: String(DAILY_MILEAGE_MILES) },
-      { label: "Sedans", key: "body_type", value: "Sedan" },
-      { label: "Hatchbacks", key: "body_type", value: "Hatchback" },
-      { label: "Hybrids", key: "fuel_type", value: "Hybrid" },
-      { label: "EV", key: "fuel_type", value: "Electric" },
+      { label: "Best budget fit", query: { price_max: String(AFFORDABLE_PRICE), mileage_max: String(DAILY_MILEAGE_MILES), sort: "price_asc" } },
+      { label: "Under $20k", query: { price_max: String(BUDGET_PRICE), sort: "price_asc" } },
+      { label: "Under 120k mi", query: { mileage_max: String(DAILY_MILEAGE_MILES), sort: "mileage_asc" } },
+      { label: "Sedans under $25k", query: { price_max: String(VALUE_PRICE), body_type: "Sedan", sort: "price_asc" } },
+      { label: "Efficient daily", query: { fuel_type: "Hybrid", mileage_max: String(DAILY_MILEAGE_MILES), sort: "mileage_asc" } },
+      { label: "EV value", query: { fuel_type: "Electric", price_max: String(AFFORDABLE_PRICE), sort: "price_asc" } },
     ],
     searchLinks: [
-      { label: "Under $15k", query: { price_max: String(BUDGET_PRICE) } },
-      { label: "Under 120k mi", query: { mileage_max: String(DAILY_MILEAGE_MILES) } },
-      { label: "Sedans under $15k", query: { price_max: String(BUDGET_PRICE), body_type: "Sedan" } },
+      { label: "Best budget fit", query: { price_max: String(AFFORDABLE_PRICE), mileage_max: String(DAILY_MILEAGE_MILES), sort: "price_asc" } },
+      { label: "Under 120k mi", query: { mileage_max: String(DAILY_MILEAGE_MILES), sort: "mileage_asc" } },
+      { label: "Sedans under $25k", query: { price_max: String(VALUE_PRICE), body_type: "Sedan", sort: "price_asc" } },
     ],
   },
 ];
@@ -98,7 +100,7 @@ export function getNiche(id?: string | null): NicheDefinition {
   return NICHES.find((niche) => niche.id === id) ?? NICHES[0];
 }
 
-export function nicheHref(pathname: string, niche: NicheDefinition, query: Record<string, string> = {}): string {
+export function nicheHref(pathname: string, niche: NicheDefinition, query: NicheFilterQuery = {}): string {
   const qs = new URLSearchParams({ niche: niche.id, ...query });
   return `${pathname}?${qs.toString()}`;
 }

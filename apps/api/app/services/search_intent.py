@@ -4,7 +4,9 @@ import re
 from typing import Any
 
 
-LOW_MILEAGE_MAX = 80000
+MILES_TO_KM = 1.60934
+LOW_MILEAGE_MAX_MILES = 100000
+LOW_MILEAGE_MAX_KM = round(LOW_MILEAGE_MAX_MILES * MILES_TO_KM)
 NEWER_YEAR_MIN = 2020
 
 SMART_BOOSTS = {
@@ -124,6 +126,17 @@ def _parse_money_amount(raw_value: str, suffix: str | None) -> int | None:
     return parsed if parsed > 0 else None
 
 
+def _parse_mileage_amount(raw_value: str, suffix: str | None) -> int | None:
+    try:
+        amount = float(raw_value.replace(",", ""))
+    except ValueError:
+        return None
+    if suffix and suffix.lower() == "k":
+        amount *= 1000
+    parsed = int(round(amount * MILES_TO_KM))
+    return parsed if parsed > 0 else None
+
+
 def _canonical_from_text(text: str, allowed: dict[str, str]) -> tuple[str | None, str | None]:
     normalized = text.lower()
     for key, value in sorted(allowed.items(), key=lambda item: len(item[0]), reverse=True):
@@ -215,7 +228,7 @@ def parse_search_intent(query: str | None) -> dict[str, Any]:
         normalized,
     )
     if mileage_under_match:
-        mileage_max = _parse_money_amount(mileage_under_match.group(1), mileage_under_match.group(2))
+        mileage_max = _parse_mileage_amount(mileage_under_match.group(1), mileage_under_match.group(2))
         if mileage_max:
             intent["mileage_max"] = mileage_max
             intent["sort"] = "mileage_asc"
@@ -242,7 +255,7 @@ def parse_search_intent(query: str | None) -> dict[str, Any]:
             )
 
     if re.search(r"\b(low mileage|low miles|under 100k miles|under 100k mi)\b", normalized):
-        intent["mileage_max"] = intent.get("mileage_max") or LOW_MILEAGE_MAX
+        intent["mileage_max"] = intent.get("mileage_max") or LOW_MILEAGE_MAX_KM
         intent["sort"] = intent.get("sort") or "mileage_asc"
         keyword_source = re.sub(
             r"\b(low mileage|low miles|under 100k miles|under 100k mi)\b",

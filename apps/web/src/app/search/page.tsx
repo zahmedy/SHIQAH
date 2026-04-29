@@ -231,7 +231,7 @@ export default async function SearchPage({
             <div className="form-grid form-grid-2">
               <div>
                 <label className="label" htmlFor="price_max">Max Price</label>
-                <input id="price_max" name="price_max" defaultValue={params.price_max ?? "30000"} placeholder="30000" className="input" inputMode="numeric" />
+                <input id="price_max" name="price_max" defaultValue={params.price_max ?? ""} placeholder="30000" className="input" inputMode="numeric" />
               </div>
               <div>
                 <label className="label" htmlFor="mileage_max">Max Mileage</label>

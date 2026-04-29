@@ -40,6 +40,7 @@ type Query = {
   fuel_type?: string;
   drivetrain?: string;
   body_type?: string;
+  sort?: string;
   lat?: string;
   lon?: string;
   radius_km?: string;
@@ -75,6 +76,7 @@ function buildHomeSearchPath(params: Query): string {
   if (params.fuel_type) qs.set("fuel_type", params.fuel_type);
   if (params.drivetrain) qs.set("drivetrain", params.drivetrain);
   if (params.body_type) qs.set("body_type", params.body_type);
+  if (params.sort) qs.set("sort", params.sort);
   if (params.lat) qs.set("lat", params.lat);
   if (params.lon) qs.set("lon", params.lon);
   if (params.radius_km) qs.set("radius_km", params.radius_km);
@@ -91,6 +93,7 @@ function hasHomeFilters(params: Query): boolean {
     params.fuel_type ||
     params.drivetrain ||
     params.body_type ||
+    params.sort ||
     (params.lat && params.lon)
   );
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { NICHES, getNiche } from "@/shared/niches";
+import { NICHES, getNiche, type NicheFilterQuery } from "@/shared/niches";
 
 type HomeFilterParams = {
   niche?: string;
@@ -15,6 +15,7 @@ type HomeFilterParams = {
   fuel_type?: string;
   drivetrain?: string;
   body_type?: string;
+  sort?: string;
   lat?: string;
   lon?: string;
   radius_km?: string;
@@ -25,8 +26,8 @@ type HomeFilterControlsProps = {
 };
 
 const NEARBY_RADIUS_KM = "40";
-const QUERY_KEYS = ["niche", "q", "city", "price_max", "mileage_max", "fuel_type", "drivetrain", "body_type", "lat", "lon", "radius_km"] as const;
-const NICHE_FILTER_KEYS = ["price_max", "mileage_max", "fuel_type", "drivetrain", "body_type"] as const;
+const QUERY_KEYS = ["niche", "q", "city", "price_max", "mileage_max", "fuel_type", "drivetrain", "body_type", "sort", "lat", "lon", "radius_km"] as const;
+const NICHE_FILTER_KEYS = ["price_max", "mileage_max", "fuel_type", "drivetrain", "body_type", "sort"] as const;
 
 function buildHomepageHref(params: HomeFilterParams): string {
   const next = new URLSearchParams();
@@ -42,13 +43,23 @@ function buildHomepageHref(params: HomeFilterParams): string {
   return qs ? `/?${qs}` : "/";
 }
 
-function filterHref(params: HomeFilterParams, key: keyof HomeFilterParams, value: string): string {
+function filterHref(params: HomeFilterParams, query: NicheFilterQuery): string {
   const next = { ...params };
+  const isActive = Object.entries(query).every(([key, value]) => next[key as keyof HomeFilterParams] === value);
 
-  if (next[key] === value) {
-    delete next[key];
+  if (isActive) {
+    for (const key of Object.keys(query) as Array<keyof NicheFilterQuery>) {
+      delete next[key];
+    }
   } else {
-    next[key] = value;
+    for (const key of NICHE_FILTER_KEYS) {
+      delete next[key];
+    }
+    for (const [key, value] of Object.entries(query)) {
+      if (value) {
+        next[key as keyof HomeFilterParams] = value;
+      }
+    }
   }
 
   return buildHomepageHref(next);
@@ -64,12 +75,12 @@ function nicheHref(params: HomeFilterParams, nicheId: string): string {
   return buildHomepageHref(next);
 }
 
-function isFilterActive(params: HomeFilterParams, key: keyof HomeFilterParams, value: string): boolean {
-  return params[key] === value;
+function isQuickFilterActive(params: HomeFilterParams, query: NicheFilterQuery): boolean {
+  return Object.entries(query).every(([key, value]) => params[key as keyof HomeFilterParams] === value);
 }
 
-function quickFilterClass(params: HomeFilterParams, key: keyof HomeFilterParams, value: string): string {
-  return isFilterActive(params, key, value) ? "home-quick-filter-active" : "";
+function quickFilterClass(params: HomeFilterParams, query: NicheFilterQuery): string {
+  return isQuickFilterActive(params, query) ? "home-quick-filter-active" : "";
 }
 
 export default function HomeFilterControls({ params }: HomeFilterControlsProps) {
@@ -148,11 +159,11 @@ export default function HomeFilterControls({ params }: HomeFilterControlsProps) 
           </button>
           {selectedNiche.quickFilters.map((filter) => (
             <Link
-              key={`${filter.key}:${filter.value}`}
+              key={filter.label}
               scroll={false}
-              href={filterHref(params, filter.key, filter.value)}
-              className={quickFilterClass(params, filter.key, filter.value)}
-              aria-current={isFilterActive(params, filter.key, filter.value) ? "true" : undefined}
+              href={filterHref(params, filter.query)}
+              className={quickFilterClass(params, filter.query)}
+              aria-current={isQuickFilterActive(params, filter.query) ? "true" : undefined}
             >
               {filter.label}
             </Link>
