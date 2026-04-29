@@ -1,7 +1,6 @@
-import base64
-import json
+import io
 import re
-import urllib.request
+from collections.abc import Iterable
 
 from app.core.config import settings
 
@@ -34,6 +33,13 @@ VIN_TRANSLITERATION = {
     "Z": 9,
 }
 VIN_WEIGHTS = [8, 7, 6, 5, 4, 3, 2, 10, 0, 9, 8, 7, 6, 5, 4, 3, 2]
+VIN_OCR_TRANSLATION = str.maketrans({"I": "1", "O": "0", "Q": "0"})
+OCR_CONFIGS = (
+    "--oem 3 --psm 6 -c tessedit_char_whitelist=ABCDEFGHJKLMNPRSTUVWXYZ0123456789",
+    "--oem 3 --psm 7 -c tessedit_char_whitelist=ABCDEFGHJKLMNPRSTUVWXYZ0123456789",
+    "--oem 3 --psm 11 -c tessedit_char_whitelist=ABCDEFGHJKLMNPRSTUVWXYZ0123456789",
+    "--oem 3 --psm 13 -c tessedit_char_whitelist=ABCDEFGHJKLMNPRSTUVWXYZ0123456789",
+)
 
 
 def predict_car_attributes(photo_urls: list[str]) -> dict:
@@ -56,14 +62,19 @@ def predict_car_attributes(photo_urls: list[str]) -> dict:
 
 
 def normalize_vin(raw_text: str) -> str | None:
-    candidate_text = re.sub(r"[^A-Z0-9]", "", raw_text.upper())
-    candidate_text = candidate_text.replace("I", "1").replace("O", "0").replace("Q", "0")
-    match = VIN_RE.search(candidate_text)
-    if not match:
-        return None
+    return next(iter_vin_candidates(raw_text), None)
 
-    vin = match.group(0)
-    return vin if is_valid_vin(vin) else None
+
+def iter_vin_candidates(raw_text: str) -> Iterable[str]:
+    candidate_text = re.sub(r"[^A-Z0-9]", "", raw_text.upper().translate(VIN_OCR_TRANSLATION))
+    seen: set[str] = set()
+    for index in range(max(len(candidate_text) - 16, 0)):
+        vin = candidate_text[index:index + 17]
+        if vin in seen:
+            continue
+        seen.add(vin)
+        if VIN_RE.fullmatch(vin) and is_valid_vin(vin):
+            yield vin
 
 
 def is_valid_vin(vin: str) -> bool:
@@ -79,68 +90,55 @@ def is_valid_vin(vin: str) -> bool:
     return vin[8] == expected_check_digit
 
 
-def _extract_json_object(raw_text: str) -> dict:
+def _load_ocr_modules():
     try:
-        payload = json.loads(raw_text)
-    except json.JSONDecodeError:
-        start = raw_text.find("{")
-        end = raw_text.rfind("}")
-        if start < 0 or end <= start:
-            return {}
-        try:
-            payload = json.loads(raw_text[start:end + 1])
-        except json.JSONDecodeError:
-            return {}
-    return payload if isinstance(payload, dict) else {}
+        import pytesseract
+        from PIL import Image, ImageEnhance, ImageFilter, ImageOps, UnidentifiedImageError
+    except ImportError as exc:
+        raise RuntimeError("VIN OCR dependencies are missing. Install pytesseract and Pillow.") from exc
+    return pytesseract, Image, ImageEnhance, ImageFilter, ImageOps, UnidentifiedImageError
+
+
+def _scale_for_ocr(image):
+    width, height = image.size
+    longest_side = max(width, height)
+    if longest_side >= 2200:
+        return image
+    scale = 2200 / max(longest_side, 1)
+    return image.resize((round(width * scale), round(height * scale)))
+
+
+def _build_ocr_images(image_bytes: bytes):
+    _pytesseract, Image, ImageEnhance, ImageFilter, ImageOps, UnidentifiedImageError = _load_ocr_modules()
+    try:
+        image = Image.open(io.BytesIO(image_bytes))
+    except UnidentifiedImageError as exc:
+        raise ValueError("Invalid VIN image payload.") from exc
+
+    base = ImageOps.exif_transpose(image).convert("RGB")
+    grayscale = ImageOps.grayscale(_scale_for_ocr(base))
+    contrast = ImageOps.autocontrast(grayscale)
+    sharpened = contrast.filter(ImageFilter.SHARPEN)
+    high_contrast = ImageEnhance.Contrast(sharpened).enhance(2.0)
+    thresholded = high_contrast.point(lambda value: 255 if value > 145 else 0)
+    inverted = ImageOps.invert(thresholded)
+
+    return (contrast, sharpened, high_contrast, thresholded, inverted)
 
 
 def detect_vin_from_image(image_bytes: bytes, content_type: str) -> str | None:
-    if not settings.OPENAI_API_KEY:
-        raise RuntimeError("OPENAI_API_KEY is required for VIN photo detection.")
+    if not content_type.startswith("image/"):
+        return None
 
-    encoded_image = base64.b64encode(image_bytes).decode("ascii")
-    request_body = {
-        "model": settings.OPENAI_VISION_MODEL,
-        "response_format": {"type": "json_object"},
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": (
-                            "Read the VIN from this vehicle label or windshield photo. "
-                            "Return only JSON with a vin field. A VIN is exactly 17 characters "
-                            "and never contains I, O, or Q. If no VIN is readable, use an empty string."
-                        ),
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:{content_type};base64,{encoded_image}",
-                        },
-                    },
-                ],
-            }
-        ],
-    }
+    pytesseract, *_modules = _load_ocr_modules()
+    if settings.TESSERACT_CMD:
+        pytesseract.pytesseract.tesseract_cmd = settings.TESSERACT_CMD
 
-    req = urllib.request.Request(
-        "https://api.openai.com/v1/chat/completions",
-        data=json.dumps(request_body).encode("utf-8"),
-        headers={
-            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=30) as response:
-        payload = json.loads(response.read().decode("utf-8"))
+    for image in _build_ocr_images(image_bytes):
+        for config in OCR_CONFIGS:
+            raw_text = pytesseract.image_to_string(image, config=config)
+            vin = normalize_vin(raw_text)
+            if vin:
+                return vin
 
-    content = payload["choices"][0]["message"]["content"]
-    result = _extract_json_object(content)
-    vin = normalize_vin(str(result.get("vin") or ""))
-    if vin:
-        return vin
-
-    return normalize_vin(content)
+    return None

@@ -52,11 +52,10 @@ type PublicCarResponse = {
     id: number | null;
     name: string | null;
     user_id: string | null;
-    phone_e164: string | null;
   };
   contact: {
+    sms_url: string | null;
     whatsapp_url: string | null;
-    call_phone_e164: string | null;
   };
 };
 
@@ -209,9 +208,9 @@ export default async function CarDetailPage({
           <p className="car-meta">{sellerLabel(data.seller.user_id, data.seller.name)}</p>
         ) : null}
         <div className="contact-actions">
-          {data.contact.call_phone_e164 && (
-            <a href={`tel:${data.contact.call_phone_e164}`} className="btn btn-secondary">
-              Call Seller
+          {data.contact.sms_url && (
+            <a href={data.contact.sms_url} className="btn btn-secondary">
+              Text Seller
             </a>
           )}
 
@@ -221,6 +220,9 @@ export default async function CarDetailPage({
             </a>
           )}
         </div>
+        {!data.contact.sms_url && !data.contact.whatsapp_url ? (
+          <p className="helper-text spaced-top-sm">Seller has not enabled direct messaging.</p>
+        ) : null}
 
         <hr className="separator" />
 

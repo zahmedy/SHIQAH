@@ -22,6 +22,14 @@ cd apps/api
 python -m app.tasks.retrain_pricing_model
 ```
 
+## VIN Photo OCR
+
+VIN photo scanning runs locally with Tesseract OCR, then validates the 17-character VIN checksum before decoding vehicle details. Docker installs Tesseract automatically. For local API development, install the system binary first:
+
+```bash
+brew install tesseract
+```
+
 ```
 autointel/
   apps/

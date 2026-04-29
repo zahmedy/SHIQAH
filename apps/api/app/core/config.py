@@ -37,9 +37,9 @@ class Settings(BaseSettings):
     S3_PUBLIC_BASE_URL: str = "http://localhost:9000/autointel-media"
 
     OPENAI_API_KEY: str | None = None
-    OPENAI_VISION_MODEL: str = "gpt-4o-mini"
     OPENAI_TEXT_MODEL: str = "gpt-4o-mini"
     VIN_SCAN_DEBUG: bool = False
+    TESSERACT_CMD: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=(ROOT_ENV_FILE, ".env"),

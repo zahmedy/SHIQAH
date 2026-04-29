@@ -19,6 +19,8 @@ class User(SQLModel, table=True):
     name: Optional[str] = None
     user_id: Optional[str] = Field(default=None, index=True, unique=True)
     phone_e164: str = Field(index=True, unique=True)
+    contact_text_enabled: bool = Field(default=False)
+    contact_whatsapp_enabled: bool = Field(default=False)
 
     # For MVP: we fake OTP; later integrate Twilio Verify
     is_banned: bool = Field(default=False, index=True)

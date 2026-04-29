@@ -386,6 +386,22 @@ function normalizeDecodedVehicleFields(data: VinScanResponse) {
   };
 }
 
+function buildVinConfirmationRows(data: VinScanResponse): Array<[string, string]> {
+  const decodedFields = normalizeDecodedVehicleFields(data);
+  return [
+    ["VIN", data.vin],
+    ["Make", decodedFields.make],
+    ["Model", decodedFields.model],
+    ["Year", data.year ? String(data.year) : ""],
+    ["Body", data.body_type || ""],
+    ["Transmission", data.transmission || ""],
+    ["Fuel", data.fuel_type || ""],
+    ["Drivetrain", data.drivetrain || ""],
+    ["Cylinders", data.engine_cylinders ? String(data.engine_cylinders) : ""],
+    ["Engine", data.engine_volume ? `${data.engine_volume}L` : ""],
+  ].filter((row): row is [string, string] => Boolean(row[1]));
+}
+
 function milesToKm(value: number): number {
   return Math.round(value * KM_PER_MILE);
 }
@@ -515,6 +531,7 @@ export default function CarDraftForm({
   const [locationStatus, setLocationStatus] = useState("");
   const [vinScanning, setVinScanning] = useState(false);
   const [vinDecoding, setVinDecoding] = useState(false);
+  const [pendingVinData, setPendingVinData] = useState<VinScanResponse | null>(null);
   const [manualVin, setManualVin] = useState("");
   const [vinStatus, setVinStatus] = useState("");
   const [vinStatusTone, setVinStatusTone] = useState<"success" | "error" | "">("");
@@ -586,8 +603,13 @@ export default function CarDraftForm({
     vinDecoding: "Decoding...",
     vinUploadPhoto: "Upload VIN Photo",
     vinScanning: "Reading VIN...",
-    vinApplied: (vin: string) => `VIN ${vin} detected. Details applied.`,
+    vinReadyForReview: (vin: string) => `VIN ${vin} detected. Confirm the details before applying.`,
+    vinApplied: (vin: string) => `VIN ${vin} confirmed. Details applied.`,
     vinDetectedOnly: (vin: string) => `VIN ${vin} detected, but details were not decoded.`,
+    vinConfirmTitle: "Confirm detected details",
+    vinConfirmHelp: "Only apply these details if they match the vehicle.",
+    vinApplyDetails: "Apply details",
+    vinClearDetection: "Clear",
     vinScanFailed: "Failed to read VIN photo.",
     vinManualInvalid: "Enter a valid 17-character VIN.",
     vinPhotoUnusable: "That VIN photo is too small to scan. Try a closer photo or type the VIN.",
@@ -753,6 +775,13 @@ export default function CarDraftForm({
     });
   }
 
+  function stageDecodedVinData(data: VinScanResponse) {
+    setPendingVinData(data);
+    setManualVin(data.vin);
+    setVinStatusTone("");
+    setVinStatus(text.vinReadyForReview(data.vin));
+  }
+
   function applyDecodedVinData(data: VinScanResponse) {
     const decodedFields = normalizeDecodedVehicleFields(data);
     const hasDecodedFields = Boolean(
@@ -780,6 +809,7 @@ export default function CarDraftForm({
       ...(data.engine_volume ? { engine_volume: String(data.engine_volume) } : {}),
     }));
     setManualVin(data.vin);
+    setPendingVinData(null);
     setVinStatusTone(hasDecodedFields ? "success" : "error");
     setVinStatus(hasDecodedFields ? text.vinApplied(data.vin) : text.vinDetectedOnly(data.vin));
   }
@@ -789,6 +819,7 @@ export default function CarDraftForm({
     setSuccess("");
     setVinStatus("");
     setVinStatusTone("");
+    setPendingVinData(null);
 
     const vin = normalizeVinEntry(manualVin);
     setManualVin(vin);
@@ -831,7 +862,7 @@ export default function CarDraftForm({
         throw new Error(await parseApiError(res));
       }
 
-      applyDecodedVinData((await res.json()) as VinScanResponse);
+      stageDecodedVinData((await res.json()) as VinScanResponse);
     } catch (err) {
       setVinStatusTone("error");
       setVinStatus(err instanceof Error ? translateApiMessage(locale, err.message) : text.vinScanFailed);
@@ -850,6 +881,7 @@ export default function CarDraftForm({
     setSuccess("");
     setVinStatus("");
     setVinStatusTone("");
+    setPendingVinData(null);
 
     if (!file.type.startsWith("image/")) {
       setVinStatusTone("error");
@@ -907,7 +939,7 @@ export default function CarDraftForm({
         throw new Error(await parseApiError(res));
       }
 
-      applyDecodedVinData((await res.json()) as VinScanResponse);
+      stageDecodedVinData((await res.json()) as VinScanResponse);
     } catch (err) {
       setVinStatusTone("error");
       setVinStatus(err instanceof Error ? translateApiMessage(locale, err.message) : text.vinScanFailed);
@@ -1831,6 +1863,7 @@ export default function CarDraftForm({
   }
 
   const title = mode === "create" ? text.createDraftTitle : text.editListingTitle;
+  const pendingVinRows = pendingVinData ? buildVinConfirmationRows(pendingVinData) : [];
 
   return (
     <main className="page shell auth-wrap">
@@ -2045,6 +2078,42 @@ export default function CarDraftForm({
                   <p className={`vin-status${vinStatusTone ? ` vin-status-${vinStatusTone}` : ""}`}>
                     {vinStatus}
                   </p>
+                ) : null}
+                {pendingVinData ? (
+                  <div className="vin-confirmation-panel">
+                    <div>
+                      <p className="vin-confirmation-title">{text.vinConfirmTitle}</p>
+                      <p className="helper-text">{text.vinConfirmHelp}</p>
+                    </div>
+                    <dl className="vin-confirmation-grid">
+                      {pendingVinRows.map(([label, value]) => (
+                        <div key={label}>
+                          <dt>{label}</dt>
+                          <dd>{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                    <div className="vin-confirmation-actions">
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => applyDecodedVinData(pendingVinData)}
+                      >
+                        {text.vinApplyDetails}
+                      </button>
+                      <button
+                        type="button"
+                        className="field-action-button"
+                        onClick={() => {
+                          setPendingVinData(null);
+                          setVinStatus("");
+                          setVinStatusTone("");
+                        }}
+                      >
+                        {text.vinClearDetection}
+                      </button>
+                    </div>
+                  </div>
                 ) : null}
               </div>
 

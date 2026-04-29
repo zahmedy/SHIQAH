@@ -14,6 +14,8 @@ router = APIRouter(prefix="/me", tags=["me"])
 class MeUpdate(BaseModel):
     name: str | None = None
     user_id: str | None = None
+    contact_text_enabled: bool | None = None
+    contact_whatsapp_enabled: bool | None = None
 
 
 def serialize_me(user: User) -> dict:
@@ -22,6 +24,8 @@ def serialize_me(user: User) -> dict:
         "name": user.name,
         "user_id": user.user_id,
         "phone_e164": user.phone_e164,
+        "contact_text_enabled": user.contact_text_enabled,
+        "contact_whatsapp_enabled": user.contact_whatsapp_enabled,
         "role": user.role,
         "verified_at": user.verified_at,
     }
@@ -39,7 +43,12 @@ def update_me(
     session: Session = Depends(get_session),
     user: User = Depends(get_current_user),
 ):
-    if payload.name is None and payload.user_id is None:
+    if (
+        payload.name is None
+        and payload.user_id is None
+        and payload.contact_text_enabled is None
+        and payload.contact_whatsapp_enabled is None
+    ):
         raise HTTPException(status_code=400, detail="At least one field is required")
 
     changed = False
@@ -67,6 +76,14 @@ def update_me(
         if public_user_id != user.user_id:
             user.user_id = public_user_id
             changed = True
+
+    if payload.contact_text_enabled is not None and payload.contact_text_enabled != user.contact_text_enabled:
+        user.contact_text_enabled = payload.contact_text_enabled
+        changed = True
+
+    if payload.contact_whatsapp_enabled is not None and payload.contact_whatsapp_enabled != user.contact_whatsapp_enabled:
+        user.contact_whatsapp_enabled = payload.contact_whatsapp_enabled
+        changed = True
 
     if changed:
         session.add(user)

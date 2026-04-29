@@ -204,12 +204,11 @@ class PublicSellerOut(BaseModel):
     id: Optional[int]
     name: Optional[str]
     user_id: Optional[str]
-    phone_e164: Optional[str]
 
 
 class PublicContactOut(BaseModel):
+    sms_url: Optional[str]
     whatsapp_url: Optional[str]
-    call_phone_e164: Optional[str]
 
 
 class PublicCarDetailOut(BaseModel):

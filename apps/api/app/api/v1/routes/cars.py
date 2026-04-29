@@ -141,9 +141,13 @@ def scan_vin_photo(
         if settings.VIN_SCAN_DEBUG:
             logger.exception("VIN scan configuration error")
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        if settings.VIN_SCAN_DEBUG:
+            logger.exception("VIN scan image validation failed")
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         if settings.VIN_SCAN_DEBUG:
-            logger.exception("VIN scan OCR request failed")
+            logger.exception("VIN scan OCR failed")
         raise HTTPException(status_code=502, detail="Failed to read VIN from image.") from exc
 
     if not vin:

@@ -50,6 +50,8 @@ type MeResponse = {
   name: string | null;
   user_id: string | null;
   phone_e164: string;
+  contact_text_enabled: boolean;
+  contact_whatsapp_enabled: boolean;
   role: string;
   verified_at: string | null;
 };
@@ -102,7 +104,10 @@ export default function MyCarsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [me, setMe] = useState<MeResponse | null>(null);
   const [userId, setUserId] = useState("");
+  const [contactTextEnabled, setContactTextEnabled] = useState(false);
+  const [contactWhatsappEnabled, setContactWhatsappEnabled] = useState(false);
   const [savingUserId, setSavingUserId] = useState(false);
+  const [savingContactPrefs, setSavingContactPrefs] = useState(false);
   const [photoIndexes, setPhotoIndexes] = useState<Record<number, number>>({});
   const [showSoldCars, setShowSoldCars] = useState(true);
   const [showArchivedCars, setShowArchivedCars] = useState(false);
@@ -114,7 +119,9 @@ export default function MyCarsPage() {
     submitSuccess: (carId: number) => `Car #${carId} submitted for review.`,
     submitFailed: "Failed to submit listing.",
     userIdRequired: "User ID is required.",
-    userIdUpdated: (nextUserId: string) => `User ID updated to @${nextUserId}.`,
+    profileUpdated: "User ID updated.",
+    contactPrefsUpdated: "Messaging preferences updated.",
+    contactPrefsUpdateFailed: "Failed to update messaging preferences.",
     userIdUpdateFailed: "Failed to update user ID.",
     approveSuccess: (carId: number) => `Car #${carId} approved.`,
     approveFailed: "Failed to approve listing.",
@@ -129,9 +136,12 @@ export default function MyCarsPage() {
     profileKicker: "AutoIntel Seller",
     loading: "Loading...",
     refresh: "Refresh",
-    account: "Account",
+    userIdTitle: "User ID",
     profileMember: "AutoIntel Member",
     accountSummary: "Seller ID",
+    contactPrefs: "Direct messaging",
+    enableText: "Enable text messages",
+    enableWhatsApp: "Enable WhatsApp",
     listingsSection: "Your Cars",
     listingsSectionHelp: "Draft, publish, edit, or archive.",
     adminBadge: "Admin",
@@ -139,7 +149,7 @@ export default function MyCarsPage() {
     publicUserId: "Public User ID",
     userIdHelp: "Use 3-32 lowercase letters, numbers, dots, underscores, or hyphens.",
     saving: "Saving...",
-    saveUserId: "Save User ID",
+    saveUserId: "Update User ID",
     loginRequiredForCars: "Login is required to view your profile.",
     noListingsYet: "No cars yet.",
     noVisibleListings: "No visible cars with this filter.",
@@ -221,6 +231,8 @@ export default function MyCarsPage() {
       const me = (await meRes.json()) as MeResponse;
       setMe(me);
       setUserId(me.user_id || "");
+      setContactTextEnabled(me.contact_text_enabled);
+      setContactWhatsappEnabled(me.contact_whatsapp_enabled);
       setIsAdmin(me.role === "admin");
 
       const res = await fetch(`${API_BASE}/v1/seller/cars?include_archived=true`, {
@@ -352,7 +364,9 @@ export default function MyCarsPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ user_id: userId.trim() }),
+        body: JSON.stringify({
+          user_id: userId.trim(),
+        }),
       });
 
       if (res.status === 401 || res.status === 403) {
@@ -367,12 +381,71 @@ export default function MyCarsPage() {
       const updatedMe = (await res.json()) as MeResponse;
       setMe(updatedMe);
       setUserId(updatedMe.user_id || "");
-      setSuccess(text.userIdUpdated(updatedMe.user_id || ""));
+      setSuccess(text.profileUpdated);
       window.dispatchEvent(new Event("autointel-auth-changed"));
     } catch (err) {
       setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.userIdUpdateFailed);
     } finally {
       setSavingUserId(false);
+    }
+  }
+
+  async function saveContactPreferences(nextTextEnabled: boolean, nextWhatsappEnabled: boolean) {
+    setError("");
+    setSuccess("");
+
+    if (!canLoad || !API_BASE) {
+      setError(text.missingApiBase);
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setNeedsLogin(true);
+      setError(text.loginRequired);
+      return;
+    }
+
+    const previousTextEnabled = contactTextEnabled;
+    const previousWhatsappEnabled = contactWhatsappEnabled;
+    setContactTextEnabled(nextTextEnabled);
+    setContactWhatsappEnabled(nextWhatsappEnabled);
+    setSavingContactPrefs(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/v1/me`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          contact_text_enabled: nextTextEnabled,
+          contact_whatsapp_enabled: nextWhatsappEnabled,
+        }),
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        setNeedsLogin(true);
+        throw new Error("Session expired. Please login again.");
+      }
+
+      if (!res.ok) {
+        throw new Error(await parseApiError(res));
+      }
+
+      const updatedMe = (await res.json()) as MeResponse;
+      setMe(updatedMe);
+      setContactTextEnabled(updatedMe.contact_text_enabled);
+      setContactWhatsappEnabled(updatedMe.contact_whatsapp_enabled);
+      setSuccess(text.contactPrefsUpdated);
+      window.dispatchEvent(new Event("autointel-auth-changed"));
+    } catch (err) {
+      setContactTextEnabled(previousTextEnabled);
+      setContactWhatsappEnabled(previousWhatsappEnabled);
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.contactPrefsUpdateFailed);
+    } finally {
+      setSavingContactPrefs(false);
     }
   }
 
@@ -538,33 +611,64 @@ export default function MyCarsPage() {
 
       {!needsLogin && me && (
         <section className="profile-account-layout">
-          <div className="panel profile-account-panel profile-account-compact">
-            <div className="profile-section-head">
-              <div>
-                <h2 className="subheading">{text.account}</h2>
+          <div className="profile-settings-stack">
+            <div className="panel profile-account-panel profile-account-compact">
+              <div className="profile-account-heading">
+                <h2 className="subheading">{text.userIdTitle}</h2>
+              </div>
+              <form className="profile-user-id-form" onSubmit={saveUserId}>
+                <div className="profile-user-id-field">
+                  <label className="label" htmlFor="user-id">{text.publicUserId}</label>
+                  <input
+                    id="user-id"
+                    className="input"
+                    value={userId}
+                    onChange={(e) => setUserId(e.target.value)}
+                    placeholder="user-123"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                  />
+                  <p className="helper-text">{text.userIdHelp}</p>
+                </div>
+
+                <div className="profile-user-id-actions">
+                  <button type="submit" className="btn btn-secondary" disabled={savingUserId}>
+                    {savingUserId ? text.saving : text.saveUserId}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div className="panel profile-account-panel profile-account-compact">
+              <div className="profile-account-heading">
+                <h2 className="subheading">{text.contactPrefs}</h2>
+              </div>
+              <div className="profile-contact-preferences">
+                <div className="profile-contact-options">
+                  <label className="profile-contact-option" htmlFor="contact-text-enabled">
+                    <input
+                      id="contact-text-enabled"
+                      type="checkbox"
+                      checked={contactTextEnabled}
+                      disabled={savingContactPrefs}
+                      onChange={(event) => saveContactPreferences(event.target.checked, contactWhatsappEnabled)}
+                    />
+                    <span>{text.enableText}</span>
+                  </label>
+                  <label className="profile-contact-option" htmlFor="contact-whatsapp-enabled">
+                    <input
+                      id="contact-whatsapp-enabled"
+                      type="checkbox"
+                      checked={contactWhatsappEnabled}
+                      disabled={savingContactPrefs}
+                      onChange={(event) => saveContactPreferences(contactTextEnabled, event.target.checked)}
+                    />
+                    <span>{text.enableWhatsApp}</span>
+                  </label>
+                </div>
               </div>
             </div>
-            <form className="profile-user-id-form" onSubmit={saveUserId}>
-              <div className="profile-user-id-field">
-                <label className="label" htmlFor="user-id">{text.publicUserId}</label>
-                <input
-                  id="user-id"
-                  className="input"
-                  value={userId}
-                  onChange={(e) => setUserId(e.target.value)}
-                  placeholder="user-123"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                />
-                <p className="helper-text">{text.userIdHelp}</p>
-              </div>
-              <div className="profile-user-id-actions">
-                <button type="submit" className="btn btn-secondary" disabled={savingUserId}>
-                  {savingUserId ? text.saving : text.saveUserId}
-                </button>
-              </div>
-            </form>
           </div>
 
           <div className="profile-identity-card">
@@ -575,6 +679,8 @@ export default function MyCarsPage() {
             {me.name && me.user_id ? <p className="profile-identity-handle">@{me.user_id}</p> : null}
             <div className="profile-identity-meta">
               <span>{text.phone}: {me.phone_e164}</span>
+              <span>{contactTextEnabled ? text.enableText : "Text off"}</span>
+              <span>{contactWhatsappEnabled ? text.enableWhatsApp : "WhatsApp off"}</span>
               {isAdmin ? <span>{text.adminBadge}</span> : null}
             </div>
           </div>

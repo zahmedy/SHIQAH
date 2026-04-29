@@ -36,11 +36,14 @@ def public_car_detail(car_id: int, session: Session = Depends(get_session)):
     out = CarOut(**data)
 
     seller_phone = seller.phone_e164 if seller else None
-    whatsapp_text = f"Hello, I'm interested in listing #{car.id}: {car.make} {car.model} {car.year}."
+    message_text = f"Hello, I'm interested in listing #{car.id}: {car.make} {car.model} {car.year}."
+    sms_url = None
     whatsapp_url = None
-    if seller_phone:
+    if seller and seller_phone and seller.contact_text_enabled:
+        sms_url = f"sms:{seller_phone}?&body={quote(message_text)}"
+    if seller and seller_phone and seller.contact_whatsapp_enabled:
         phone = seller_phone.replace("+", "")
-        whatsapp_url = f"https://wa.me/{phone}?text={quote(whatsapp_text)}"
+        whatsapp_url = f"https://wa.me/{phone}?text={quote(message_text)}"
 
     return {
         "listing": out.model_dump(),
@@ -48,10 +51,9 @@ def public_car_detail(car_id: int, session: Session = Depends(get_session)):
             "id": seller.id if seller else None,
             "name": seller.name if seller else None,
             "user_id": seller.user_id if seller else None,
-            "phone_e164": seller_phone,
         },
         "contact": {
+            "sms_url": sms_url,
             "whatsapp_url": whatsapp_url,
-            "call_phone_e164": seller_phone,
         },
     }
