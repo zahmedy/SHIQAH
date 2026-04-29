@@ -10,7 +10,7 @@ import { getServerLocale } from "@/lib/server-locale";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AutoIntel | Sell and Browse Cars Smarter",
+  title: "AutoIntel | Sell and Browse Cars",
   description: "AutoIntel helps sellers create cleaner car listings with vehicle details, pricing tools, and a simple marketplace experience.",
 };
 

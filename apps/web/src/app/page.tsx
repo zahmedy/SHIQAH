@@ -120,7 +120,7 @@ export default async function HomePage({
         <div className="home-hero-copy">
           <h1 className="home-hero-title">
             <span>Sell your car faster.</span>
-            <span className="home-hero-title-accent">Price it smarter.</span>
+            <span className="home-hero-title-accent">List it smarter.</span>
           </h1>
           <p className="home-hero-sub">
             AutoIntel helps you turn vehicle details, VIN data, and market signals into a clean listing buyers can trust.

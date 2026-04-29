@@ -49,7 +49,7 @@ export default function LogoMark({ className, title = "AutoIntel logo" }: LogoMa
           fontWeight="800"
           letterSpacing="0"
         >
-          AI CAR MARKETPLACE
+          CAR MARKETPLACE
         </text>
       </g>
     </svg>
