@@ -1,4 +1,5 @@
 import io
+import itertools
 import logging
 import os
 import re
@@ -41,6 +42,13 @@ VIN_TRANSLITERATION = {
 }
 VIN_WEIGHTS = [8, 7, 6, 5, 4, 3, 2, 10, 0, 9, 8, 7, 6, 5, 4, 3, 2]
 VIN_OCR_TRANSLATION = str.maketrans({"I": "1", "O": "0", "Q": "0"})
+VIN_OCR_CONFUSIONS = {
+    "B": ("8",),
+    "G": ("6",),
+    "S": ("5", "3"),
+    "T": ("1",),
+    "Z": ("2",),
+}
 OCR_CONFIGS = (
     "--oem 3 --psm 6 -c tessedit_char_whitelist=ABCDEFGHJKLMNPRSTUVWXYZ0123456789",
     "--oem 3 --psm 7 -c tessedit_char_whitelist=ABCDEFGHJKLMNPRSTUVWXYZ0123456789",
@@ -48,6 +56,7 @@ OCR_CONFIGS = (
     "--oem 3 --psm 13 -c tessedit_char_whitelist=ABCDEFGHJKLMNPRSTUVWXYZ0123456789",
 )
 REKOGNITION_MAX_IMAGE_BYTES = 4_750_000
+OCR_ROTATION_ANGLES = (0, 12, -12, 20, -20)
 
 
 def predict_car_attributes(photo_urls: list[str]) -> dict:
@@ -78,11 +87,38 @@ def iter_vin_candidates(raw_text: str) -> Iterable[str]:
     seen: set[str] = set()
     for index in range(max(len(candidate_text) - 16, 0)):
         vin = candidate_text[index:index + 17]
-        if vin in seen:
+        for candidate in _iter_ocr_corrected_vins(vin):
+            if candidate in seen:
+                continue
+            seen.add(candidate)
+            if VIN_RE.fullmatch(candidate) and is_valid_vin(candidate):
+                yield candidate
+
+
+def _iter_ocr_corrected_vins(vin: str) -> Iterable[str]:
+    if len(vin) != 17:
+        return
+
+    yield vin
+    ambiguous_positions = [
+        (index, VIN_OCR_CONFUSIONS[character])
+        for index, character in enumerate(vin)
+        if character in VIN_OCR_CONFUSIONS
+    ]
+    if len(ambiguous_positions) > 6:
+        return
+
+    alternatives = [
+        ((vin[index],) + replacements)
+        for index, replacements in ambiguous_positions
+    ]
+    for replacement_values in itertools.product(*alternatives):
+        if all(vin[index] == replacement for (index, _replacements), replacement in zip(ambiguous_positions, replacement_values, strict=True)):
             continue
-        seen.add(vin)
-        if VIN_RE.fullmatch(vin) and is_valid_vin(vin):
-            yield vin
+        characters = list(vin)
+        for (index, _replacements), replacement in zip(ambiguous_positions, replacement_values, strict=True):
+            characters[index] = replacement
+        yield "".join(characters)
 
 
 def is_valid_vin(vin: str) -> bool:
@@ -123,19 +159,27 @@ def _build_ocr_images(image_bytes: bytes):
     except UnidentifiedImageError as exc:
         raise ValueError("Invalid VIN image payload.") from exc
 
-    base = ImageOps.exif_transpose(image).convert("RGB")
-    grayscale = ImageOps.grayscale(_scale_for_ocr(base))
-    contrast = ImageOps.autocontrast(grayscale)
-    sharpened = contrast.filter(ImageFilter.SHARPEN)
-    high_contrast = ImageEnhance.Contrast(sharpened).enhance(2.0)
-    thresholded = high_contrast.point(lambda value: 255 if value > 145 else 0)
-    inverted = ImageOps.invert(thresholded)
+    base = _scale_for_ocr(ImageOps.exif_transpose(image).convert("RGB"))
+    images = []
+    for angle in OCR_ROTATION_ANGLES:
+        rotated = base if angle == 0 else base.rotate(angle, expand=True, fillcolor=(16, 24, 32))
+        grayscale = ImageOps.grayscale(rotated)
+        contrast = ImageOps.autocontrast(grayscale)
+        sharpened = contrast.filter(ImageFilter.SHARPEN)
+        high_contrast = ImageEnhance.Contrast(sharpened).enhance(2.0)
+        thresholded = high_contrast.point(lambda value: 255 if value > 145 else 0)
+        inverted = ImageOps.invert(thresholded)
+        images.extend((contrast, sharpened, high_contrast, thresholded, inverted))
 
-    return (contrast, sharpened, high_contrast, thresholded, inverted)
+    return tuple(images)
+
+
+def _is_rekognition_supported_image(image_bytes: bytes) -> bool:
+    return image_bytes.startswith(b"\xff\xd8") or image_bytes.startswith(b"\x89PNG\r\n\x1a\n")
 
 
 def _prepare_rekognition_image_bytes(image_bytes: bytes) -> bytes:
-    if len(image_bytes) <= REKOGNITION_MAX_IMAGE_BYTES:
+    if _is_rekognition_supported_image(image_bytes) and len(image_bytes) <= REKOGNITION_MAX_IMAGE_BYTES:
         return image_bytes
 
     _pytesseract, Image, _ImageEnhance, _ImageFilter, ImageOps, UnidentifiedImageError = _load_ocr_modules()
