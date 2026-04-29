@@ -45,10 +45,10 @@ function buildHomepageHref(params: HomeFilterParams): string {
 
 function filterHref(params: HomeFilterParams, query: NicheFilterQuery): string {
   const next = { ...params };
-  const isActive = Object.entries(query).every(([key, value]) => next[key as keyof HomeFilterParams] === value);
+  const isActive = hasExactQuickFilter(params, query);
 
   if (isActive) {
-    for (const key of Object.keys(query) as Array<keyof NicheFilterQuery>) {
+    for (const key of NICHE_FILTER_KEYS) {
       delete next[key];
     }
   } else {
@@ -76,11 +76,15 @@ function nicheHref(params: HomeFilterParams, nicheId: string): string {
 }
 
 function isQuickFilterActive(params: HomeFilterParams, query: NicheFilterQuery): boolean {
-  return Object.entries(query).every(([key, value]) => params[key as keyof HomeFilterParams] === value);
+  return hasExactQuickFilter(params, query);
 }
 
 function quickFilterClass(params: HomeFilterParams, query: NicheFilterQuery): string {
   return isQuickFilterActive(params, query) ? "home-quick-filter-active" : "";
+}
+
+function hasExactQuickFilter(params: HomeFilterParams, query: NicheFilterQuery): boolean {
+  return NICHE_FILTER_KEYS.every((key) => (params[key] ?? "") === (query[key] ?? ""));
 }
 
 export default function HomeFilterControls({ params }: HomeFilterControlsProps) {
