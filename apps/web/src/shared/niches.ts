@@ -7,7 +7,7 @@ export type NicheListingSignal = {
   drivetrain?: string | null;
   body_type?: string | null;
   condition?: string | null;
-  description_ar?: string | null;
+  description?: string | null;
   niche_scores?: Record<string, NicheScoreResult>;
 };
 

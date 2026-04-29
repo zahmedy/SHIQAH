@@ -30,8 +30,8 @@ class CarCreate(BaseModel):
     condition: Optional[str] = None
     color: Optional[str] = None
 
-    title_ar: Optional[str] = None
-    description_ar: str
+    title: Optional[str] = None
+    description: str
     public_bidding_enabled: bool = False
 
 
@@ -57,8 +57,8 @@ class CarUpdate(BaseModel):
     condition: Optional[str] = None
     color: Optional[str] = None
 
-    title_ar: Optional[str] = None
-    description_ar: Optional[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
     public_bidding_enabled: Optional[bool] = None
 
 
@@ -105,13 +105,13 @@ class DescriptionFillRequest(BaseModel):
     engine_volume: Optional[float] = None
     condition: Optional[str] = None
     color: Optional[str] = None
-    title_ar: Optional[str] = None
-    description_ar: Optional[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
     seller_highlights: list[str] = Field(default_factory=list)
 
 
 class DescriptionFillResponse(BaseModel):
-    description_ar: str
+    description: str
 
 
 class PricePredictionRequest(BaseModel):
@@ -129,8 +129,8 @@ class PricePredictionRequest(BaseModel):
     engine_volume: Optional[float] = None
     condition: Optional[str] = None
     color: Optional[str] = None
-    title_ar: Optional[str] = None
-    description_ar: Optional[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
 
 
 class PricePredictionResponse(BaseModel):
@@ -184,8 +184,8 @@ class CarOut(BaseModel):
     color: Optional[str]
     photos: list[CarPhoto] = Field(default_factory=list)
 
-    title_ar: str
-    description_ar: str
+    title: str
+    description: str
     public_bidding_enabled: bool
 
     published_at: Optional[datetime]

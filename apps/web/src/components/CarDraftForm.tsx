@@ -42,8 +42,8 @@ type CarPayload = {
   engine_volume?: number;
   condition?: string;
   color?: string;
-  title_ar: string;
-  description_ar: string;
+  title: string;
+  description: string;
   public_bidding_enabled: boolean;
 };
 
@@ -86,8 +86,8 @@ type FormState = {
   engine_volume: string;
   condition: string;
   color: string;
-  title_ar: string;
-  description_ar: string;
+  title: string;
+  description: string;
   public_bidding_enabled: boolean;
 };
 
@@ -117,7 +117,7 @@ type VinScanResponse = {
 };
 
 type DescriptionFillResponse = {
-  description_ar: string;
+  description: string;
 };
 
 type DescriptionHighlight = {
@@ -169,8 +169,8 @@ const initialForm: FormState = {
   engine_volume: "",
   condition: "",
   color: "",
-  title_ar: "",
-  description_ar: "",
+  title: "",
+  description: "",
   public_bidding_enabled: false,
 };
 
@@ -414,8 +414,8 @@ function buildPayload(form: FormState): BuildPayloadResult {
   const city = form.city.trim();
   const make = form.make.trim();
   const model = form.model.trim();
-  const title = form.title_ar.trim();
-  const description = form.description_ar.trim();
+  const title = form.title.trim();
+  const description = form.description.trim();
 
   if (!city || !make || !model || !description) {
     return { ok: false, error: "Please fill all required fields." };
@@ -478,8 +478,8 @@ function buildPayload(form: FormState): BuildPayloadResult {
     engine_volume: engineVolume,
     condition: form.condition.trim() || undefined,
     color: form.color.trim() || undefined,
-    title_ar: title || `${make} ${model} ${year} for sale`,
-    description_ar: description,
+    title: title || `${make} ${model} ${year} for sale`,
+    description: description,
     public_bidding_enabled: form.public_bidding_enabled,
   };
 
@@ -769,8 +769,8 @@ export default function CarDraftForm({
       engine_volume: fromLoadedField(car.engine_volume),
       condition: fromLoadedField(car.condition),
       color: fromLoadedField(car.color),
-      title_ar: fromLoadedField(car.title_ar),
-      description_ar: fromLoadedField(car.description_ar),
+      title: fromLoadedField(car.title),
+      description: fromLoadedField(car.description),
       public_bidding_enabled: Boolean(car.public_bidding_enabled),
     });
   }
@@ -999,8 +999,8 @@ export default function CarDraftForm({
           drivetrain: form.drivetrain.trim() || undefined,
           condition: form.condition.trim() || undefined,
           color: form.color.trim() || undefined,
-          title_ar: form.title_ar.trim() || undefined,
-          description_ar: form.description_ar.trim() || undefined,
+          title: form.title.trim() || undefined,
+          description: form.description.trim() || undefined,
           seller_highlights: descriptionHighlights,
         }),
       });
@@ -1014,7 +1014,7 @@ export default function CarDraftForm({
       }
 
       const data = (await res.json()) as DescriptionFillResponse;
-      setForm((prev) => ({ ...prev, description_ar: data.description_ar }));
+      setForm((prev) => ({ ...prev, description: data.description }));
       setDescriptionFillStatus(text.descriptionAiFillApplied);
     } catch (err) {
       setDescriptionFillStatus(
@@ -1090,8 +1090,8 @@ export default function CarDraftForm({
           engine_volume: engineVolume,
           condition: form.condition.trim() || undefined,
           color: form.color.trim() || undefined,
-          title_ar: form.title_ar.trim() || undefined,
-          description_ar: form.description_ar.trim() || undefined,
+          title: form.title.trim() || undefined,
+          description: form.description.trim() || undefined,
         }),
       });
 
@@ -1197,7 +1197,7 @@ export default function CarDraftForm({
   }
 
   function validateSubmissionBeforeCreateOrSubmit(): string | null {
-    const description = form.description_ar.trim();
+    const description = form.description.trim();
     if (description.length < 20) {
       return text.descriptionTooShort;
     }
@@ -1206,7 +1206,7 @@ export default function CarDraftForm({
       return translateApiMessage(locale, "At least 4 photos required");
     }
 
-    const content = `${form.title_ar}\n${description}`.toLowerCase();
+    const content = `${form.title}\n${description}`.toLowerCase();
     if (DISALLOWED_REVIEW_TERMS.some((term) => content.includes(term))) {
       return text.disallowedContactInfo;
     }
@@ -2425,8 +2425,8 @@ export default function CarDraftForm({
                   id="title"
                   className="input"
                   placeholder="2019 RAV4 Hybrid AWD with snow tires"
-                  value={form.title_ar}
-                  onChange={(e) => setForm((prev) => ({ ...prev, title_ar: e.target.value }))}
+                  value={form.title}
+                  onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
                 />
               </div>
 
@@ -2472,8 +2472,8 @@ export default function CarDraftForm({
                   className="textarea"
                   rows={6}
                   placeholder="Example: Clean title, daily driven, recent brakes, small rust spot on rear quarter. Includes winter tires."
-                  value={form.description_ar}
-                  onChange={(e) => setForm((prev) => ({ ...prev, description_ar: e.target.value }))}
+                  value={form.description}
+                  onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
                 />
                 <p className="helper-text">{text.descriptionScoringHint}</p>
                 {descriptionFillStatus ? <p className="helper-text">{descriptionFillStatus}</p> : null}

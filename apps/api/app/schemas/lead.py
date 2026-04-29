@@ -7,7 +7,7 @@ class LeadCreate(BaseModel):
     name: Optional[str] = None
     phone_e164: Optional[str] = None
     message: Optional[str] = None
-    amount_sar: Optional[int] = None
+    amount: Optional[int] = None
     channel: str = "form"
 
 
@@ -19,27 +19,27 @@ class LeadOut(BaseModel):
     name: Optional[str]
     phone_e164: Optional[str]
     message: Optional[str]
-    amount_sar: Optional[int]
+    amount: Optional[int]
     accepted_at: Optional[datetime]
     channel: str
     created_at: datetime
 
 
 class OfferCreate(BaseModel):
-    amount_sar: int
+    amount: int
     visibility: str = "public"
 
 
 class OfferOut(BaseModel):
     id: int
-    amount_sar: int
+    amount: int
     created_at: datetime
     accepted_at: Optional[datetime] = None
     visibility: str = "public"
 
 
 class OfferSummaryOut(BaseModel):
-    highest_offer_sar: Optional[int]
+    highest_offer: Optional[int]
     offer_count: int
     bidding_open: bool
     public_bidding_enabled: bool
@@ -49,7 +49,7 @@ class OfferSummaryOut(BaseModel):
 
 class OwnerOfferOut(BaseModel):
     id: int
-    amount_sar: int
+    amount: int
     created_at: datetime
     accepted_at: Optional[datetime] = None
     visibility: str = "public"
@@ -59,7 +59,7 @@ class OwnerOfferOut(BaseModel):
 
 
 class OwnerOfferSummaryOut(BaseModel):
-    highest_offer_sar: Optional[int]
+    highest_offer: Optional[int]
     offer_count: int
     bidding_open: bool
     public_bidding_enabled: bool

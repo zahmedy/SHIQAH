@@ -20,8 +20,8 @@ type HomeListing = {
   drivetrain?: string;
   body_type?: string;
   condition?: string;
-  title_ar: string;
-  description_ar?: string;
+  title: string;
+  description?: string;
   published_at?: string;
   photos?: Array<{ id?: number; public_url: string; sort_order?: number; is_cover?: boolean }>;
   niche_scores?: Record<string, NicheScoreResult>;
@@ -152,7 +152,7 @@ export default async function HomePage({
               <HomeListingCard
                 key={car.id}
                 href={`/cars/${car.id}?niche=${selectedNiche.id}`}
-                title={car.title_ar || `${car.make} ${car.model}`}
+                title={car.title || `${car.make} ${car.model}`}
                 make={car.make}
                 model={car.model}
                 year={car.year}

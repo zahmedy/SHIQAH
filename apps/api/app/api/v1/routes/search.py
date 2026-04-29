@@ -69,8 +69,8 @@ def _search_item_from_listing(
         "fuel_type": listing.fuel_type,
         "drivetrain": listing.drivetrain,
         "condition": listing.condition,
-        "title_ar": listing.title_ar,
-        "description_ar": listing.description_ar,
+        "title": listing.title,
+        "description": listing.description,
         "published_at": listing.published_at.isoformat() if listing.published_at else None,
         "photos": photos_by_listing_id.get(listing.id, []),
         "niche_scores": score_listing_for_all_niches(listing),
@@ -263,7 +263,7 @@ def search_cars(
         must.append({
             "multi_match": {
                 "query": text_query,
-                "fields": ["title_ar", "description_ar", "seller_name", "make", "model", "city"],
+                "fields": ["title", "description", "seller_name", "make", "model", "city"],
             }
         })
     should = build_smart_should_clauses(intent.get("boosts", []))

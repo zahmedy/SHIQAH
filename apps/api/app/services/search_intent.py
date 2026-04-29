@@ -11,13 +11,13 @@ SMART_BOOSTS = {
     "winter": [
         {"terms": {"drivetrain": ["AWD", "4WD"]}, "boost": 4},
         {"terms": {"body_type": ["SUV", "Wagon", "Pickup", "Hatchback"]}, "boost": 2},
-        {"multi_match": {"query": "winter snow tire tires heated seats garage rust battery remote start", "fields": ["title_ar^2", "description_ar"]}, "boost": 3},
+        {"multi_match": {"query": "winter snow tire tires heated seats garage rust battery remote start", "fields": ["title^2", "description"]}, "boost": 3},
     ],
     "daily_driver": [
         {"range": {"mileage": {"lte": 193121}}, "boost": 3},
         {"terms": {"body_type": ["Sedan", "Hatchback", "Wagon", "SUV"]}, "boost": 2},
         {"terms": {"fuel_type": ["Hybrid", "Petrol", "Electric"]}, "boost": 2},
-        {"multi_match": {"query": "maintenance service records one owner clean title no accident new tires", "fields": ["title_ar^2", "description_ar"]}, "boost": 2},
+        {"multi_match": {"query": "maintenance service records one owner clean title no accident new tires", "fields": ["title^2", "description"]}, "boost": 2},
     ],
     "family": [
         {"terms": {"body_type": ["SUV", "Van", "Wagon", "Sedan"]}, "boost": 3},

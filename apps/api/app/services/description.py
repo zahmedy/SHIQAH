@@ -43,9 +43,9 @@ def _compact_payload(payload: DescriptionFillRequest) -> dict:
     for key, value in raw.items():
         if key == "price":
             renamed["price_usd"] = value
-        elif key == "title_ar":
+        elif key == "title":
             renamed["title"] = value
-        elif key == "description_ar":
+        elif key == "description":
             renamed["existing_description"] = value
         else:
             renamed[key] = value
@@ -85,7 +85,7 @@ def _build_messages(payload: DescriptionFillRequest, retry_plainer: bool = False
                 "Aim for 55 to 90 words. Use a simple, natural tone. Mention the year, make, "
                 "model, body type, color, transmission, fuel type, mileage, price, and location only "
                 "when those fields are provided. All prices are in USD. If price_usd is present, refer to it as USD "
-                "or omit the currency instead of using SAR. Include seller_highlights naturally when provided, especially "
+                "or omit the currency. Include seller_highlights naturally when provided, especially "
                 "winter tires, heated seats, remote start, garage-kept, service records, one-owner, clean title, "
                 "no-accident, new-tire, or recent-maintenance facts. If existing_description is provided, preserve its "
                 "factual details and clean up the wording. Do not say the car is reliable, dependable, excellent, "
@@ -96,7 +96,7 @@ def _build_messages(payload: DescriptionFillRequest, retry_plainer: bool = False
                 "winter, snow, cold-weather commuting, traction, or city-specific weather. "
                 "Avoid hype, emojis, and external contact info. "
                 f"{extra_instruction}"
-                "Return exactly JSON with a description_ar string.\n\n"
+                "Return exactly JSON with a description string.\n\n"
                 f"Car fields: {json.dumps(_compact_payload(payload), ensure_ascii=False)}"
             ),
         },
@@ -126,7 +126,7 @@ def _request_description(payload: DescriptionFillRequest, retry_plainer: bool = 
 
     content = result["choices"][0]["message"]["content"]
     parsed = _extract_json_object(content)
-    description = str(parsed.get("description_ar") or "").strip()
+    description = str(parsed.get("description") or "").strip()
     if not description:
         raise RuntimeError("AI description response was empty.")
     return description

@@ -29,8 +29,8 @@ type Listing = {
   price?: number | null;
   sold_price?: number | null;
   mileage?: number;
-  title_ar: string;
-  description_ar: string;
+  title: string;
+  description: string;
   public_bidding_enabled: boolean;
   transmission?: string;
   fuel_type?: string;
@@ -121,7 +121,7 @@ export default async function CarDetailPage({
     <main className="page shell two-col">
       <section className="panel">
         <header className="listing-head">
-          <h1 className="listing-title">{car.title_ar}</h1>
+          <h1 className="listing-title">{car.title}</h1>
           <div className="listing-price-row">
             <p className="car-price-meta">{sellerAndTime(locale, data.seller.user_id, data.seller.name, car.published_at)}</p>
             <p className="car-price">{formatListingPrice(car.price, locale)}</p>
@@ -130,7 +130,7 @@ export default async function CarDetailPage({
         </header>
 
         {car.photos?.length ? (
-          <ListingPhotoGallery photos={car.photos} title={car.title_ar} />
+          <ListingPhotoGallery photos={car.photos} title={car.title} />
         ) : (
           <div className="notice spaced-top-sm">No photos yet.</div>
         )}
@@ -198,7 +198,7 @@ export default async function CarDetailPage({
 
         <div className="panel panel-soft">
           <h2 className="subheading">Description</h2>
-          <p className="body-copy">{car.description_ar}</p>
+          <p className="body-copy">{car.description}</p>
         </div>
       </section>
 

@@ -22,6 +22,8 @@ def ensure_index() -> None:
                         "body_type": {"type": "keyword"},
                         "price": {"type": "integer"},
                         "mileage": {"type": "integer"},
+                        "title": {"type": "text"},
+                        "description": {"type": "text"},
                     }
                 },
             )
@@ -48,8 +50,8 @@ def ensure_index() -> None:
                 "drivetrain": {"type": "keyword"},
                 "condition": {"type": "keyword"},
                 "seller_name": {"type": "text"},
-                "title_ar": {"type": "text"},
-                "description_ar": {"type": "text"},
+                "title": {"type": "text"},
+                "description": {"type": "text"},
                 "published_at": {"type": "date"},
                 "location": {"type": "geo_point"},
             }

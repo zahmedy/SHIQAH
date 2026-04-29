@@ -37,8 +37,8 @@ def index_car_listing(car_id: int) -> None:
             "fuel_type": car.fuel_type,
             "drivetrain": car.drivetrain,
             "condition": car.condition,
-            "title_ar": car.title_ar,
-            "description_ar": car.description_ar,
+            "title": car.title,
+            "description": car.description,
             "published_at": car.published_at.isoformat() if car.published_at else None,
         }
         c.index(index=index, id=str(car.id), body=doc, refresh=True)

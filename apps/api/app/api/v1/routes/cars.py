@@ -216,7 +216,7 @@ def fill_car_description(
     except Exception as exc:
         raise HTTPException(status_code=502, detail="Failed to generate description.") from exc
 
-    return DescriptionFillResponse(description_ar=description)
+    return DescriptionFillResponse(description=description)
 
 
 @router.post("/cars/price/predict", response_model=PricePredictionResponse)
@@ -248,7 +248,7 @@ def create_car(
     session: Session = Depends(get_session),
     user: User = Depends(get_current_user),
 ):
-    title = (payload.title_ar or "").strip() or default_listing_title(payload.make, payload.model, payload.year)
+    title = (payload.title or "").strip() or default_listing_title(payload.make, payload.model, payload.year)
 
     if payload.year < 1980 or payload.year > datetime.utcnow().year + 1:
         raise HTTPException(status_code=400, detail="Invalid year")
@@ -265,8 +265,8 @@ def create_car(
     car = CarListing(
         owner_id=user.id,
         status=CarStatus.draft,
-        **payload.model_dump(exclude={"title_ar"}),
-        title_ar=title,
+        **payload.model_dump(exclude={"title"}),
+        title=title,
     )
     session.add(car)
     session.commit()
@@ -329,8 +329,8 @@ def update_car(
     next_make = data.get("make", car.make)
     next_model = data.get("model", car.model)
     next_year = data.get("year", car.year)
-    if "title_ar" in data:
-        data["title_ar"] = (data["title_ar"] or "").strip() or default_listing_title(next_make, next_model, next_year)
+    if "title" in data:
+        data["title"] = (data["title"] or "").strip() or default_listing_title(next_make, next_model, next_year)
 
     for k, v in data.items():
         setattr(car, k, v)
@@ -382,9 +382,9 @@ def submit_car(
         raise HTTPException(status_code=400, detail="Only draft or inactive listings can be submitted")
 
     # MVP publish gates (tighten later)
-    if not car.title_ar or not car.title_ar.strip():
-        car.title_ar = default_listing_title(car.make, car.model, car.year)
-    if not car.description_ar:
+    if not car.title or not car.title.strip():
+        car.title = default_listing_title(car.make, car.model, car.year)
+    if not car.description:
         raise HTTPException(status_code=400, detail="Missing description")
     # sqlmodel may return a scalar int or a row-like object depending on backend/version.
     photo_count_result = session.exec(

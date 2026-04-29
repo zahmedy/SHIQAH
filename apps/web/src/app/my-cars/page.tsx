@@ -37,7 +37,7 @@ type MyCar = {
   price?: number | null;
   sold_price?: number | null;
   mileage?: number;
-  title_ar: string;
+  title: string;
   photos: CarPhoto[];
   created_at: string;
   sold_at?: string | null;
@@ -755,7 +755,7 @@ export default function MyCarsPage() {
                 <article key={car.id} className="car-card profile-listing-card">
                   <div className="car-media profile-listing-media">
                     {activePhoto ? (
-                      <img className="car-thumb profile-listing-thumb" src={activePhoto} alt={car.title_ar || `${car.make} ${car.model}`} />
+                      <img className="car-thumb profile-listing-thumb" src={activePhoto} alt={car.title || `${car.make} ${car.model}`} />
                     ) : (
                       <div className="car-thumb profile-listing-thumb" aria-hidden="true" />
                     )}
@@ -788,7 +788,7 @@ export default function MyCarsPage() {
 
                   <div className="car-body profile-listing-body">
                     <div className="car-row">
-                      <h3 className="car-title">{car.title_ar || `${car.make} ${car.model}`}</h3>
+                      <h3 className="car-title">{car.title || `${car.make} ${car.model}`}</h3>
                       <span className={statusClass}>{translateStatus(locale, car.status)}</span>
                     </div>
 

@@ -67,8 +67,8 @@ class CarListing(SQLModel, table=True):
 
     color: Optional[str] = Field(default=None, index=True)
 
-    title_ar: str
-    description_ar: str
+    title: str
+    description: str
     public_bidding_enabled: bool = Field(default=False, index=True)
 
     published_at: Optional[datetime] = Field(default=None, index=True)

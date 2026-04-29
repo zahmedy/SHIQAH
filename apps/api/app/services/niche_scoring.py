@@ -48,8 +48,18 @@ def _display_value(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _positive_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        parsed = int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
 def _listing_text(listing: Any) -> str:
-    return _normalized(f"{_get(listing, 'title_ar')} {_get(listing, 'description_ar')}")
+    return _normalized(f"{_get(listing, 'title')} {_get(listing, 'description')}")
 
 
 def _mentions_winter_readiness(listing: Any) -> bool:
@@ -222,55 +232,67 @@ def _budget_daily_scorecard(listing: Any) -> dict[str, Any]:
     fuel_type = _normalized(_get(listing, "fuel_type"))
     body_type = _normalized(_get(listing, "body_type"))
     condition = _normalized(_get(listing, "condition"))
+    cylinders = _positive_int(_get(listing, "engine_cylinders"))
     mileage = _get(listing, "mileage")
     signals: list[ScoreSignal] = []
 
     if mileage is None:
-        signals.append(ScoreSignal(weight=26, value=0, missing="Mileage not listed"))
+        signals.append(ScoreSignal(weight=22, value=0, missing="Mileage not listed"))
     elif mileage <= DAILY_MILEAGE_KM:
-        signals.append(ScoreSignal(weight=26, value=1, reason=f"Under {_format_miles(DAILY_MILEAGE_KM)}"))
+        signals.append(ScoreSignal(weight=22, value=1, reason=f"Under {_format_miles(DAILY_MILEAGE_KM)}"))
     elif mileage <= DAILY_MILEAGE_KM * 1.25:
-        signals.append(ScoreSignal(weight=26, value=0.45))
+        signals.append(ScoreSignal(weight=22, value=0.45))
     else:
-        signals.append(ScoreSignal(weight=26, value=-0.25, warning="High mileage"))
+        signals.append(ScoreSignal(weight=22, value=-0.25, warning="High mileage"))
 
     if not _has_value(_get(listing, "body_type")):
-        signals.append(ScoreSignal(weight=24, value=0, missing="Body style not listed"))
+        signals.append(ScoreSignal(weight=14, value=0, missing="Body style not listed"))
     elif body_type in {"sedan", "hatchback", "wagon"}:
-        signals.append(ScoreSignal(weight=24, value=1, reason=_display_value(_get(listing, "body_type"))))
+        signals.append(ScoreSignal(weight=14, value=1, reason=_display_value(_get(listing, "body_type"))))
     elif body_type in {"suv", "van"}:
-        signals.append(ScoreSignal(weight=24, value=0.55, reason=_display_value(_get(listing, "body_type"))))
+        signals.append(ScoreSignal(weight=14, value=0.55, reason=_display_value(_get(listing, "body_type"))))
     elif body_type == "pickup":
-        signals.append(ScoreSignal(weight=24, value=0.25, warning="Pickup efficiency check"))
+        signals.append(ScoreSignal(weight=14, value=0.25, warning="Pickup efficiency check"))
     else:
-        signals.append(ScoreSignal(weight=24, value=0.15))
+        signals.append(ScoreSignal(weight=14, value=0.15))
 
     if not _has_value(_get(listing, "fuel_type")):
-        signals.append(ScoreSignal(weight=22, value=0, missing="Fuel type not listed"))
+        signals.append(ScoreSignal(weight=18, value=0, missing="Fuel type not listed"))
     elif fuel_type == "hybrid":
-        signals.append(ScoreSignal(weight=22, value=1, reason="Hybrid"))
+        signals.append(ScoreSignal(weight=18, value=1, reason="Hybrid"))
     elif fuel_type in {"petrol", "gasoline"}:
-        signals.append(ScoreSignal(weight=22, value=0.75))
+        signals.append(ScoreSignal(weight=18, value=0.65))
     elif fuel_type == "electric":
-        signals.append(ScoreSignal(weight=22, value=0.65, reason="Electric"))
+        signals.append(ScoreSignal(weight=18, value=0.65, reason="Electric"))
     elif fuel_type == "diesel":
-        signals.append(ScoreSignal(weight=22, value=0.35, warning="Diesel short-trip check"))
+        signals.append(ScoreSignal(weight=18, value=0.35, warning="Diesel short-trip check"))
     else:
-        signals.append(ScoreSignal(weight=22, value=0.2))
+        signals.append(ScoreSignal(weight=18, value=0.2))
 
     if not _has_value(_get(listing, "condition")):
-        signals.append(ScoreSignal(weight=12, value=0, missing="Condition not listed"))
+        signals.append(ScoreSignal(weight=10, value=0, missing="Condition not listed"))
     elif condition == "used":
-        signals.append(ScoreSignal(weight=12, value=0.85))
+        signals.append(ScoreSignal(weight=10, value=0.85))
     elif condition == "new":
-        signals.append(ScoreSignal(weight=12, value=0.55))
+        signals.append(ScoreSignal(weight=10, value=0.55))
     else:
-        signals.append(ScoreSignal(weight=12, value=0.35))
+        signals.append(ScoreSignal(weight=10, value=0.35))
+
+    if cylinders is None:
+        signals.append(ScoreSignal(weight=30, value=0, missing="Cylinders not listed"))
+    elif cylinders <= 4:
+        signals.append(ScoreSignal(weight=30, value=1, reason="4-cylinder efficiency"))
+    elif cylinders == 6:
+        signals.append(ScoreSignal(weight=30, value=0.35, warning="6-cylinder fuel cost"))
+    elif cylinders >= 8:
+        signals.append(ScoreSignal(weight=30, value=-0.65, warning=f"{cylinders}-cylinder fuel cost"))
+    else:
+        signals.append(ScoreSignal(weight=30, value=0.15, warning="Fuel economy check"))
 
     if _mentions_clean_ownership_signal(listing):
-        signals.append(ScoreSignal(weight=16, value=1, reason="Service / ownership details"))
+        signals.append(ScoreSignal(weight=6, value=1, reason="Service / ownership details"))
     else:
-        signals.append(ScoreSignal(weight=16, value=0, missing="No maintenance, title, ownership, or tire-care note"))
+        signals.append(ScoreSignal(weight=6, value=0, missing="No maintenance, title, ownership, or tire-care note"))
 
     return _finalize_score(signals)
 

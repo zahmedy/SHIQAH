@@ -11,14 +11,14 @@ const TOKEN_KEY = "autointel_access_token";
 
 type OfferEntry = {
   id: number;
-  amount_sar: number;
+  amount: number;
   created_at: string;
   accepted_at: string | null;
   visibility: "public" | "private";
 };
 
 type OfferSummary = {
-  highest_offer_sar: number | null;
+  highest_offer: number | null;
   offer_count: number;
   bidding_open: boolean;
   public_bidding_enabled: boolean;
@@ -33,7 +33,7 @@ type OwnerOfferEntry = OfferEntry & {
 };
 
 type OwnerOfferSummary = {
-  highest_offer_sar: number | null;
+  highest_offer: number | null;
   offer_count: number;
   bidding_open: boolean;
   public_bidding_enabled: boolean;
@@ -88,7 +88,7 @@ export default function OfferForm({
     amount: "Your bid",
     signIn: "Sign in to bid or send an offer",
     signInHint: "Your saved account phone number will be used automatically.",
-    minBid: (amountSar: number) => `For a public bid, your amount must be higher than ${formatPrice(amountSar, locale)}.`,
+    minBid: (amount: number) => `For a public bid, your amount must be higher than ${formatPrice(amount, locale)}.`,
     publicHint: "Public bids are visible to everyone and raise the current highest bid.",
     privateHint: "Private offers are shared only with the listing owner.",
     privateOnlyHint: "This seller accepts private offers only. Public bidding is off for this listing.",
@@ -122,7 +122,7 @@ export default function OfferForm({
     loading: "Loading offers...",
     missingApi: "NEXT_PUBLIC_API_BASE is missing.",
     invalidAmount: "Enter a valid offer amount.",
-    lowerThanHighest: (amountSar: number) => `Your bid must be higher than ${formatPrice(amountSar, locale)}.`,
+    lowerThanHighest: (amount: number) => `Your bid must be higher than ${formatPrice(amount, locale)}.`,
     success: "Bid placed.",
     privateSuccess: "Private offer sent.",
     acceptedSuccess: "Offer accepted and bidding closed.",
@@ -135,7 +135,7 @@ export default function OfferForm({
   const acceptedOffer = currentSummary?.accepted_offer ?? null;
   const biddingOpen = currentSummary?.bidding_open ?? true;
   const publicBiddingEnabled = currentSummary?.public_bidding_enabled ?? publicBiddingEnabledProp;
-  const minimumBid = publicBiddingEnabled ? (currentSummary?.highest_offer_sar ?? 0) + 1 : 1;
+  const minimumBid = publicBiddingEnabled ? (currentSummary?.highest_offer ?? 0) + 1 : 1;
   const acceptedOwnerOffer = isOwner && acceptedOffer && isOwnerOfferEntry(acceptedOffer) ? acceptedOffer : null;
   const acceptedBidderLabel = acceptedOwnerOffer?.buyer_user_label || acceptedOwnerOffer?.phone_e164 || null;
   const acceptedBidderPhone = acceptedOwnerOffer?.phone_e164 || null;
@@ -288,7 +288,7 @@ export default function OfferForm({
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          amount_sar: Math.trunc(nextAmount),
+          amount: Math.trunc(nextAmount),
           visibility: nextVisibility,
         }),
       });
@@ -443,7 +443,7 @@ export default function OfferForm({
         <div className="offer-summary spaced-top-sm">
           <p className="offer-summary-label">{text.highestOffer}</p>
           <p className="offer-summary-value">
-            {currentSummary?.highest_offer_sar ? formatPrice(currentSummary.highest_offer_sar, locale) : text.noOffers}
+            {currentSummary?.highest_offer ? formatPrice(currentSummary.highest_offer, locale) : text.noOffers}
           </p>
           <p className="offer-summary-count">{text.bidCount(currentSummary?.offer_count ?? 0)}</p>
         </div>
@@ -451,7 +451,7 @@ export default function OfferForm({
 
       {acceptedOffer ? (
         <p className="notice success spaced-top-sm">
-          {text.acceptedSummary} {formatPrice(acceptedOffer.amount_sar, locale)}
+          {text.acceptedSummary} {formatPrice(acceptedOffer.amount, locale)}
         </p>
       ) : null}
 
@@ -495,7 +495,7 @@ export default function OfferForm({
           {currentSummary.offers.map((offer) => (
             <div key={offer.id} className="offer-list-item">
               <div className="offer-list-body">
-                <strong>{formatPrice(offer.amount_sar, locale)}</strong>
+                <strong>{formatPrice(offer.amount, locale)}</strong>
                 {offer.visibility === "private" ? <span>{text.privateBadge}</span> : null}
                 {isOwner && isOwnerOfferEntry(offer) ? (
                   <span>{text.bidder}: {offer.buyer_user_label || offer.phone_e164 || `#${offer.buyer_user_id ?? offer.id}`}</span>

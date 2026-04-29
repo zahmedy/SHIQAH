@@ -49,8 +49,8 @@ def build_search_doc(session: Session, car: CarListing) -> dict:
         "fuel_type": car.fuel_type,
         "drivetrain": car.drivetrain,
         "condition": car.condition,
-        "title_ar": car.title_ar,
-        "description_ar": car.description_ar,
+        "title": car.title,
+        "description": car.description,
         "photos": [
             {
                 "id": photo.id,
@@ -119,12 +119,12 @@ def _photo_count(session: Session, car_id: int) -> int:
 
 
 def auto_review_listing(session: Session, car: CarListing) -> CarListing:
-    if not car.title_ar.strip():
-        car.title_ar = f"{car.make} {car.model} {car.year} for sale"
+    if not car.title.strip():
+        car.title = f"{car.make} {car.model} {car.year} for sale"
 
-    content = f"{car.title_ar}\n{car.description_ar}".lower()
+    content = f"{car.title}\n{car.description}".lower()
 
-    if not car.description_ar.strip():
+    if not car.description.strip():
         return reject_listing(
             session,
             car,
@@ -132,7 +132,7 @@ def auto_review_listing(session: Session, car: CarListing) -> CarListing:
             review_reason="Missing description.",
         )
 
-    if len(car.description_ar.strip()) < 20:
+    if len(car.description.strip()) < 20:
         return reject_listing(
             session,
             car,
