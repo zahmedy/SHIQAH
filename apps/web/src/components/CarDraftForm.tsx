@@ -2359,27 +2359,7 @@ export default function CarDraftForm({
               </div>
 
               <div className="field-card">
-                <div className="field-label-action">
-                  <label className="label" htmlFor="description">{text.descriptionLabel}</label>
-                  <button
-                    type="button"
-                    className="field-action-button"
-                    onClick={() => void handleDescriptionAiFill()}
-                    disabled={descriptionFilling || saving || loading}
-                  >
-                    {descriptionFilling ? text.descriptionAiFilling : text.descriptionAiFill}
-                  </button>
-                </div>
-                <textarea
-                  id="description"
-                  className="textarea"
-                  rows={6}
-                  placeholder="Example: Clean title, daily driven, recent brakes, small rust spot on rear quarter. Includes winter tires."
-                  value={form.description_ar}
-                  onChange={(e) => setForm((prev) => ({ ...prev, description_ar: e.target.value }))}
-                />
-                <p className="helper-text">{text.descriptionScoringHint}</p>
-                <div className="niche-picker spaced-top-sm">
+                <div className="niche-picker">
                   <p className="home-quick-filters-label">{text.descriptionHighlights}</p>
                   <div className="home-quick-filter-list">
                     {DESCRIPTION_HIGHLIGHTS.map((highlight) => {
@@ -2403,6 +2383,27 @@ export default function CarDraftForm({
                     })}
                   </div>
                 </div>
+
+                <div className="field-label-action">
+                  <label className="label" htmlFor="description">{text.descriptionLabel}</label>
+                  <button
+                    type="button"
+                    className="field-action-button"
+                    onClick={() => void handleDescriptionAiFill()}
+                    disabled={descriptionFilling || saving || loading}
+                  >
+                    {descriptionFilling ? text.descriptionAiFilling : text.descriptionAiFill}
+                  </button>
+                </div>
+                <textarea
+                  id="description"
+                  className="textarea"
+                  rows={6}
+                  placeholder="Example: Clean title, daily driven, recent brakes, small rust spot on rear quarter. Includes winter tires."
+                  value={form.description_ar}
+                  onChange={(e) => setForm((prev) => ({ ...prev, description_ar: e.target.value }))}
+                />
+                <p className="helper-text">{text.descriptionScoringHint}</p>
                 {descriptionFillStatus ? <p className="helper-text">{descriptionFillStatus}</p> : null}
               </div>
 
@@ -2492,7 +2493,7 @@ export default function CarDraftForm({
                     </button>
                     <button
                       type="button"
-                      className="btn btn-primary sold-confirm-button"
+                      className="btn btn-danger sold-confirm-button"
                       disabled={deleting}
                       onClick={() => void handleDeleteListing()}
                     >
@@ -2519,7 +2520,7 @@ export default function CarDraftForm({
               ) : null}
               {activeCarId ? (
                 <button
-                  className="btn btn-secondary"
+                  className="btn btn-danger"
                   type="button"
                   disabled={deleting || saving || loading || uploading}
                   onClick={openDeleteConfirmation}
