@@ -21,7 +21,9 @@ def public_car_detail(car_id: int, session: Session = Depends(get_session)):
     seller = session.exec(select(User).where(User.id == car.owner_id)).first()
 
     photos = session.exec(
-        select(CarMedia).where(CarMedia.car_id == car.id).order_by(CarMedia.sort_order.asc(), CarMedia.id.asc())
+        select(CarMedia)
+        .where(CarMedia.car_id == car.id)
+        .order_by(CarMedia.is_cover.desc(), CarMedia.sort_order.asc(), CarMedia.id.asc())
     ).all()
 
     data = car.model_dump()

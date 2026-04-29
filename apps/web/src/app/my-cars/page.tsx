@@ -101,6 +101,7 @@ export default function MyCarsPage() {
   const [userId, setUserId] = useState("");
   const [savingUserId, setSavingUserId] = useState(false);
   const [photoIndexes, setPhotoIndexes] = useState<Record<number, number>>({});
+  const [showSoldCars, setShowSoldCars] = useState(true);
   const text = {
     missingApiBase: "NEXT_PUBLIC_API_BASE is missing.",
     sessionExpired: "Your session is missing or expired. Please login again.",
@@ -135,6 +136,7 @@ export default function MyCarsPage() {
     saveUserId: "Save User ID",
     loginRequiredForCars: "Login is required to view your profile.",
     noListingsYet: "No cars yet.",
+    noVisibleListings: "No visible cars with this filter.",
     cityNotSet: "Location not set",
     createdOn: (value: string) => `Created ${value}`,
     soldOn: (value: string) => `Sold ${value}`,
@@ -152,10 +154,15 @@ export default function MyCarsPage() {
     reject: "Reject",
     openPublicListing: "View",
     publicPageAfterActive: "Visible after publishing.",
+    showSoldCars: "Show sold cars",
     currentStatus: "Current status",
   };
 
   const canLoad = useMemo(() => Boolean(API_BASE), []);
+  const visibleCars = useMemo(
+    () => (showSoldCars ? cars : cars.filter((car) => car.status !== "sold")),
+    [cars, showSoldCars],
+  );
 
   const loadCars = useCallback(async () => {
     setLoading(true);
@@ -512,23 +519,34 @@ export default function MyCarsPage() {
       {error && <div className="notice error">{error}</div>}
       {success && <div className="notice success">{success}</div>}
 
-      {!loading && !needsLogin && !error && cars.length === 0 && (
+      {!loading && !needsLogin && !error && visibleCars.length === 0 && (
         <div className="panel profile-empty">
           <h2 className="subheading">{text.listingsSection}</h2>
-          <p className="helper-text">{text.noListingsYet}</p>
+          <p className="helper-text">{cars.length ? text.noVisibleListings : text.noListingsYet}</p>
         </div>
       )}
 
-      {!loading && !needsLogin && cars.length > 0 && (
+      {!loading && !needsLogin && visibleCars.length > 0 && (
         <section className="spaced-top">
           <div className="profile-section-head">
             <div>
               <h2 className="subheading">{text.listingsSection}</h2>
               <p className="helper-text">{text.listingsSectionHelp}</p>
             </div>
+            {cars.some((car) => car.status === "sold") ? (
+              <label className="field-toggle profile-sold-toggle" htmlFor="show-sold-cars">
+                <input
+                  id="show-sold-cars"
+                  type="checkbox"
+                  checked={showSoldCars}
+                  onChange={(event) => setShowSoldCars(event.target.checked)}
+                />
+                <span>{text.showSoldCars}</span>
+              </label>
+            ) : null}
           </div>
           <div className="profile-listing-grid">
-            {cars.map((car) => {
+            {visibleCars.map((car) => {
               const photos = getOrderedPhotos(car.photos);
               const photoIndex = Math.min(photoIndexes[car.id] ?? 0, Math.max(photos.length - 1, 0));
               const activePhoto = photos[photoIndex]?.public_url || "";
@@ -638,7 +656,7 @@ export default function MyCarsPage() {
                       ) : null}
                     </div>
 
-                    {car.status !== "active" ? (
+                    {["draft", "pending_review", "rejected", "expired"].includes(car.status) ? (
                       <p className="car-meta card-note">{text.publicPageAfterActive}</p>
                     ) : null}
                   </div>

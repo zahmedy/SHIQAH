@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 
 type ListingPhoto = {
+  id?: number;
   public_url: string;
+  sort_order?: number;
+  is_cover?: boolean;
 };
 
 type HomeListingCardProps = {
@@ -62,8 +65,14 @@ export default function HomeListingCard({
   photos = [],
 }: HomeListingCardProps) {
   const [photoIndex, setPhotoIndex] = useState(0);
-  const hasMultiplePhotos = photos.length > 1;
-  const activePhoto = photos[photoIndex]?.public_url ?? "";
+  const orderedPhotos = [...photos].sort((a, b) => {
+    if (Boolean(a.is_cover) !== Boolean(b.is_cover)) {
+      return a.is_cover ? -1 : 1;
+    }
+    return (a.sort_order ?? 0) - (b.sort_order ?? 0) || (a.id ?? 0) - (b.id ?? 0);
+  });
+  const hasMultiplePhotos = orderedPhotos.length > 1;
+  const activePhoto = orderedPhotos[photoIndex]?.public_url ?? "";
   const titleKey = normalizeTitle(title);
   const generatedTitleKeys = new Set([
     normalizeTitle(`${make} ${model}`),
@@ -75,13 +84,13 @@ export default function HomeListingCard({
   function showPreviousPhoto(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     event.stopPropagation();
-    setPhotoIndex((current) => (current - 1 + photos.length) % photos.length);
+    setPhotoIndex((current) => (current - 1 + orderedPhotos.length) % orderedPhotos.length);
   }
 
   function showNextPhoto(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     event.stopPropagation();
-    setPhotoIndex((current) => (current + 1) % photos.length);
+    setPhotoIndex((current) => (current + 1) % orderedPhotos.length);
   }
 
   return (
@@ -115,7 +124,7 @@ export default function HomeListingCard({
               <ChevronIcon direction="right" />
             </button>
             <p className="car-thumb-count" aria-live="polite">
-              {photoIndex + 1}/{photos.length}
+              {photoIndex + 1}/{orderedPhotos.length}
             </p>
           </>
         ) : null}

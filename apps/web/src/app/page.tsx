@@ -23,7 +23,7 @@ type HomeListing = {
   title_ar: string;
   description_ar?: string;
   published_at?: string;
-  photos?: Array<{ public_url: string }>;
+  photos?: Array<{ id?: number; public_url: string; sort_order?: number; is_cover?: boolean }>;
   niche_scores?: Record<string, NicheScoreResult>;
 };
 

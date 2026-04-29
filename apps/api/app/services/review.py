@@ -28,7 +28,7 @@ def build_search_doc(session: Session, car: CarListing) -> dict:
     photos = session.exec(
         select(CarMedia)
         .where(CarMedia.car_id == car.id)
-        .order_by(CarMedia.sort_order.asc(), CarMedia.id.asc())
+        .order_by(CarMedia.is_cover.desc(), CarMedia.sort_order.asc(), CarMedia.id.asc())
     ).all()
     seller = session.exec(select(User).where(User.id == car.owner_id)).first()
 

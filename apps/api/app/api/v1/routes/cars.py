@@ -87,7 +87,7 @@ def _load_photos_map(session: Session, car_ids: list[int]) -> dict[int, list[Car
     photos = session.exec(
         select(CarMedia)
         .where(CarMedia.car_id.in_(car_ids))
-        .order_by(CarMedia.car_id.asc(), CarMedia.sort_order.asc(), CarMedia.id.asc())
+        .order_by(CarMedia.car_id.asc(), CarMedia.is_cover.desc(), CarMedia.sort_order.asc(), CarMedia.id.asc())
     ).all()
 
     photos_map: dict[int, list[CarPhoto]] = defaultdict(list)

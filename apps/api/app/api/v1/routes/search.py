@@ -4,7 +4,7 @@ from opensearchpy.exceptions import TransportError
 from sqlmodel import Session, select
 
 from app.db.session import get_session
-from app.models.car import CarListing, CarStatus
+from app.models.car import CarListing, CarMedia, CarStatus
 from app.models.user import User
 from app.services.opensearch import client, ensure_index
 from app.services.city_proximity import nearby_cities
@@ -168,6 +168,7 @@ def search_cars(
         if item.get("id") is not None and str(item.get("id")).isdigit()
     }
     listings_by_id: dict[int, CarListing] = {}
+    photos_by_listing_id: dict[int, list[dict]] = {}
     if listing_ids:
         listings = session.exec(select(CarListing).where(CarListing.id.in_(listing_ids))).all()
         listings_by_id = {
@@ -175,6 +176,19 @@ def search_cars(
             for listing in listings
             if listing.id is not None and listing.status == CarStatus.active
         }
+        if listings_by_id:
+            photos = session.exec(
+                select(CarMedia)
+                .where(CarMedia.car_id.in_(list(listings_by_id)))
+                .order_by(CarMedia.car_id.asc(), CarMedia.is_cover.desc(), CarMedia.sort_order.asc(), CarMedia.id.asc())
+            ).all()
+            for photo in photos:
+                photos_by_listing_id.setdefault(photo.car_id, []).append({
+                    "id": photo.id,
+                    "public_url": photo.public_url,
+                    "sort_order": photo.sort_order,
+                    "is_cover": photo.is_cover,
+                })
 
     owner_ids = {
         int(item["owner_id"])
@@ -206,6 +220,7 @@ def search_cars(
         item["fuel_type"] = listing.fuel_type
         item["drivetrain"] = listing.drivetrain
         item["condition"] = listing.condition
+        item["photos"] = photos_by_listing_id.get(listing.id, [])
         item["niche_scores"] = score_listing_for_all_niches(listing)
 
         owner_id = item.get("owner_id")
