@@ -167,7 +167,8 @@ export default async function SearchPage({
   } catch (err) {
     fetchError = err instanceof Error ? err.message : "Failed to load search results.";
   }
-  const showClearFilters = hasActiveFilters(params) && data.total > 0 && data.total <= LOW_RESULT_THRESHOLD;
+  const resultCount = data.items.length;
+  const showClearFilters = hasActiveFilters(params) && resultCount > 0 && resultCount <= LOW_RESULT_THRESHOLD;
 
   return (
     <main className="page shell">
@@ -287,7 +288,7 @@ export default async function SearchPage({
         <section>
           <div className="results-bar">
             <div>
-              <strong>{data.total}</strong> cars found
+              <strong>{resultCount}</strong> cars found
               <p>Sorted and filtered for a faster browse.</p>
             </div>
             {showClearFilters ? (

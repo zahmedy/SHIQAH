@@ -159,8 +159,6 @@ def search_cars(
         ) from exc
 
     hits = res["hits"]["hits"]
-    total = res["hits"]["total"]["value"] if isinstance(res["hits"]["total"], dict) else res["hits"]["total"]
-
     items = [h["_source"] for h in hits]
     listing_ids = {
         int(item["id"])
@@ -238,4 +236,4 @@ def search_cars(
         and int(item["id"]) in listings_by_id
     ]
 
-    return {"page": page, "page_size": page_size, "total": total, "items": items}
+    return {"page": page, "page_size": page_size, "total": len(items), "items": items}
