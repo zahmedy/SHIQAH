@@ -48,7 +48,6 @@ const BUDGET_PRICE = 20000;
 const LOW_MILEAGE_MILES = 100000;
 const DAILY_MILEAGE_MILES = 120000;
 const VALUE_PRICE = 25000;
-const ENTRY_MILEAGE_MILES = 80000;
 
 export const DEFAULT_NICHE_ID = "cold_weather_commuter";
 
@@ -62,24 +61,18 @@ export const NICHES: NicheDefinition[] = [
     signals: ["AWD / 4WD", "Winter equipment", "Lower miles"],
     quickFilters: [
       { label: "Winter value", query: { price_max: String(AFFORDABLE_PRICE), mileage_max: String(LOW_MILEAGE_MILES), sort: "price_asc" } },
-      { label: "Lowest price", query: { sort: "price_asc" } },
-      { label: "Lowest miles", query: { sort: "mileage_asc" } },
-      { label: "Under $30k", query: { price_max: String(AFFORDABLE_PRICE), sort: "price_asc" } },
-      { label: "Under 100k mi", query: { mileage_max: String(LOW_MILEAGE_MILES), sort: "mileage_asc" } },
       { label: "AWD under $30k", query: { price_max: String(AFFORDABLE_PRICE), drivetrain: "AWD", sort: "price_asc" } },
-      { label: "4WD under $30k", query: { price_max: String(AFFORDABLE_PRICE), drivetrain: "4WD", sort: "price_asc" } },
-      { label: "AWD SUVs", query: { drivetrain: "AWD", body_type: "SUV" } },
       { label: "4WD SUVs", query: { drivetrain: "4WD", body_type: "SUV" } },
       { label: "Low-mile AWD", query: { mileage_max: String(LOW_MILEAGE_MILES), drivetrain: "AWD", sort: "mileage_asc" } },
-      { label: "Low-mile SUVs", query: { mileage_max: String(LOW_MILEAGE_MILES), body_type: "SUV", sort: "mileage_asc" } },
       { label: "SUVs under $30k", query: { price_max: String(AFFORDABLE_PRICE), body_type: "SUV", sort: "price_asc" } },
       { label: "Wagons under 100k", query: { mileage_max: String(LOW_MILEAGE_MILES), body_type: "Wagon", sort: "mileage_asc" } },
-      { label: "4WD pickups", query: { drivetrain: "4WD", body_type: "Pickup" } },
     ],
     searchLinks: [
       { label: "Winter value", query: { price_max: String(AFFORDABLE_PRICE), mileage_max: String(LOW_MILEAGE_MILES), sort: "price_asc" } },
       { label: "AWD under $30k", query: { price_max: String(AFFORDABLE_PRICE), drivetrain: "AWD", sort: "price_asc" } },
       { label: "Low-mile AWD", query: { mileage_max: String(LOW_MILEAGE_MILES), drivetrain: "AWD", sort: "mileage_asc" } },
+      { label: "4WD SUVs", query: { drivetrain: "4WD", body_type: "SUV" } },
+      { label: "SUVs under $30k", query: { price_max: String(AFFORDABLE_PRICE), body_type: "SUV", sort: "price_asc" } },
     ],
   },
   {
@@ -91,25 +84,18 @@ export const NICHES: NicheDefinition[] = [
     signals: ["Lower miles", "Efficient fuel", "Easy body styles"],
     quickFilters: [
       { label: "Best budget fit", query: { price_max: String(AFFORDABLE_PRICE), mileage_max: String(DAILY_MILEAGE_MILES), sort: "price_asc" } },
-      { label: "Lowest price", query: { sort: "price_asc" } },
-      { label: "Lowest miles", query: { sort: "mileage_asc" } },
       { label: "Under $20k", query: { price_max: String(BUDGET_PRICE), sort: "price_asc" } },
-      { label: "Under $25k", query: { price_max: String(VALUE_PRICE), sort: "price_asc" } },
-      { label: "Under 80k mi", query: { mileage_max: String(ENTRY_MILEAGE_MILES), sort: "mileage_asc" } },
       { label: "Under 120k mi", query: { mileage_max: String(DAILY_MILEAGE_MILES), sort: "mileage_asc" } },
       { label: "Sedans under $25k", query: { price_max: String(VALUE_PRICE), body_type: "Sedan", sort: "price_asc" } },
-      { label: "Low-mile sedans", query: { mileage_max: String(LOW_MILEAGE_MILES), body_type: "Sedan", sort: "mileage_asc" } },
-      { label: "Hatchbacks under $25k", query: { price_max: String(VALUE_PRICE), body_type: "Hatchback", sort: "price_asc" } },
-      { label: "Low-mile hatchbacks", query: { mileage_max: String(LOW_MILEAGE_MILES), body_type: "Hatchback", sort: "mileage_asc" } },
       { label: "Efficient daily", query: { fuel_type: "Hybrid", mileage_max: String(DAILY_MILEAGE_MILES), sort: "mileage_asc" } },
-      { label: "Hybrids under $30k", query: { fuel_type: "Hybrid", price_max: String(AFFORDABLE_PRICE), sort: "price_asc" } },
       { label: "EV value", query: { fuel_type: "Electric", price_max: String(AFFORDABLE_PRICE), sort: "price_asc" } },
-      { label: "Gas under $25k", query: { fuel_type: "Petrol", price_max: String(VALUE_PRICE), sort: "price_asc" } },
     ],
     searchLinks: [
       { label: "Best budget fit", query: { price_max: String(AFFORDABLE_PRICE), mileage_max: String(DAILY_MILEAGE_MILES), sort: "price_asc" } },
+      { label: "Under $20k", query: { price_max: String(BUDGET_PRICE), sort: "price_asc" } },
       { label: "Under 120k mi", query: { mileage_max: String(DAILY_MILEAGE_MILES), sort: "mileage_asc" } },
       { label: "Sedans under $25k", query: { price_max: String(VALUE_PRICE), body_type: "Sedan", sort: "price_asc" } },
+      { label: "Hybrids under $30k", query: { fuel_type: "Hybrid", price_max: String(AFFORDABLE_PRICE), sort: "price_asc" } },
     ],
   },
 ];
