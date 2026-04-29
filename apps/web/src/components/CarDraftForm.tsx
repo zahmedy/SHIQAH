@@ -509,6 +509,7 @@ export default function CarDraftForm({
   const [removingPhotoId, setRemovingPhotoId] = useState<number | null>(null);
   const [mainPhotoId, setMainPhotoId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [locating, setLocating] = useState(false);
   const [locationStatus, setLocationStatus] = useState("");
@@ -550,8 +551,11 @@ export default function CarDraftForm({
     listingSubmitted: "Listing submitted.",
     submitListingFailed: "Failed to submit listing.",
     saveBeforeDelete: "Save the listing before deleting it.",
-    hideConfirm: "Hide this listing? It will disappear from search and your profile.",
-    listingHidden: "Listing hidden.",
+    deleteConfirmTitle: "Delete listing?",
+    deleteConfirmBody: "This listing will be archived and can be restored for 30 days.",
+    deleteConfirmCancel: "Cancel",
+    deleteConfirmAction: "Delete listing",
+    listingHidden: "Listing archived.",
     deleteFailed: "Failed to complete the action.",
     selectPhotosFirst: "Select one or more photos first.",
     imagesOnly: "Only image files are allowed.",
@@ -660,8 +664,8 @@ export default function CarDraftForm({
     submitting: "Submitting...",
     saveAndSubmit: "Publish",
     deleting: "Deleting...",
-    hiding: "Hiding...",
-    hideListing: "Delete",
+    deletingListing: "Deleting...",
+    deleteListing: "Delete",
     backToMyCars: "Back",
     editCreatedDraft: "Edit Created Draft",
     descriptionTooShort: "Description is too short for approval. Add more detail.",
@@ -1355,7 +1359,7 @@ export default function CarDraftForm({
     }
   }
 
-  async function handleDeleteListing() {
+  function openDeleteConfirmation() {
     setError("");
     setSuccess("");
 
@@ -1375,8 +1379,29 @@ export default function CarDraftForm({
       return;
     }
 
-    const confirmed = window.confirm(text.hideConfirm);
-    if (!confirmed) {
+    setDeleteConfirmOpen(true);
+  }
+
+  async function handleDeleteListing() {
+    setError("");
+    setSuccess("");
+
+    if (!API_BASE) {
+      setError(text.missingApiBase);
+      setDeleteConfirmOpen(false);
+      return;
+    }
+    if (!activeCarId) {
+      setError(text.saveBeforeDelete);
+      setDeleteConfirmOpen(false);
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setNeedsLogin(true);
+      setError(text.loginRequired);
+      setDeleteConfirmOpen(false);
       return;
     }
 
@@ -1403,6 +1428,7 @@ export default function CarDraftForm({
       setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.deleteFailed);
     } finally {
       setDeleting(false);
+      setDeleteConfirmOpen(false);
     }
   }
 
@@ -2441,6 +2467,41 @@ export default function CarDraftForm({
               </div>
             ) : null}
 
+            {deleteConfirmOpen ? (
+              <div className="sold-modal" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title">
+                <button
+                  type="button"
+                  className="sold-modal-backdrop"
+                  onClick={() => {
+                    if (!deleting) setDeleteConfirmOpen(false);
+                  }}
+                  aria-label={text.deleteConfirmCancel}
+                />
+                <div className="sold-modal-card">
+                  <h2 id="delete-confirm-title" className="subheading">{text.deleteConfirmTitle}</h2>
+                  <p className="helper-text">{text.deleteConfirmBody}</p>
+                  <div className="sold-modal-actions">
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      disabled={deleting}
+                      onClick={() => setDeleteConfirmOpen(false)}
+                    >
+                      {text.deleteConfirmCancel}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary sold-confirm-button"
+                      disabled={deleting}
+                      onClick={() => void handleDeleteListing()}
+                    >
+                      {deleting ? text.deletingListing : text.deleteConfirmAction}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             <div className="auth-actions">
               <button className="btn btn-secondary" type="submit" disabled={saving || loading || uploading}>
                 {saving ? text.saving : saveButtonLabel}
@@ -2460,9 +2521,9 @@ export default function CarDraftForm({
                   className="btn btn-secondary"
                   type="button"
                   disabled={deleting || saving || loading || uploading}
-                  onClick={() => void handleDeleteListing()}
+                  onClick={openDeleteConfirmation}
                 >
-                  {deleting ? text.hiding : text.hideListing}
+                  {deleting ? text.deletingListing : text.deleteListing}
                 </button>
               ) : null}
               <Link href="/my-cars" className="btn btn-secondary">{text.backToMyCars}</Link>
