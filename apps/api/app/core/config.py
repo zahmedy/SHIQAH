@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str | None = None
     OPENAI_TEXT_MODEL: str = "gpt-4o-mini"
     VIN_SCAN_DEBUG: bool = False
+    VIN_OCR_PROVIDER: str = "auto"
+    VIN_OCR_AWS_REGION: str = "us-east-1"
+    VIN_OCR_AWS_ACCESS_KEY_ID: str | None = None
+    VIN_OCR_AWS_SECRET_ACCESS_KEY: str | None = None
+    VIN_OCR_AWS_SESSION_TOKEN: str | None = None
+    VIN_OCR_MIN_CONFIDENCE: float = 45.0
     TESSERACT_CMD: str | None = None
 
     model_config = SettingsConfigDict(

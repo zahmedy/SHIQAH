@@ -1,10 +1,17 @@
 import io
+import logging
+import os
 import re
 from collections.abc import Iterable
+
+import boto3
+from botocore.config import Config
+from botocore.exceptions import BotoCoreError, ClientError, NoCredentialsError
 
 from app.core.config import settings
 
 
+logger = logging.getLogger("uvicorn.error")
 VIN_RE = re.compile(r"\b[A-HJ-NPR-Z0-9]{17}\b")
 VIN_TRANSLITERATION = {
     **{str(number): number for number in range(10)},
@@ -40,6 +47,7 @@ OCR_CONFIGS = (
     "--oem 3 --psm 11 -c tessedit_char_whitelist=ABCDEFGHJKLMNPRSTUVWXYZ0123456789",
     "--oem 3 --psm 13 -c tessedit_char_whitelist=ABCDEFGHJKLMNPRSTUVWXYZ0123456789",
 )
+REKOGNITION_MAX_IMAGE_BYTES = 4_750_000
 
 
 def predict_car_attributes(photo_urls: list[str]) -> dict:
@@ -126,10 +134,83 @@ def _build_ocr_images(image_bytes: bytes):
     return (contrast, sharpened, high_contrast, thresholded, inverted)
 
 
-def detect_vin_from_image(image_bytes: bytes, content_type: str) -> str | None:
-    if not content_type.startswith("image/"):
-        return None
+def _prepare_rekognition_image_bytes(image_bytes: bytes) -> bytes:
+    if len(image_bytes) <= REKOGNITION_MAX_IMAGE_BYTES:
+        return image_bytes
 
+    _pytesseract, Image, _ImageEnhance, _ImageFilter, ImageOps, UnidentifiedImageError = _load_ocr_modules()
+    try:
+        image = Image.open(io.BytesIO(image_bytes))
+    except UnidentifiedImageError as exc:
+        raise ValueError("Invalid VIN image payload.") from exc
+
+    prepared = ImageOps.exif_transpose(image).convert("RGB")
+    prepared.thumbnail((1800, 1800))
+    output = io.BytesIO()
+    prepared.save(output, format="JPEG", quality=86, optimize=True)
+    return output.getvalue()
+
+
+def _should_try_aws_rekognition(provider: str) -> bool:
+    if provider == "aws_rekognition":
+        return True
+    if provider != "auto":
+        return False
+    if settings.VIN_OCR_AWS_ACCESS_KEY_ID and settings.VIN_OCR_AWS_SECRET_ACCESS_KEY:
+        return True
+    return any(
+        os.getenv(name)
+        for name in (
+            "AWS_ACCESS_KEY_ID",
+            "AWS_PROFILE",
+            "AWS_WEB_IDENTITY_TOKEN_FILE",
+            "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI",
+            "AWS_CONTAINER_CREDENTIALS_FULL_URI",
+        )
+    )
+
+
+def _aws_rekognition_client():
+    client_kwargs = {
+        "region_name": settings.VIN_OCR_AWS_REGION,
+        "config": Config(connect_timeout=3, read_timeout=12, retries={"max_attempts": 2, "mode": "standard"}),
+    }
+    if settings.VIN_OCR_AWS_ACCESS_KEY_ID and settings.VIN_OCR_AWS_SECRET_ACCESS_KEY:
+        client_kwargs["aws_access_key_id"] = settings.VIN_OCR_AWS_ACCESS_KEY_ID
+        client_kwargs["aws_secret_access_key"] = settings.VIN_OCR_AWS_SECRET_ACCESS_KEY
+        if settings.VIN_OCR_AWS_SESSION_TOKEN:
+            client_kwargs["aws_session_token"] = settings.VIN_OCR_AWS_SESSION_TOKEN
+    return boto3.client("rekognition", **client_kwargs)
+
+
+def _detect_vin_with_aws_rekognition(image_bytes: bytes) -> str | None:
+    client = _aws_rekognition_client()
+    response = client.detect_text(Image={"Bytes": _prepare_rekognition_image_bytes(image_bytes)})
+    detections = response.get("TextDetections") or []
+    high_confidence_text: list[str] = []
+    all_text: list[str] = []
+    for detection in detections:
+        detected_text = str(detection.get("DetectedText") or "")
+        if not detected_text:
+            continue
+        all_text.append(detected_text)
+        confidence = float(detection.get("Confidence") or 0)
+        if confidence >= settings.VIN_OCR_MIN_CONFIDENCE:
+            high_confidence_text.append(detected_text)
+
+    for text in high_confidence_text:
+        vin = normalize_vin(text)
+        if vin:
+            return vin
+
+    vin = normalize_vin(" ".join(high_confidence_text))
+    if vin:
+        return vin
+
+    return normalize_vin(" ".join(all_text))
+
+
+def _detect_vin_with_tesseract(image_bytes: bytes) -> str | None:
     pytesseract, *_modules = _load_ocr_modules()
     if settings.TESSERACT_CMD:
         pytesseract.pytesseract.tesseract_cmd = settings.TESSERACT_CMD
@@ -142,3 +223,28 @@ def detect_vin_from_image(image_bytes: bytes, content_type: str) -> str | None:
                 return vin
 
     return None
+
+
+def detect_vin_from_image(image_bytes: bytes, content_type: str) -> str | None:
+    if not content_type.startswith("image/"):
+        return None
+
+    provider = settings.VIN_OCR_PROVIDER.strip().lower()
+    if provider not in {"auto", "aws_rekognition", "tesseract"}:
+        raise RuntimeError("VIN_OCR_PROVIDER must be auto, aws_rekognition, or tesseract.")
+
+    if _should_try_aws_rekognition(provider):
+        try:
+            vin = _detect_vin_with_aws_rekognition(image_bytes)
+            if vin:
+                return vin
+        except (BotoCoreError, ClientError, NoCredentialsError) as exc:
+            if provider == "aws_rekognition":
+                raise RuntimeError("AWS Rekognition VIN OCR failed.") from exc
+            if settings.VIN_SCAN_DEBUG:
+                logger.exception("AWS Rekognition VIN OCR failed; falling back to Tesseract")
+
+    if provider == "aws_rekognition":
+        return None
+
+    return _detect_vin_with_tesseract(image_bytes)
