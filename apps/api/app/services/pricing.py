@@ -49,6 +49,15 @@ PIPELINE_FEATURE_NAMES = (
     "Miles per year",
 )
 
+ENCODED_MODEL_FEATURE_PREFIXES = (
+    "Manufacturer_",
+    "Color_",
+    "Category_",
+    "Fuel type_",
+    "Drive wheels_",
+)
+ENCODED_MODEL_FEATURE_NAMES = {"Model_te"}
+
 COLOR_MAP = {
     "Silver": "Silver",
     "Black": "Black",
@@ -411,9 +420,12 @@ class ModelTargetEncoder(BaseEstimator, TransformerMixin):
 
 @lru_cache(maxsize=1)
 def _load_model():
-    model_path = MODEL_PATH if MODEL_PATH.exists() else LEGACY_MODEL_PATH
+    model_path = MODEL_PATH
     if not model_path.exists():
-        raise RuntimeError(f"Pricing model not found at {MODEL_PATH} or {LEGACY_MODEL_PATH}.")
+        detail = f"Pricing pipeline not found at {MODEL_PATH}."
+        if LEGACY_MODEL_PATH.exists():
+            detail += f" {LEGACY_MODEL_PATH.name} is only the final estimator and cannot be deployed by itself."
+        raise RuntimeError(detail)
 
     # The notebook saved ModelTargetEncoder from __main__. Registering it here
     # lets joblib unpickle the existing artifact. Future training should move
@@ -433,9 +445,33 @@ def _load_model():
         model_step.n_jobs = 1
 
     expected_features = tuple(getattr(model, "feature_names_in_", ()))
-    if expected_features and expected_features not in (PIPELINE_FEATURE_NAMES, tuple(DEPLOY_INPUT_COLUMNS)):
-        raise RuntimeError("Pricing model pipeline inputs do not match the API input map.")
+    _validate_model_features(model_path, expected_features)
     return model
+
+
+def _validate_model_features(model_path: Path, expected_features: tuple[str, ...]) -> None:
+    if not expected_features:
+        return
+
+    encoded_features = [
+        feature
+        for feature in expected_features
+        if feature in ENCODED_MODEL_FEATURE_NAMES
+        or any(feature.startswith(prefix) for prefix in ENCODED_MODEL_FEATURE_PREFIXES)
+    ]
+    if encoded_features:
+        raise RuntimeError(
+            f"Pricing model at {model_path} is the final estimator, not the preprocessing pipeline. "
+            f"Deploy {MODEL_PATH.name} instead."
+        )
+
+    supported_features = set(PIPELINE_FEATURE_NAMES) | set(DEPLOY_INPUT_COLUMNS)
+    unsupported_features = sorted(set(expected_features) - supported_features)
+    if unsupported_features:
+        raise RuntimeError(
+            "Pricing model pipeline inputs do not match the API input map: "
+            + ", ".join(unsupported_features)
+        )
 
 
 def _build_model_input(payload: PricePredictionRequest) -> pd.DataFrame:
@@ -486,12 +522,20 @@ def _build_deploy_model_input(payload: PricePredictionRequest) -> pd.DataFrame:
     }], columns=DEPLOY_INPUT_COLUMNS)
 
 
+def _build_input_for_features(payload: PricePredictionRequest, features: tuple[str, ...]) -> pd.DataFrame:
+    if features == tuple(DEPLOY_INPUT_COLUMNS):
+        return _build_deploy_model_input(payload)
+
+    raw_input = _build_model_input(payload)
+    return raw_input.loc[:, list(features)]
+
+
 def generate_price_prediction(payload: PricePredictionRequest) -> int:
     model = _load_model()
     expected_features = tuple(getattr(model, "feature_names_in_", ()))
     model_input = (
-        _build_deploy_model_input(payload)
-        if expected_features == tuple(DEPLOY_INPUT_COLUMNS)
+        _build_input_for_features(payload, expected_features)
+        if expected_features
         else _build_model_input(payload)
     )
     with warnings.catch_warnings():

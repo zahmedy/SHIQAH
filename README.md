@@ -17,11 +17,11 @@ docker compose -f infra/docker-compose.yaml up --build
 
 Run this from the API environment after Postgres is running. It appends eligible `carlisting` rows to `app_ready.csv`, reruns the notebook, and replaces `car_price_pipeline.pkl` only after the notebook succeeds.
 
-The API first looks for `app/ml_models/car_price_pipeline.pkl` and falls back to the tracked LFS model at `app/ml_models/pricing_model.pkl`. Make sure Git LFS files are pulled before building the API image:
+The API uses the tracked LFS pipeline at `app/ml_models/car_price_pipeline.pkl`. Make sure Git LFS files are pulled before building the API image:
 
 ```bash
 git lfs pull
-ls -lh apps/api/app/ml_models/pricing_model.pkl
+ls -lh apps/api/app/ml_models/car_price_pipeline.pkl
 ```
 
 ```bash

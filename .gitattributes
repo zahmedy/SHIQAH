@@ -1,1 +1,2 @@
 apps/api/app/ml_models/pricing_model.pkl filter=lfs diff=lfs merge=lfs -text
+apps/api/app/ml_models/car_price_pipeline.pkl filter=lfs diff=lfs merge=lfs -text
