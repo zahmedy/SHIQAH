@@ -61,11 +61,16 @@ services:
       - VIN_OCR_AWS_SECRET_ACCESS_KEY
       - VIN_OCR_AWS_SESSION_TOKEN
       - VIN_OCR_MIN_CONFIDENCE=45
+      - S3_ENDPOINT_URL=http://minio:9000
+      - S3_PRESIGN_BASE_URL
+      - S3_PUBLIC_BASE_URL
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
+      minio:
+        condition: service_started
 
   web:
     build:
@@ -104,7 +109,7 @@ services:
       until /usr/bin/mc alias set local http://minio:9000 minioadmin minioadmin; do sleep 1; done;
       /usr/bin/mc mb -p local/autointel-media || true;
       /usr/bin/mc anonymous set download local/autointel-media || true;
-      echo '[{"AllowedOrigin":["http://localhost:3001","http://localhost:3000"],"AllowedMethod":["GET","PUT","HEAD"],"AllowedHeader":["*"],"ExposeHeader":["ETag"],"MaxAgeSeconds":3000}]' > /tmp/autointel-cors.json;
+      echo '[{"AllowedOrigin":["https://nicherides.com","https://www.nicherides.com","http://localhost:3001","http://localhost:3000"],"AllowedMethod":["GET","PUT","HEAD"],"AllowedHeader":["*"],"ExposeHeader":["ETag"],"MaxAgeSeconds":3000}]' > /tmp/autointel-cors.json;
       for i in 1 2 3 4 5; do /usr/bin/mc cors set local/autointel-media /tmp/autointel-cors.json && break || sleep 1; done;
       exit 0;
       "
@@ -122,6 +127,7 @@ services:
     depends_on:
       - web
       - api
+      - minio
 
 volumes:
   pgdata:
