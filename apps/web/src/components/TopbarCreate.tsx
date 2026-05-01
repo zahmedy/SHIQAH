@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
-const TOKEN_KEY = "autointel_access_token";
+const TOKEN_KEY = "nicherides_access_token";
 
 export default function TopbarCreate() {
   const [href, setHref] = useState("/login");
@@ -42,10 +42,10 @@ export default function TopbarCreate() {
     }
 
     void load();
-    window.addEventListener("autointel-auth-changed", handleAuthChange);
+    window.addEventListener("nicherides-auth-changed", handleAuthChange);
     window.addEventListener("focus", handleAuthChange);
     return () => {
-      window.removeEventListener("autointel-auth-changed", handleAuthChange);
+      window.removeEventListener("nicherides-auth-changed", handleAuthChange);
       window.removeEventListener("focus", handleAuthChange);
     };
   }, []);

@@ -1,10 +1,10 @@
-# AutoIntel
+# NicheRides
 Curated used car marketplace for niche buyers, starting with cold-weather commuter cars.
 
 ## Run With Docker Compose
 
 ```bash
-docker compose -f infra/compose.yaml up --build
+docker compose -f infra/docker-compose.yaml up --build
 ```
 
 - Web UI: `http://localhost:3001`
@@ -42,7 +42,7 @@ VIN_OCR_AWS_SECRET_ACCESS_KEY=...
 Use `VIN_OCR_PROVIDER=auto` to try AWS Rekognition when VIN OCR AWS credentials, `AWS_ACCESS_KEY_ID`, or an AWS profile are present and fall back to Tesseract otherwise.
 
 ```
-autointel/
+nicherides/
   apps/
     api/
       app/

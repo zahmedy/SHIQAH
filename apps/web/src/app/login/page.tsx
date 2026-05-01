@@ -5,7 +5,7 @@ import { FormEvent, useState } from "react";
 import { translateApiMessage } from "@/lib/locale";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
-const NAME_KEY = "autointel_user_name";
+const NAME_KEY = "nicherides_user_name";
 
 type VerifyResponse = {
   access_token: string;
@@ -49,7 +49,7 @@ export default function LoginPage() {
   const [success, setSuccess] = useState("");
   const normalizedPhone = normalizeUSPhone(phone);
   const text = {
-    title: "Sign in to AutoIntel",
+    title: "Sign in to NicheRides",
     note: "Use your U.S. mobile number to manage listings, save drafts, and contact sellers. MVP code is",
     missingApiBase: "NEXT_PUBLIC_API_BASE is missing.",
     invalidPhone: "Enter a valid U.S. number, for example (555) 555-0123 or +15555550123.",
@@ -150,11 +150,11 @@ export default function LoginPage() {
       }
 
       const data = (await res.json()) as VerifyResponse;
-      localStorage.setItem("autointel_access_token", data.access_token);
+      localStorage.setItem("nicherides_access_token", data.access_token);
       if (name.trim()) {
         localStorage.setItem(NAME_KEY, name.trim());
       }
-      window.dispatchEvent(new Event("autointel-auth-changed"));
+      window.dispatchEvent(new Event("nicherides-auth-changed"));
       window.location.replace("/");
     } catch (err) {
       setError(err instanceof Error ? translateApiMessage("en", err.message) : text.verifyOtpFailed);

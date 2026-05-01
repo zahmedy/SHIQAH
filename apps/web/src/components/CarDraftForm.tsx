@@ -12,8 +12,8 @@ import { findNearestCity } from "@/shared/cities";
 import { findMake } from "@/shared/carMakes";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
-const TOKEN_KEY = "autointel_access_token";
-const FLASH_KEY = "autointel_flash";
+const TOKEN_KEY = "nicherides_access_token";
+const FLASH_KEY = "nicherides_flash";
 
 type DraftFormMode = "create" | "edit";
 
@@ -595,7 +595,7 @@ export default function CarDraftForm({
     sectionPricing: "Price guidance",
     sectionListing: "Listing copy",
     currentStatus: "Current status",
-    vinTitle: "AutoIntel VIN",
+    vinTitle: "NicheRides VIN",
     vinHelp: "Take a close, clear VIN photo or type it manually.",
     vinManualLabel: "VIN",
     vinManualPlaceholder: "17-character VIN",
@@ -635,13 +635,13 @@ export default function CarDraftForm({
     year: "Year *",
     price: "Price (USD)",
     mileage: "Mileage (mi)",
-    pricePredict: "AutoIntel Price",
+    pricePredict: "NicheRides Price",
     pricePredicting: "Pricing...",
     pricePredictNeedsBasics: "Fill make, model, and year first.",
-    pricePredictApplied: "AutoIntel Price applied.",
-    pricePredictFailed: "Could not run AutoIntel Price.",
-    pricingNoteTitle: "AutoIntel Price",
-    pricingNoteBody: "AutoIntel Price uses VIN-decoded fields and your listing details to suggest an asking price. It is not a guaranteed sale price or appraisal.",
+    pricePredictApplied: "NicheRides Price applied.",
+    pricePredictFailed: "Could not run NicheRides Price.",
+    pricingNoteTitle: "NicheRides Price",
+    pricingNoteBody: "NicheRides Price uses VIN-decoded fields and your listing details to suggest an asking price. It is not a guaranteed sale price or appraisal.",
     bodyType: "Body Type",
     selectBodyType: "Select body type",
     transmission: "Transmission",
@@ -660,11 +660,11 @@ export default function CarDraftForm({
     publicBiddingEnabled: "Enable public bidding",
     titleLabel: "Title",
     descriptionLabel: "Listing description *",
-    descriptionAiFill: "AutoIntel Description",
+    descriptionAiFill: "NicheRides Description",
     descriptionAiFilling: "Writing...",
     descriptionAiFillNeedsBasics: "Fill make, model, and year first.",
-    descriptionAiFillApplied: "AutoIntel Description drafted. Review before publishing.",
-    descriptionAiFillFailed: "Could not run AutoIntel Description.",
+    descriptionAiFillApplied: "NicheRides Description drafted. Review before publishing.",
+    descriptionAiFillFailed: "Could not run NicheRides Description.",
     descriptionScoringHint: "More verified details improve niche scoring.",
     descriptionHighlights: "Seller-confirmed highlights",
     photos: "Photos",

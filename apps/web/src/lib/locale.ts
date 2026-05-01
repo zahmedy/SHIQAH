@@ -1,6 +1,6 @@
 export type Locale = "en";
 
-export const LOCALE_COOKIE = "autointel_locale";
+export const LOCALE_COOKIE = "nicherides_locale";
 
 const VALUE_LABELS: Record<string, string> = {
   Sedan: "Sedan",

@@ -3,53 +3,53 @@ type LogoMarkProps = {
   title?: string;
 };
 
-export default function LogoMark({ className, title = "AutoIntel logo" }: LogoMarkProps) {
+export default function LogoMark({ className, title = "NicheRides logo" }: LogoMarkProps) {
   return (
     <svg
       className={className}
-      viewBox="0 0 238 64"
+      viewBox="0 0 224 56"
       role="img"
       aria-label={title}
       xmlns="http://www.w3.org/2000/svg"
     >
-      <defs>
-        <linearGradient id="mark-gradient" x1="10" y1="9" x2="54" y2="55" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#2563EB" />
-          <stop offset="1" stopColor="#0F172A" />
-        </linearGradient>
-      </defs>
-
       <g>
-        <rect x="7" y="8" width="48" height="48" rx="14" fill="url(#mark-gradient)" />
-        <path
-          d="M20 39.5 29.2 18h4.1l9.2 21.5h-5.3l-1.7-4.3h-8.7l-1.7 4.3H20Zm8.5-8.7h5.3l-2.6-6.8-2.7 6.8Z"
+        <rect x="6" y="8" width="40" height="40" rx="10" fill="#0F766E" />
+        <text
+          x="26"
+          y="35"
+          textAnchor="middle"
           fill="#FFFFFF"
-        />
-        <path d="M43.5 18v21.5" stroke="#10B981" strokeWidth="4.4" strokeLinecap="round" />
+          fontFamily="Manrope, Avenir Next, Segoe UI, sans-serif"
+          fontSize="22"
+          fontWeight="800"
+          letterSpacing="0"
+        >
+          N
+        </text>
       </g>
 
       <g>
         <text
-          x="68"
-          y="33"
+          x="58"
+          y="30"
           fill="#0F172A"
-          fontFamily="Rajdhani, Eurostile, Trebuchet MS, sans-serif"
-          fontSize="31"
+          fontFamily="Manrope, Avenir Next, Segoe UI, sans-serif"
+          fontSize="25"
           fontWeight="800"
           letterSpacing="0"
         >
-          AutoIntel
+          NicheRides
         </text>
         <text
-          x="70"
-          y="49"
+          x="59"
+          y="44"
           fill="#64748B"
-          fontFamily="Cairo, Avenir Next, Segoe UI, sans-serif"
-          fontSize="10"
+          fontFamily="Manrope, Avenir Next, Segoe UI, sans-serif"
+          fontSize="9"
           fontWeight="800"
           letterSpacing="0"
         >
-          CAR MARKETPLACE
+          FIND THE RIGHT FIT
         </text>
       </g>
     </svg>

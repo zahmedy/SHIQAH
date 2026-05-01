@@ -7,7 +7,7 @@ import { useLocale } from "@/components/LocaleProvider";
 import { formatClockTime, translateApiMessage } from "@/lib/locale";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
-const TOKEN_KEY = "autointel_access_token";
+const TOKEN_KEY = "nicherides_access_token";
 
 type Message = {
   id: number;

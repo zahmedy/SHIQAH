@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
-const TOKEN_KEY = "autointel_access_token";
-const NAME_KEY = "autointel_user_name";
+const TOKEN_KEY = "nicherides_access_token";
+const NAME_KEY = "nicherides_user_name";
 
 type MeResponse = {
   id: number;
@@ -82,10 +82,10 @@ export default function TopbarUser() {
     }
 
     void load();
-    window.addEventListener("autointel-auth-changed", handleAuthChange);
+    window.addEventListener("nicherides-auth-changed", handleAuthChange);
     window.addEventListener("focus", handleAuthChange);
     return () => {
-      window.removeEventListener("autointel-auth-changed", handleAuthChange);
+      window.removeEventListener("nicherides-auth-changed", handleAuthChange);
       window.removeEventListener("focus", handleAuthChange);
     };
   }, [text.loggedIn]);
@@ -95,7 +95,7 @@ export default function TopbarUser() {
     localStorage.removeItem(NAME_KEY);
     setLabel("");
     setReady(true);
-    window.dispatchEvent(new Event("autointel-auth-changed"));
+    window.dispatchEvent(new Event("nicherides-auth-changed"));
     window.location.replace("/");
   }
 

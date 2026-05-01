@@ -16,7 +16,7 @@ from app.api.v1.routes.leads import router as leads_router
 from app.api.v1.routes.comments import router as comments_router
 
 
-app = FastAPI(title="AutoIntel API", version="0.1.0")
+app = FastAPI(title="NicheRides API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,

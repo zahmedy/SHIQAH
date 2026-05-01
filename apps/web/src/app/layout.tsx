@@ -10,8 +10,8 @@ import { getServerLocale } from "@/lib/server-locale";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AutoIntel | Sell and Browse Cars",
-  description: "AutoIntel helps sellers create cleaner car listings with vehicle details, pricing tools, and a simple marketplace experience.",
+  title: "NicheRides | Find and Sell Cars",
+  description: "NicheRides keeps car search and listing simple with clear details, focused filters, and easy seller tools.",
 };
 
 export default async function RootLayout({
@@ -27,7 +27,7 @@ export default async function RootLayout({
         <LocaleProvider locale={locale}>
           <header className="topbar">
             <div className="shell topbar-inner">
-              <Link href="/" className="brand" aria-label="AutoIntel home">
+              <Link href="/" className="brand" aria-label="NicheRides home">
                 <LogoMark className="brand-logo" />
               </Link>
               <form action="/search" method="get" className="topbar-search" role="search">
@@ -35,7 +35,7 @@ export default async function RootLayout({
                   type="search"
                   name="q"
                   className="input topbar-search-input"
-                  placeholder="Search make, model, city, or use case"
+                  placeholder="Search cars, cities, or use cases"
                   aria-label="Search cars"
                 />
               </form>

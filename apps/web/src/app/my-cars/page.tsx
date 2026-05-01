@@ -14,8 +14,8 @@ import {
 } from "@/lib/locale";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
-const TOKEN_KEY = "autointel_access_token";
-const FLASH_KEY = "autointel_flash";
+const TOKEN_KEY = "nicherides_access_token";
+const FLASH_KEY = "nicherides_flash";
 
 type CarPhoto = {
   id: number;
@@ -133,11 +133,11 @@ export default function MyCarsPage() {
     restoreFailed: "Failed to restore listing.",
     title: "Seller Hub",
     subtitle: "",
-    profileKicker: "AutoIntel Seller",
+    profileKicker: "NicheRides Seller",
     loading: "Loading...",
     refresh: "Refresh",
     userIdTitle: "User ID",
-    profileMember: "AutoIntel Member",
+    profileMember: "NicheRides Member",
     accountSummary: "Seller ID",
     contactPrefs: "Direct messaging",
     enableText: "Enable text messages",
@@ -382,7 +382,7 @@ export default function MyCarsPage() {
       setMe(updatedMe);
       setUserId(updatedMe.user_id || "");
       setSuccess(text.profileUpdated);
-      window.dispatchEvent(new Event("autointel-auth-changed"));
+      window.dispatchEvent(new Event("nicherides-auth-changed"));
     } catch (err) {
       setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.userIdUpdateFailed);
     } finally {
@@ -439,7 +439,7 @@ export default function MyCarsPage() {
       setContactTextEnabled(updatedMe.contact_text_enabled);
       setContactWhatsappEnabled(updatedMe.contact_whatsapp_enabled);
       setSuccess(text.contactPrefsUpdated);
-      window.dispatchEvent(new Event("autointel-auth-changed"));
+      window.dispatchEvent(new Event("nicherides-auth-changed"));
     } catch (err) {
       setContactTextEnabled(previousTextEnabled);
       setContactWhatsappEnabled(previousWhatsappEnabled);

@@ -7,7 +7,7 @@ import { useLocale } from "@/components/LocaleProvider";
 import { formatDateTime, formatPrice, translateApiMessage } from "@/lib/locale";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
-const TOKEN_KEY = "autointel_access_token";
+const TOKEN_KEY = "nicherides_access_token";
 
 type OfferEntry = {
   id: number;
@@ -173,10 +173,10 @@ export default function OfferForm({
     }
 
     void syncAuth();
-    window.addEventListener("autointel-auth-changed", syncAuth);
+    window.addEventListener("nicherides-auth-changed", syncAuth);
     window.addEventListener("focus", syncAuth);
     return () => {
-      window.removeEventListener("autointel-auth-changed", syncAuth);
+      window.removeEventListener("nicherides-auth-changed", syncAuth);
       window.removeEventListener("focus", syncAuth);
     };
   }, []);
