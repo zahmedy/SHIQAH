@@ -1,0 +1,11 @@
+nicherides.com {
+  reverse_proxy web:3001
+}
+
+www.nicherides.com {
+  reverse_proxy web:3001
+}
+
+api.nicherides.com {
+  reverse_proxy api:8000
+}

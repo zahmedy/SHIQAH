@@ -1,4 +1,7 @@
 from opensearchpy import OpenSearch
+from opensearchpy.exceptions import ConnectionError as OpenSearchConnectionError
+from opensearchpy.exceptions import TransportError
+
 from app.core.config import settings
 
 def client() -> OpenSearch:
@@ -60,14 +63,19 @@ def ensure_index() -> None:
     c.indices.create(index=idx, body=mapping)
 
 def upsert_car(doc_id: str, doc: dict) -> None:
-    ensure_index()
-    c = client()
-    c.index(index=settings.OPENSEARCH_INDEX, id=doc_id, body=doc, refresh=True)
+    try:
+        ensure_index()
+        c = client()
+        c.index(index=settings.OPENSEARCH_INDEX, id=doc_id, body=doc, refresh=True)
+    except (OpenSearchConnectionError, TransportError):
+        return
 
 def delete_car(doc_id: str) -> None:
-    ensure_index()
-    c = client()
     try:
+        ensure_index()
+        c = client()
         c.delete(index=settings.OPENSEARCH_INDEX, id=doc_id, refresh=True)
+    except (OpenSearchConnectionError, TransportError):
+        return
     except Exception:
-        pass
+        return

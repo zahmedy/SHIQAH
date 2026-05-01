@@ -5,10 +5,11 @@ from datetime import datetime, timedelta
 from unittest.mock import patch
 
 from fastapi import HTTPException
+from opensearchpy.exceptions import ConnectionError as OpenSearchConnectionError
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.api.v1.routes.cars import archive_owner_car, restore_archived_owner_car
-from app.api.v1.routes.search import _db_search_cars
+from app.api.v1.routes.search import _db_search_cars, search_cars
 from app.models.car import CarListing, CarStatus
 from app.models.user import User, UserRole
 from app.services.niche_scoring import BUDGET_DAILY_NICHE_ID, score_listing_for_niche
@@ -152,6 +153,7 @@ class PreDeploymentListingLifecycleTests(unittest.TestCase):
                 lat=None,
                 lon=None,
                 radius_km=None,
+                keyword_query=None,
                 sort="mileage_asc",
                 page=1,
                 page_size=20,
@@ -160,6 +162,32 @@ class PreDeploymentListingLifecycleTests(unittest.TestCase):
 
         self.assertEqual(result["total"], 1)
         self.assertEqual(result["items"][0]["title"], "Boundary car")
+
+    def test_keyword_search_falls_back_to_database_when_opensearch_is_down(self) -> None:
+        with Session(self.engine) as session:
+            user = User(
+                role=UserRole.seller,
+                name="Seller",
+                user_id="fallback-seller",
+                phone_e164="+15558880000",
+                verified_at=datetime.utcnow(),
+            )
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+
+            session.add(make_listing(user.id, title="Toyota Camry 2020 for sale"))
+            session.add(make_listing(user.id, title="Mazda CX-90 2024 for sale", make="Mazda", model="CX-90"))
+            session.commit()
+
+            with patch(
+                "app.api.v1.routes.search.ensure_index",
+                side_effect=OpenSearchConnectionError("opensearch", "down"),
+            ):
+                result = search_cars(q="Camry", lat=None, lon=None, radius_km=None, page=1, page_size=20, session=session)
+
+        self.assertEqual(result["total"], 1)
+        self.assertEqual(result["items"][0]["title"], "Toyota Camry 2020 for sale")
 
     def test_archive_hides_listing_and_restore_only_allows_active_archives(self) -> None:
         active_user_id, active_listing_id = self.create_user_and_listing(status=CarStatus.active)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from opensearchpy.exceptions import ConnectionError as OpenSearchConnectionError
 from opensearchpy.exceptions import TransportError
 from sqlmodel import Session, select
@@ -94,6 +94,7 @@ def _db_search_cars(
     lat: float | None,
     lon: float | None,
     radius_km: int | None,
+    keyword_query: str | None,
     sort: str,
     page: int,
     page_size: int,
@@ -128,6 +129,14 @@ def _db_search_cars(
         statement = statement.where(CarListing.mileage != None, CarListing.mileage <= mileage_max)
 
     listings = list(session.exec(statement).all())
+    if keyword_query:
+        terms = [term for term in keyword_query.lower().split() if term]
+        listings = [
+            listing
+            for listing in listings
+            if _listing_matches_keywords(listing, terms)
+        ]
+
     if sort == "price_asc":
         listings.sort(key=lambda listing: (listing.price is None, listing.price or 0, listing.published_at or listing.created_at), reverse=False)
     elif sort == "price_desc":
@@ -155,6 +164,25 @@ def _db_search_cars(
             for listing in page_items
         ],
     }
+
+
+def _listing_matches_keywords(listing: CarListing, terms: list[str]) -> bool:
+    if not terms:
+        return True
+    haystack = " ".join(
+        str(value or "")
+        for value in (
+            listing.title,
+            listing.description,
+            listing.make,
+            listing.model,
+            listing.city,
+            listing.body_type,
+            listing.fuel_type,
+            listing.drivetrain,
+        )
+    ).lower()
+    return all(term in haystack for term in terms)
 
 
 @router.get("/cars")
@@ -200,15 +228,6 @@ def search_cars(
     body_type = body_type or intent.get("body_type")
     if sort == "newest" and intent.get("sort"):
         sort = intent["sort"]
-
-    try:
-        ensure_index()
-        c = client()
-    except (OpenSearchConnectionError, TransportError) as exc:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Search service unavailable. Start OpenSearch at {settings.OPENSEARCH_URL}.",
-        ) from exc
 
     filters: list[dict] = []
     if city:
@@ -284,6 +303,7 @@ def search_cars(
             lat=lat,
             lon=lon,
             radius_km=radius_km,
+            keyword_query=None,
             sort=sort,
             page=page,
             page_size=page_size,
@@ -316,12 +336,32 @@ def search_cars(
         body["sort"] = [{"mileage": {"order": "asc", "missing": "_last"}}]
 
     try:
+        ensure_index()
+        c = client()
         res = c.search(index=settings.OPENSEARCH_INDEX, body=body)
-    except (OpenSearchConnectionError, TransportError) as exc:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Search service unavailable. Start OpenSearch at {settings.OPENSEARCH_URL}.",
-        ) from exc
+    except (OpenSearchConnectionError, TransportError):
+        return _db_search_cars(
+            city=city,
+            make=make,
+            model=model,
+            year_min=year_min,
+            year_max=year_max,
+            price_min=price_min,
+            price_max=price_max,
+            mileage_max=mileage_max,
+            transmission=transmission,
+            fuel_type=fuel_type,
+            drivetrain=drivetrain,
+            body_type=body_type,
+            lat=lat,
+            lon=lon,
+            radius_km=radius_km,
+            keyword_query=text_query,
+            sort=sort,
+            page=page,
+            page_size=page_size,
+            session=session,
+        )
 
     hits = res["hits"]["hits"]
     items = [h["_source"] for h in hits]
