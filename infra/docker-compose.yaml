@@ -1,3 +1,5 @@
+version: "2.4"
+
 services:
   db:
     image: postgres:16
@@ -47,22 +49,22 @@ services:
       uvicorn app.main:app --host 0.0.0.0 --port 8000
       "
     environment:
-      ENV: dev
-      API_HOST: 0.0.0.0
-      API_PORT: 8000
-      DATABASE_URL: postgresql+psycopg://autointel:autointel@db:5432/autointel
-      JWT_SECRET: change-me-super-secret
-      OPENSEARCH_URL: http://opensearch:9200
-      OPENSEARCH_INDEX: autointel_cars
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_TEXT_MODEL: ${OPENAI_TEXT_MODEL:-gpt-4o-mini}
-      VIN_SCAN_DEBUG: ${VIN_SCAN_DEBUG:-false}
-      VIN_OCR_PROVIDER: ${VIN_OCR_PROVIDER:-auto}
-      VIN_OCR_AWS_REGION: ${VIN_OCR_AWS_REGION:-us-east-1}
-      VIN_OCR_AWS_ACCESS_KEY_ID: ${VIN_OCR_AWS_ACCESS_KEY_ID:-}
-      VIN_OCR_AWS_SECRET_ACCESS_KEY: ${VIN_OCR_AWS_SECRET_ACCESS_KEY:-}
-      VIN_OCR_AWS_SESSION_TOKEN: ${VIN_OCR_AWS_SESSION_TOKEN:-}
-      VIN_OCR_MIN_CONFIDENCE: ${VIN_OCR_MIN_CONFIDENCE:-45}
+      - ENV=dev
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - DATABASE_URL=postgresql+psycopg://autointel:autointel@db:5432/autointel
+      - JWT_SECRET=change-me-super-secret
+      - OPENSEARCH_URL=http://opensearch:9200
+      - OPENSEARCH_INDEX=autointel_cars
+      - OPENAI_API_KEY
+      - OPENAI_TEXT_MODEL=gpt-4o-mini
+      - VIN_SCAN_DEBUG=false
+      - VIN_OCR_PROVIDER=auto
+      - VIN_OCR_AWS_REGION=us-east-1
+      - VIN_OCR_AWS_ACCESS_KEY_ID
+      - VIN_OCR_AWS_SECRET_ACCESS_KEY
+      - VIN_OCR_AWS_SESSION_TOKEN
+      - VIN_OCR_MIN_CONFIDENCE=45
     ports:
       - "8000:8000"
     depends_on:
