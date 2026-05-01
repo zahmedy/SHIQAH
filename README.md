@@ -21,6 +21,7 @@ The API first looks for `app/ml_models/car_price_pipeline.pkl` and falls back to
 
 ```bash
 git lfs pull
+ls -lh apps/api/app/ml_models/pricing_model.pkl
 ```
 
 ```bash
