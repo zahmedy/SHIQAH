@@ -1,9 +1,15 @@
 nicherides.com {
-  reverse_proxy web:3001
+  handle_path /v1/* {
+    reverse_proxy api:8000
+  }
+
+  handle {
+    reverse_proxy web:3001
+  }
 }
 
 www.nicherides.com {
-  reverse_proxy web:3001
+  redir https://nicherides.com{uri} permanent
 }
 
 api.nicherides.com {
