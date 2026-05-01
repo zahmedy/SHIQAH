@@ -635,13 +635,13 @@ export default function CarDraftForm({
     year: "Year *",
     price: "Price (USD)",
     mileage: "Mileage (mi)",
-    pricePredict: "NicheRides Price",
+    pricePredict: "Price estimate",
     pricePredicting: "Pricing...",
     pricePredictNeedsBasics: "Fill make, model, and year first.",
-    pricePredictApplied: "NicheRides Price applied.",
-    pricePredictFailed: "Could not run NicheRides Price.",
-    pricingNoteTitle: "NicheRides Price",
-    pricingNoteBody: "NicheRides Price uses VIN-decoded fields and your listing details to suggest an asking price. It is not a guaranteed sale price or appraisal.",
+    pricePredictApplied: "Price estimate applied.",
+    pricePredictFailed: "Could not estimate price.",
+    pricingNoteTitle: "Price estimate",
+    pricingNoteBody: "The estimate uses VIN-decoded fields and your listing details to suggest an asking price. It is not a guaranteed sale price or appraisal.",
     bodyType: "Body Type",
     selectBodyType: "Select body type",
     transmission: "Transmission",
@@ -660,11 +660,11 @@ export default function CarDraftForm({
     publicBiddingEnabled: "Enable public bidding",
     titleLabel: "Title",
     descriptionLabel: "Listing description *",
-    descriptionAiFill: "NicheRides Description",
+    descriptionAiFill: "Draft description",
     descriptionAiFilling: "Writing...",
     descriptionAiFillNeedsBasics: "Fill make, model, and year first.",
-    descriptionAiFillApplied: "NicheRides Description drafted. Review before publishing.",
-    descriptionAiFillFailed: "Could not run NicheRides Description.",
+    descriptionAiFillApplied: "Description drafted. Review before publishing.",
+    descriptionAiFillFailed: "Could not draft description.",
     descriptionScoringHint: "More verified details improve niche scoring.",
     descriptionHighlights: "Seller-confirmed highlights",
     photos: "Photos",
@@ -694,6 +694,45 @@ export default function CarDraftForm({
     descriptionTooShort: "Description is too short for approval. Add more detail.",
     disallowedContactInfo: "Remove external contact info from the listing text.",
   };
+
+  useEffect(() => {
+    if (mode !== "create") {
+      return;
+    }
+
+    let cancelled = false;
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!API_BASE || !token) {
+      setNeedsLogin(true);
+      router.replace("/login");
+      return;
+    }
+
+    async function verifySession() {
+      try {
+        const res = await fetch(`${API_BASE}/v1/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        if (!cancelled && !res.ok) {
+          localStorage.removeItem(TOKEN_KEY);
+          setNeedsLogin(true);
+          router.replace("/login");
+        }
+      } catch {
+        if (!cancelled) {
+          setNeedsLogin(true);
+          router.replace("/login");
+        }
+      }
+    }
+
+    void verifySession();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, router]);
+
   const saveButtonLabel = isReviewLocked ? text.saveChanges : text.saveDraft;
   const hasPreciseLocation = Boolean(form.latitude.trim() && form.longitude.trim());
   const localizedReviewReason = translateReviewReason(locale, reviewReason);

@@ -1,6 +1,7 @@
 import { apiGet } from "@/lib/api";
 import HomeListingCard from "@/components/HomeListingCard";
 import HomeFilterControls from "@/components/HomeFilterControls";
+import SellCarLink from "@/components/SellCarLink";
 import { formatListingPrice, formatMileage, formatRelativeHours, type Locale } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
 import { getNiche, nicheBadges, nicheScoreLabel, type NicheScoreResult } from "@/shared/niches";
@@ -145,7 +146,7 @@ export default async function HomePage({
           <p>Try another filter set or start a listing if you are ready to sell.</p>
           <div className="hero-actions">
             <a href="/search" className="btn btn-secondary">Browse all cars</a>
-            <a href="/my-cars/new" className="btn btn-primary">Sell your car</a>
+            <SellCarLink />
           </div>
         </div>
       ) : (
