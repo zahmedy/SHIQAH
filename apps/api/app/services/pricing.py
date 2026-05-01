@@ -13,7 +13,9 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 from app.schemas.car import PricePredictionRequest
 
-MODEL_PATH = Path(__file__).resolve().parent.parent / "ml_models" / "car_price_pipeline.pkl"
+ML_MODELS_DIR = Path(__file__).resolve().parent.parent / "ml_models"
+MODEL_PATH = ML_MODELS_DIR / "car_price_pipeline.pkl"
+LEGACY_MODEL_PATH = ML_MODELS_DIR / "pricing_model.pkl"
 REFERENCE_YEAR = 2026
 
 DEPLOY_INPUT_COLUMNS = [
@@ -409,8 +411,9 @@ class ModelTargetEncoder(BaseEstimator, TransformerMixin):
 
 @lru_cache(maxsize=1)
 def _load_model():
-    if not MODEL_PATH.exists():
-        raise RuntimeError(f"Pricing model not found at {MODEL_PATH}.")
+    model_path = MODEL_PATH if MODEL_PATH.exists() else LEGACY_MODEL_PATH
+    if not model_path.exists():
+        raise RuntimeError(f"Pricing model not found at {MODEL_PATH} or {LEGACY_MODEL_PATH}.")
 
     # The notebook saved ModelTargetEncoder from __main__. Registering it here
     # lets joblib unpickle the existing artifact. Future training should move
@@ -419,7 +422,7 @@ def _load_model():
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", InconsistentVersionWarning)
-        model = joblib.load(MODEL_PATH, mmap_mode="r")
+        model = joblib.load(model_path, mmap_mode="r")
 
     # Prediction does not benefit from using every CPU here, and lower parallelism
     # reduces memory pressure when the forest is very large.
