@@ -73,9 +73,11 @@ services:
     build:
       context: ../apps/web
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_BASE
     environment:
-      INTERNAL_API_BASE: http://api:8000
-      NEXT_PUBLIC_API_BASE: http://localhost:8000
+      - INTERNAL_API_BASE=http://api:8000
+      - NEXT_PUBLIC_API_BASE
     ports:
       - "3001:3001"
     depends_on:
