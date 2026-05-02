@@ -9,7 +9,14 @@ from fastapi import HTTPException
 from opensearchpy.exceptions import ConnectionError as OpenSearchConnectionError
 from sqlmodel import Session, SQLModel, create_engine, select
 
-from app.api.v1.routes.auth import _create_google_state, google_callback, request_email_code, verify_email_code
+from app.api.v1.routes.auth import (
+    _create_google_state,
+    _google_redirect_uri,
+    _login_success_url,
+    google_callback,
+    request_email_code,
+    verify_email_code,
+)
 from app.api.v1.routes.me import MeUpdate, update_me
 from app.api.v1.routes.cars import archive_owner_car, restore_archived_owner_car
 from app.api.v1.routes.search import _db_search_cars, search_cars
@@ -127,6 +134,25 @@ class PreDeploymentAuthTests(unittest.TestCase):
         self.assertIn("http://localhost:3001/login#access_token=", response.headers["location"])
         self.assertIsNotNone(user)
         self.assertEqual(user.name, "Driver")
+
+    def test_google_urls_ignore_localhost_config_on_public_origin(self) -> None:
+        request = SimpleNamespace(
+            headers={"x-forwarded-host": "nicherides.com", "x-forwarded-proto": "https"},
+            url=SimpleNamespace(scheme="http", netloc="api:8000"),
+        )
+
+        with (
+            patch(
+                "app.api.v1.routes.auth.settings.GOOGLE_REDIRECT_URI",
+                "http://localhost:8000/v1/auth/google/callback",
+            ),
+            patch("app.api.v1.routes.auth.settings.GOOGLE_LOGIN_SUCCESS_URL", "http://localhost:3001/login"),
+        ):
+            redirect_uri = _google_redirect_uri(request)
+            success_url = _login_success_url(request)
+
+        self.assertEqual(redirect_uri, "https://nicherides.com/v1/auth/google/callback")
+        self.assertEqual(success_url, "https://nicherides.com/login")
 
     def test_direct_messaging_requires_phone_and_normalizes_number(self) -> None:
         with Session(self.engine) as session:

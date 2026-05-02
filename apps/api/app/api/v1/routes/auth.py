@@ -23,6 +23,7 @@ GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
 GOOGLE_SCOPE = "openid email profile"
+LOCAL_OAUTH_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0"}
 
 
 def fallback_name(phone_e164: str) -> str:
@@ -85,21 +86,43 @@ def _request_origin(request: Request) -> str:
     return f"{proto}://{host.split(',')[0].strip()}"
 
 
+def _is_local_url(value: str | None) -> bool:
+    if not value:
+        return False
+    return urlparse(value).hostname in LOCAL_OAUTH_HOSTS
+
+
+def _configured_or_request_url(
+    configured_url: str | None,
+    request: Request,
+    path: str,
+    local_fallback: str,
+) -> str:
+    origin = _request_origin(request).rstrip("/")
+    origin_is_local = _is_local_url(origin)
+    if configured_url and (origin_is_local or not _is_local_url(configured_url)):
+        return configured_url
+    if origin_is_local:
+        return local_fallback
+    return f"{origin}{path}"
+
+
 def _google_redirect_uri(request: Request) -> str:
-    if settings.GOOGLE_REDIRECT_URI:
-        return settings.GOOGLE_REDIRECT_URI
-    return f"{_request_origin(request).rstrip('/')}/v1/auth/google/callback"
+    return _configured_or_request_url(
+        settings.GOOGLE_REDIRECT_URI,
+        request,
+        "/v1/auth/google/callback",
+        "http://localhost:8000/v1/auth/google/callback",
+    )
 
 
 def _login_success_url(request: Request) -> str:
-    if settings.GOOGLE_LOGIN_SUCCESS_URL:
-        return settings.GOOGLE_LOGIN_SUCCESS_URL
-
-    origin = _request_origin(request)
-    parsed = urlparse(origin)
-    if parsed.hostname in {"localhost", "127.0.0.1"} and parsed.port == 8000:
-        return "http://localhost:3001/login"
-    return f"{origin.rstrip('/')}/login"
+    return _configured_or_request_url(
+        settings.GOOGLE_LOGIN_SUCCESS_URL,
+        request,
+        "/login",
+        "http://localhost:3001/login",
+    )
 
 
 def _create_google_state(request: Request) -> str:
