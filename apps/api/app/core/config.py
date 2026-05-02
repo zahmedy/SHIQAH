@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     JWT_SECRET: str
     JWT_EXPIRE_MINUTES: int = 60 * 24 * 30
 
+    GOOGLE_CLIENT_ID: str | None = None
+    GOOGLE_CLIENT_SECRET: str | None = None
+    GOOGLE_REDIRECT_URI: str | None = None
+    GOOGLE_LOGIN_SUCCESS_URL: str | None = None
+
     OPENSEARCH_URL: str = "http://localhost:9200"
     OPENSEARCH_INDEX: str = "autointel_cars"
 

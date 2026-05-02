@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import { translateApiMessage } from "@/lib/locale";
 
@@ -55,12 +55,37 @@ export default function LoginPage() {
     verifyAndLogin: "Verify & Login",
     back: "Back",
     google: "Continue with Google",
-    googleUnavailable: "Google sign-in is not configured yet. Use email for now.",
   };
 
-  function showGoogleUnavailable() {
+  useEffect(() => {
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const accessToken = hash.get("access_token");
+    const authError = hash.get("auth_error");
+
+    if (accessToken) {
+      localStorage.setItem("nicherides_access_token", accessToken);
+      window.dispatchEvent(new Event("nicherides-auth-changed"));
+      window.history.replaceState(null, "", "/");
+      window.location.replace("/");
+      return;
+    }
+
+    if (authError) {
+      setError(`Google sign-in failed: ${authError.replaceAll("_", " ")}`);
+      window.history.replaceState(null, "", "/login");
+    }
+  }, []);
+
+  function startGoogleLogin() {
     setError("");
-    setSuccess(text.googleUnavailable);
+    setSuccess("");
+
+    if (!API_BASE) {
+      setError(text.missingApiBase);
+      return;
+    }
+
+    window.location.href = `${API_BASE}/v1/auth/google/start`;
   }
 
   async function requestCode(e: FormEvent) {
@@ -164,7 +189,13 @@ export default function LoginPage() {
         <p className="auth-note">{text.note} <strong>0000</strong>.</p>
 
         <div className="auth-provider-stack">
-          <button type="button" className="btn btn-secondary auth-google-btn" onClick={showGoogleUnavailable}>
+          <button type="button" className="btn btn-secondary auth-google-btn" onClick={startGoogleLogin}>
+            <svg className="auth-google-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#4285F4" d="M21.6 12.23c0-.78-.07-1.53-.2-2.23H12v4.22h5.38a4.6 4.6 0 0 1-2 3.02v2.51h3.24c1.9-1.75 2.98-4.33 2.98-7.52z" />
+              <path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.62-2.44l-3.24-2.51c-.9.6-2.04.95-3.38.95-2.6 0-4.8-1.76-5.59-4.12H3.06v2.6A10 10 0 0 0 12 22z" />
+              <path fill="#FBBC05" d="M6.41 13.88A6 6 0 0 1 6.09 12c0-.65.11-1.28.32-1.88v-2.6H3.06A10 10 0 0 0 2 12c0 1.61.39 3.13 1.06 4.48l3.35-2.6z" />
+              <path fill="#EA4335" d="M12 5.99c1.47 0 2.78.5 3.82 1.5l2.87-2.87C16.95 3 14.7 2 12 2a10 10 0 0 0-8.94 5.52l3.35 2.6C7.2 7.75 9.4 5.99 12 5.99z" />
+            </svg>
             {text.google}
           </button>
         </div>

@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import unittest
 from datetime import datetime, timedelta
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from fastapi import HTTPException
 from opensearchpy.exceptions import ConnectionError as OpenSearchConnectionError
 from sqlmodel import Session, SQLModel, create_engine, select
 
-from app.api.v1.routes.auth import request_email_code, verify_email_code
+from app.api.v1.routes.auth import _create_google_state, google_callback, request_email_code, verify_email_code
+from app.api.v1.routes.me import MeUpdate, update_me
 from app.api.v1.routes.cars import archive_owner_car, restore_archived_owner_car
 from app.api.v1.routes.search import _db_search_cars, search_cars
 from app.models.car import CarListing, CarStatus
@@ -100,6 +102,61 @@ class PreDeploymentAuthTests(unittest.TestCase):
         self.assertIsNotNone(user)
         self.assertEqual(user.phone_e164, None)
         self.assertEqual(user.name, "Driver")
+
+    def test_google_callback_creates_email_user_and_redirects_with_token(self) -> None:
+        request = SimpleNamespace(
+            headers={"host": "localhost:8000"},
+            url=SimpleNamespace(scheme="http", netloc="localhost:8000"),
+        )
+        with patch("app.api.v1.routes.auth.settings.GOOGLE_LOGIN_SUCCESS_URL", None):
+            state = _create_google_state(request)
+
+        with Session(self.engine) as session:
+            with (
+                patch("app.api.v1.routes.auth.settings.GOOGLE_LOGIN_SUCCESS_URL", None),
+                patch("app.api.v1.routes.auth._exchange_google_code", return_value={"access_token": "google-token"}),
+                patch(
+                    "app.api.v1.routes.auth._fetch_google_userinfo",
+                    return_value={"email": "driver@example.com", "email_verified": True, "name": "Driver"},
+                ),
+            ):
+                response = google_callback(request, code="code", state=state, session=session)
+            user = session.exec(select(User).where(User.email == "driver@example.com")).first()
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("http://localhost:3001/login#access_token=", response.headers["location"])
+        self.assertIsNotNone(user)
+        self.assertEqual(user.name, "Driver")
+
+    def test_direct_messaging_requires_phone_and_normalizes_number(self) -> None:
+        with Session(self.engine) as session:
+            user = User(
+                role=UserRole.seller,
+                name="Seller",
+                email="seller@example.com",
+                verified_at=datetime.utcnow(),
+            )
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+
+            with self.assertRaises(HTTPException) as raised:
+                update_me(MeUpdate(contact_text_enabled=True), session=session, user=user)
+            self.assertEqual(raised.exception.status_code, 400)
+
+            result = update_me(
+                MeUpdate(
+                    phone_e164="555-555-0123",
+                    contact_text_enabled=True,
+                    contact_whatsapp_enabled=True,
+                ),
+                session=session,
+                user=user,
+            )
+
+        self.assertEqual(result["phone_e164"], "+15555550123")
+        self.assertTrue(result["contact_text_enabled"])
+        self.assertTrue(result["contact_whatsapp_enabled"])
 
 
 class PreDeploymentListingLifecycleTests(unittest.TestCase):

@@ -1,15 +1,28 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException
+import json
+from urllib.parse import urlencode, urlparse
+import urllib.error
+import urllib.request
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import RedirectResponse
+from jose import JWTError, jwt
 from sqlmodel import Session, select
 
 from app.schemas.auth import EmailCodeRequest, EmailCodeVerify, OTPRequest, OTPRequestResponse, OTPVerify, TokenResponse
+from app.core.config import settings
 from app.db.session import get_session
 from app.models.user import User, UserRole
-from app.core.security import create_access_token
+from app.core.security import ALGORITHM, create_access_token
 from app.services.review import reindex_owner_active_listings
 from app.services.user_identity import ensure_user_id
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
+GOOGLE_SCOPE = "openid email profile"
 
 
 def fallback_name(phone_e164: str) -> str:
@@ -28,6 +41,137 @@ def normalize_email(email: str) -> str:
     if not normalized or "@" not in normalized or normalized.startswith("@") or normalized.endswith("@"):
         raise HTTPException(status_code=400, detail="Enter a valid email address")
     return normalized
+
+
+def _issue_token_for_email(session: Session, email: str, name: str | None = None) -> TokenResponse:
+    normalized_email = normalize_email(email)
+    requested_name = (name or "").strip()
+    user = session.exec(select(User).where(User.email == normalized_email)).first()
+    if not user:
+        user = User(
+            email=normalized_email,
+            role=UserRole.seller,
+            name=requested_name or fallback_email_name(normalized_email),
+            verified_at=datetime.utcnow(),
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+    else:
+        if user.is_banned:
+            raise HTTPException(status_code=403, detail="User is banned")
+        if not user.verified_at:
+            user.verified_at = datetime.utcnow()
+        if requested_name:
+            user.name = requested_name
+        elif not user.name:
+            user.name = fallback_email_name(normalized_email)
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+
+    if not user.user_id:
+        ensure_user_id(session, user)
+
+    if user.name:
+        reindex_owner_active_listings(session, user.id)
+
+    return TokenResponse(access_token=create_access_token(subject=str(user.id)))
+
+
+def _request_origin(request: Request) -> str:
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
+    proto = request.headers.get("x-forwarded-proto") or request.url.scheme
+    return f"{proto}://{host.split(',')[0].strip()}"
+
+
+def _google_redirect_uri(request: Request) -> str:
+    if settings.GOOGLE_REDIRECT_URI:
+        return settings.GOOGLE_REDIRECT_URI
+    return f"{_request_origin(request).rstrip('/')}/v1/auth/google/callback"
+
+
+def _login_success_url(request: Request) -> str:
+    if settings.GOOGLE_LOGIN_SUCCESS_URL:
+        return settings.GOOGLE_LOGIN_SUCCESS_URL
+
+    origin = _request_origin(request)
+    parsed = urlparse(origin)
+    if parsed.hostname in {"localhost", "127.0.0.1"} and parsed.port == 8000:
+        return "http://localhost:3001/login"
+    return f"{origin.rstrip('/')}/login"
+
+
+def _create_google_state(request: Request) -> str:
+    payload = {
+        "sub": "google_oauth_state",
+        "success_url": _login_success_url(request),
+        "iat": int(datetime.utcnow().timestamp()),
+    }
+    return jwt.encode(payload, settings.JWT_SECRET, algorithm=ALGORITHM)
+
+
+def _decode_google_state(state: str) -> str | None:
+    try:
+        payload = jwt.decode(state, settings.JWT_SECRET, algorithms=[ALGORITHM])
+    except JWTError:
+        return None
+    if payload.get("sub") != "google_oauth_state":
+        return None
+    success_url = payload.get("success_url")
+    return success_url if isinstance(success_url, str) else None
+
+
+def _post_form_json(url: str, data: dict[str, str]) -> dict:
+    encoded = urlencode(data).encode("utf-8")
+    request = urllib.request.Request(
+        url,
+        data=encoded,
+        headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=15) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise HTTPException(status_code=502, detail=f"Google token exchange failed: {detail}") from exc
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=502, detail="Google token exchange failed") from exc
+
+
+def _get_json(url: str, access_token: str) -> dict:
+    request = urllib.request.Request(
+        url,
+        headers={"Authorization": f"Bearer {access_token}", "Accept": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=15) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise HTTPException(status_code=502, detail=f"Google profile lookup failed: {detail}") from exc
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=502, detail="Google profile lookup failed") from exc
+
+
+def _exchange_google_code(code: str, redirect_uri: str) -> dict:
+    if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
+        raise HTTPException(status_code=503, detail="Google login is not configured")
+    return _post_form_json(
+        GOOGLE_TOKEN_URL,
+        {
+            "client_id": settings.GOOGLE_CLIENT_ID,
+            "client_secret": settings.GOOGLE_CLIENT_SECRET,
+            "code": code,
+            "grant_type": "authorization_code",
+            "redirect_uri": redirect_uri,
+        },
+    )
+
+
+def _fetch_google_userinfo(access_token: str) -> dict:
+    return _get_json(GOOGLE_USERINFO_URL, access_token)
 
 
 def require_us_phone(phone_e164: str) -> str:
@@ -50,40 +194,56 @@ def verify_email_code(payload: EmailCodeVerify, session: Session = Depends(get_s
     if payload.code != "0000":
         raise HTTPException(status_code=400, detail="Invalid code (MVP accepts 0000)")
 
-    email = normalize_email(payload.email)
-    requested_name = (payload.name or "").strip()
-    user = session.exec(select(User).where(User.email == email)).first()
-    if not user:
-        user = User(
-            email=email,
-            role=UserRole.seller,
-            name=requested_name or fallback_email_name(email),
-            verified_at=datetime.utcnow(),
-        )
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-    else:
-        if user.is_banned:
-            raise HTTPException(status_code=403, detail="User is banned")
-        if not user.verified_at:
-            user.verified_at = datetime.utcnow()
-        if requested_name:
-            user.name = requested_name
-        elif not user.name:
-            user.name = fallback_email_name(email)
-        session.add(user)
-        session.commit()
-        session.refresh(user)
+    return _issue_token_for_email(session, payload.email, payload.name)
 
-    if not user.user_id:
-        ensure_user_id(session, user)
 
-    if user.name:
-        reindex_owner_active_listings(session, user.id)
+@router.get("/google/start")
+def start_google_login(request: Request):
+    if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
+        raise HTTPException(status_code=503, detail="Google login is not configured")
 
-    token = create_access_token(subject=str(user.id))
-    return TokenResponse(access_token=token)
+    query = urlencode({
+        "client_id": settings.GOOGLE_CLIENT_ID,
+        "redirect_uri": _google_redirect_uri(request),
+        "response_type": "code",
+        "scope": GOOGLE_SCOPE,
+        "state": _create_google_state(request),
+        "prompt": "select_account",
+    })
+    return RedirectResponse(f"{GOOGLE_AUTH_URL}?{query}", status_code=302)
+
+
+@router.get("/google/callback")
+def google_callback(
+    request: Request,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    session: Session = Depends(get_session),
+):
+    success_url = _decode_google_state(state or "") or _login_success_url(request)
+    if error:
+        return RedirectResponse(f"{success_url}#auth_error={error}", status_code=302)
+    if not code:
+        return RedirectResponse(f"{success_url}#auth_error=missing_code", status_code=302)
+
+    token_payload = _exchange_google_code(code, _google_redirect_uri(request))
+    google_access_token = token_payload.get("access_token")
+    if not google_access_token:
+        return RedirectResponse(f"{success_url}#auth_error=missing_google_token", status_code=302)
+
+    profile = _fetch_google_userinfo(google_access_token)
+    if not profile.get("email_verified", False):
+        return RedirectResponse(f"{success_url}#auth_error=email_not_verified", status_code=302)
+
+    email = profile.get("email")
+    if not email:
+        return RedirectResponse(f"{success_url}#auth_error=missing_email", status_code=302)
+
+    name = profile.get("name") if isinstance(profile.get("name"), str) else None
+    app_token = _issue_token_for_email(session, email, name).access_token
+    separator = "&" if "#" in success_url else "#"
+    return RedirectResponse(f"{success_url}{separator}access_token={app_token}", status_code=302)
 
 @router.post("/request-otp", response_model=OTPRequestResponse)
 def request_otp(payload: OTPRequest, session: Session = Depends(get_session)):

@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.core.deps import get_current_user
 from app.db.session import get_session
@@ -14,8 +14,22 @@ router = APIRouter(prefix="/me", tags=["me"])
 class MeUpdate(BaseModel):
     name: str | None = None
     user_id: str | None = None
+    phone_e164: str | None = None
     contact_text_enabled: bool | None = None
     contact_whatsapp_enabled: bool | None = None
+
+
+def normalize_us_phone(raw_phone: str | None) -> str | None:
+    if raw_phone is None:
+        return None
+    digits = "".join(ch for ch in raw_phone if ch.isdigit())
+    if len(digits) == 10:
+        return f"+1{digits}"
+    if len(digits) == 11 and digits.startswith("1"):
+        return f"+{digits}"
+    if raw_phone.strip().startswith("+1") and len(digits) == 11:
+        return f"+{digits}"
+    raise HTTPException(status_code=400, detail="Enter a valid U.S. phone number")
 
 
 def serialize_me(user: User) -> dict:
@@ -47,6 +61,7 @@ def update_me(
     if (
         payload.name is None
         and payload.user_id is None
+        and payload.phone_e164 is None
         and payload.contact_text_enabled is None
         and payload.contact_whatsapp_enabled is None
     ):
@@ -77,6 +92,30 @@ def update_me(
         if public_user_id != user.user_id:
             user.user_id = public_user_id
             changed = True
+
+    next_phone = user.phone_e164
+    if payload.phone_e164 is not None:
+        next_phone = normalize_us_phone(payload.phone_e164)
+        if next_phone:
+            existing_user = session.exec(select(User).where(User.phone_e164 == next_phone, User.id != user.id)).first()
+            if existing_user:
+                raise HTTPException(status_code=409, detail="Phone number is already used by another account")
+        if next_phone != user.phone_e164:
+            user.phone_e164 = next_phone
+            changed = True
+
+    next_text_enabled = (
+        payload.contact_text_enabled
+        if payload.contact_text_enabled is not None
+        else user.contact_text_enabled
+    )
+    next_whatsapp_enabled = (
+        payload.contact_whatsapp_enabled
+        if payload.contact_whatsapp_enabled is not None
+        else user.contact_whatsapp_enabled
+    )
+    if (next_text_enabled or next_whatsapp_enabled) and not next_phone:
+        raise HTTPException(status_code=400, detail="Add a phone number before enabling direct messaging")
 
     if payload.contact_text_enabled is not None and payload.contact_text_enabled != user.contact_text_enabled:
         user.contact_text_enabled = payload.contact_text_enabled

@@ -50,6 +50,10 @@ services:
       - API_PORT=8000
       - DATABASE_URL=postgresql+psycopg://autointel:autointel@db:5432/autointel
       - JWT_SECRET=change-me-super-secret
+      - GOOGLE_CLIENT_ID
+      - GOOGLE_CLIENT_SECRET
+      - GOOGLE_REDIRECT_URI
+      - GOOGLE_LOGIN_SUCCESS_URL
       - OPENSEARCH_URL=http://opensearch:9200
       - OPENSEARCH_INDEX=autointel_cars
       - OPENAI_API_KEY

@@ -92,6 +92,27 @@ async function parseApiError(res: Response): Promise<string> {
   return translateApiMessage("en", detail || `Failed with status ${res.status}`);
 }
 
+function normalizeUSPhone(rawPhone: string): string | null {
+  const trimmed = rawPhone.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (/^\+1\d{10}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length === 10) {
+    return `+1${digits}`;
+  }
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return `+${digits}`;
+  }
+
+  return null;
+}
+
 export default function MyCarsPage() {
   const locale = useLocale();
   const [cars, setCars] = useState<MyCar[]>([]);
@@ -105,6 +126,7 @@ export default function MyCarsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [me, setMe] = useState<MeResponse | null>(null);
   const [userId, setUserId] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
   const [contactTextEnabled, setContactTextEnabled] = useState(false);
   const [contactWhatsappEnabled, setContactWhatsappEnabled] = useState(false);
   const [savingUserId, setSavingUserId] = useState(false);
@@ -123,6 +145,7 @@ export default function MyCarsPage() {
     profileUpdated: "User ID updated.",
     contactPrefsUpdated: "Messaging preferences updated.",
     contactPrefsUpdateFailed: "Failed to update messaging preferences.",
+    contactPhoneInvalid: "Enter a valid U.S. phone number before enabling messaging.",
     userIdUpdateFailed: "Failed to update user ID.",
     approveSuccess: (carId: number) => `Car #${carId} approved.`,
     approveFailed: "Failed to approve listing.",
@@ -141,8 +164,11 @@ export default function MyCarsPage() {
     profileMember: "NicheRides Member",
     accountSummary: "Seller ID",
     contactPrefs: "Direct messaging",
+    contactPhone: "Phone number",
+    contactPhoneHelp: "Used only for text or WhatsApp when you enable them.",
     enableText: "Enable text messages",
     enableWhatsApp: "Enable WhatsApp",
+    saveMessaging: "Save Messaging",
     listingsSection: "Your Cars",
     listingsSectionHelp: "Draft, publish, edit, or archive.",
     adminBadge: "Admin",
@@ -232,6 +258,7 @@ export default function MyCarsPage() {
       const me = (await meRes.json()) as MeResponse;
       setMe(me);
       setUserId(me.user_id || "");
+      setContactPhone(me.phone_e164 || "");
       setContactTextEnabled(me.contact_text_enabled);
       setContactWhatsappEnabled(me.contact_whatsapp_enabled);
       setIsAdmin(me.role === "admin");
@@ -391,7 +418,8 @@ export default function MyCarsPage() {
     }
   }
 
-  async function saveContactPreferences(nextTextEnabled: boolean, nextWhatsappEnabled: boolean) {
+  async function saveContactPreferences(e?: FormEvent<HTMLFormElement>) {
+    e?.preventDefault();
     setError("");
     setSuccess("");
 
@@ -407,10 +435,12 @@ export default function MyCarsPage() {
       return;
     }
 
-    const previousTextEnabled = contactTextEnabled;
-    const previousWhatsappEnabled = contactWhatsappEnabled;
-    setContactTextEnabled(nextTextEnabled);
-    setContactWhatsappEnabled(nextWhatsappEnabled);
+    const normalizedPhone = normalizeUSPhone(contactPhone);
+    if ((contactTextEnabled || contactWhatsappEnabled) && !normalizedPhone) {
+      setError(text.contactPhoneInvalid);
+      return;
+    }
+
     setSavingContactPrefs(true);
 
     try {
@@ -421,8 +451,9 @@ export default function MyCarsPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          contact_text_enabled: nextTextEnabled,
-          contact_whatsapp_enabled: nextWhatsappEnabled,
+          phone_e164: normalizedPhone,
+          contact_text_enabled: contactTextEnabled,
+          contact_whatsapp_enabled: contactWhatsappEnabled,
         }),
       });
 
@@ -437,13 +468,12 @@ export default function MyCarsPage() {
 
       const updatedMe = (await res.json()) as MeResponse;
       setMe(updatedMe);
+      setContactPhone(updatedMe.phone_e164 || "");
       setContactTextEnabled(updatedMe.contact_text_enabled);
       setContactWhatsappEnabled(updatedMe.contact_whatsapp_enabled);
       setSuccess(text.contactPrefsUpdated);
       window.dispatchEvent(new Event("nicherides-auth-changed"));
     } catch (err) {
-      setContactTextEnabled(previousTextEnabled);
-      setContactWhatsappEnabled(previousWhatsappEnabled);
       setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.contactPrefsUpdateFailed);
     } finally {
       setSavingContactPrefs(false);
@@ -645,7 +675,21 @@ export default function MyCarsPage() {
               <div className="profile-account-heading">
                 <h2 className="subheading">{text.contactPrefs}</h2>
               </div>
-              <div className="profile-contact-preferences">
+              <form className="profile-contact-preferences" onSubmit={saveContactPreferences}>
+                <div>
+                  <label className="label" htmlFor="contact-phone">{text.contactPhone}</label>
+                  <input
+                    id="contact-phone"
+                    className="input"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel-national"
+                    placeholder="(555) 555-0123"
+                    value={contactPhone}
+                    onChange={(event) => setContactPhone(event.target.value)}
+                  />
+                  <p className="helper-text">{text.contactPhoneHelp}</p>
+                </div>
                 <div className="profile-contact-options">
                   <label className="profile-contact-option" htmlFor="contact-text-enabled">
                     <input
@@ -653,7 +697,7 @@ export default function MyCarsPage() {
                       type="checkbox"
                       checked={contactTextEnabled}
                       disabled={savingContactPrefs}
-                      onChange={(event) => saveContactPreferences(event.target.checked, contactWhatsappEnabled)}
+                      onChange={(event) => setContactTextEnabled(event.target.checked)}
                     />
                     <span>{text.enableText}</span>
                   </label>
@@ -663,12 +707,15 @@ export default function MyCarsPage() {
                       type="checkbox"
                       checked={contactWhatsappEnabled}
                       disabled={savingContactPrefs}
-                      onChange={(event) => saveContactPreferences(contactTextEnabled, event.target.checked)}
+                      onChange={(event) => setContactWhatsappEnabled(event.target.checked)}
                     />
                     <span>{text.enableWhatsApp}</span>
                   </label>
                 </div>
-              </div>
+                <button type="submit" className="btn btn-secondary" disabled={savingContactPrefs}>
+                  {savingContactPrefs ? text.saving : text.saveMessaging}
+                </button>
+              </form>
             </div>
           </div>
 
@@ -697,7 +744,7 @@ export default function MyCarsPage() {
       {error && <div className="notice error">{error}</div>}
       {success && <div className="notice success">{success}</div>}
 
-      {!loading && !needsLogin && !error && cars.length === 0 && (
+      {!loading && !needsLogin && cars.length === 0 && (
         <div className="panel profile-empty">
           <h2 className="subheading">{text.listingsSection}</h2>
           <p className="helper-text">{text.noListingsYet}</p>
