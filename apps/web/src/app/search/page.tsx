@@ -162,8 +162,6 @@ export default async function SearchPage({
     <main className="page shell">
       <section className="hero hero-mini search-hero">
         <p className="hero-kicker">Browse cars</p>
-        <h1>Find the right car with cleaner filters.</h1>
-        <p>{selectedNiche.intro}</p>
       </section>
 
       <section className="search-grid">
