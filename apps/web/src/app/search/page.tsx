@@ -164,19 +164,22 @@ export default async function SearchPage({
         <p className="hero-kicker">Browse cars</p>
         <h1>Find the right car with cleaner filters.</h1>
         <p>{selectedNiche.intro}</p>
-        <div className="hero-actions">
-          {selectedNiche.searchLinks.map((link) => (
-            <Link key={link.label} href={nicheHref("/search", selectedNiche, link.query)} className="btn btn-secondary">
-              {link.label}
-            </Link>
-          ))}
-        </div>
       </section>
 
       <section className="search-grid">
         <aside className="panel">
           <form className="filters" method="get">
             <input type="hidden" name="niche" value={selectedNiche.id} />
+            <nav className="home-quick-filters" aria-label="Quick filters">
+              <p className="home-quick-filters-label">Quick filters</p>
+              <div className="home-quick-filter-list">
+                {selectedNiche.searchLinks.slice(0, 3).map((link) => (
+                  <Link key={link.label} href={nicheHref("/search", selectedNiche, link.query)}>
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            </nav>
             <NearbySearch initialRadiusKm={initialRadiusKm} />
             {params.lat ? <input type="hidden" name="lat" value={params.lat} /> : null}
             {params.lon ? <input type="hidden" name="lon" value={params.lon} /> : null}

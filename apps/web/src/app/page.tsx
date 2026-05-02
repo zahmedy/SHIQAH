@@ -122,16 +122,12 @@ export default async function HomePage({
       <section className="home-hero">
         <div className="home-hero-copy">
           <h1 className="home-hero-title">
-            <span>Find the ride that fits.</span>
-            <span className="home-hero-title-accent">List it smarter.</span>
+            <span>Easy Listing.</span>
+            <span className="home-hero-title-accent">Easy finding.</span>
           </h1>
           <p className="home-hero-sub">
-            NicheRides makes it simple to search by real needs, create a clean listing, and help buyers understand where your car fits.
+            Search by real needs, create clean listings, and show buyers where each car fits.
           </p>
-          <div className="home-hero-actions">
-            <a href={`/search?niche=${selectedNiche.id}`} className="btn btn-primary">Browse cars</a>
-            <SellCarLink className="btn btn-secondary" />
-          </div>
         </div>
       </section>
 

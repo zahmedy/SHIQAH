@@ -12,16 +12,13 @@ export default function LogoMark({ className, title = "NicheRides logo" }: LogoM
       aria-label={title}
       xmlns="http://www.w3.org/2000/svg"
     >
-      <text
-        x="4"
-        y="31"
-        fontFamily="Manrope, Avenir Next, Segoe UI, sans-serif"
-        fontSize="29"
-        fontWeight="800"
-        letterSpacing="0"
-      >
-        <tspan fill="#0f766e">Niche</tspan>
-        <tspan fill="#0f172a">Rides</tspan>
+      <text y="31" fontFamily="Manrope, Avenir Next, Segoe UI, sans-serif" letterSpacing="0">
+        <tspan x="4" fill="#0f766e" fontSize="26" fontStyle="italic" fontWeight="800">
+          Niche
+        </tspan>
+        <tspan fill="#0f172a" fontSize="30" fontWeight="800">
+          Rides
+        </tspan>
       </text>
       <rect x="5" y="36" width="28" height="3" rx="1.5" fill="#0f766e" />
     </svg>

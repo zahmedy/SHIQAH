@@ -55,7 +55,7 @@ export default async function RootLayout({
               </form>
               <nav className="topnav">
                 <Link href="/search" className="nav-link topnav-browse">
-                  Browse cars
+                  Browse
                 </Link>
                 <TopbarCreate />
                 <TopbarUser />
