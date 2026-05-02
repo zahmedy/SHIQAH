@@ -115,7 +115,7 @@ def _owner_offer_out(offer: Lead, buyers: dict[int, User]) -> OwnerOfferOut:
     buyer = buyers.get(offer.buyer_user_id or -1)
     buyer_label = None
     if buyer:
-        buyer_label = f"@{buyer.user_id}" if buyer.user_id else buyer.name or buyer.phone_e164
+        buyer_label = f"@{buyer.user_id}" if buyer.user_id else buyer.name or buyer.email or buyer.phone_e164
     return OwnerOfferOut(
         id=offer.id or 0,
         amount=offer.amount or 0,
@@ -175,9 +175,6 @@ def create_offer(
 
     if user.id == car.owner_id:
         raise HTTPException(status_code=400, detail="You cannot bid on your own listing")
-
-    if not user.phone_e164:
-        raise HTTPException(status_code=400, detail="A verified phone number is required to bid")
 
     if _accepted_offer_for_car(session, car_id):
         raise HTTPException(status_code=400, detail="Bidding is closed for this listing")

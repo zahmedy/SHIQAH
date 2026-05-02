@@ -49,7 +49,8 @@ type MeResponse = {
   id: number;
   name: string | null;
   user_id: string | null;
-  phone_e164: string;
+  email: string | null;
+  phone_e164: string | null;
   contact_text_enabled: boolean;
   contact_whatsapp_enabled: boolean;
   role: string;
@@ -145,7 +146,7 @@ export default function MyCarsPage() {
     listingsSection: "Your Cars",
     listingsSectionHelp: "Draft, publish, edit, or archive.",
     adminBadge: "Admin",
-    phone: "Phone",
+    account: "Account",
     publicUserId: "Public User ID",
     userIdHelp: "Use 3-32 lowercase letters, numbers, dots, underscores, or hyphens.",
     saving: "Saving...",
@@ -678,7 +679,7 @@ export default function MyCarsPage() {
             </h2>
             {me.name && me.user_id ? <p className="profile-identity-handle">@{me.user_id}</p> : null}
             <div className="profile-identity-meta">
-              <span>{text.phone}: {me.phone_e164}</span>
+              <span>{text.account}: {me.email || me.phone_e164 || "Verified"}</span>
               <span>{contactTextEnabled ? text.enableText : "Text off"}</span>
               <span>{contactWhatsappEnabled ? text.enableWhatsApp : "WhatsApp off"}</span>
               {isAdmin ? <span>{text.adminBadge}</span> : null}

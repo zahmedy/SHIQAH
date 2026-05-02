@@ -12,65 +12,58 @@ type VerifyResponse = {
   token_type: string;
 };
 
-type OTPRequestResponse = {
+type CodeRequestResponse = {
   ok: boolean;
   needs_name: boolean;
 };
 
-function normalizeUSPhone(rawPhone: string): string | null {
-  const trimmed = rawPhone.trim();
-  if (!trimmed) {
+function normalizeEmail(rawEmail: string): string | null {
+  const email = rawEmail.trim().toLowerCase();
+  if (!email || !email.includes("@") || email.startsWith("@") || email.endsWith("@")) {
     return null;
   }
-
-  if (/^\+1\d{10}$/.test(trimmed)) {
-    return trimmed;
-  }
-
-  const digits = trimmed.replace(/\D/g, "");
-  if (digits.length === 10) {
-    return `+1${digits}`;
-  }
-  if (digits.length === 11 && digits.startsWith("1")) {
-    return `+${digits}`;
-  }
-
-  return null;
+  return email;
 }
 
 export default function LoginPage() {
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [code, setCode] = useState("0000");
   const [step, setStep] = useState<"request" | "verify">("request");
   const [needsName, setNeedsName] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const normalizedPhone = normalizeUSPhone(phone);
+  const normalizedEmail = normalizeEmail(email);
   const text = {
     title: "Sign in to NicheRides",
-    note: "Use your U.S. mobile number to manage listings, save drafts, and contact sellers. MVP code is",
+    note: "Use email to manage listings, save drafts, and contact sellers. MVP code is",
     missingApiBase: "NEXT_PUBLIC_API_BASE is missing.",
-    invalidPhone: "Enter a valid U.S. number, for example (555) 555-0123 or +15555550123.",
-    requestOtpFailed: "Failed to request OTP.",
-    otpRequested: "OTP requested. For MVP, use code 0000.",
+    invalidEmail: "Enter a valid email address.",
+    requestCodeFailed: "Failed to request login code.",
+    codeRequested: "Login code requested. For MVP, use code 0000.",
     enterName: "Enter your name.",
-    phoneMustBeE164: "Phone must be a valid U.S. number.",
     enterCode: "Enter verification code.",
-    verifyOtpFailed: "Failed to verify OTP.",
-    phoneLabel: "Phone (U.S.)",
+    verifyCodeFailed: "Failed to verify code.",
+    emailLabel: "Email",
     nameLabel: "Name",
     yourName: "Your name",
-    otpCodeLabel: "OTP Code",
+    codeLabel: "Login code",
     requesting: "Requesting...",
-    requestOtp: "Request OTP",
+    requestCode: "Continue with Email",
     verifying: "Verifying...",
     verifyAndLogin: "Verify & Login",
     back: "Back",
+    google: "Continue with Google",
+    googleUnavailable: "Google sign-in is not configured yet. Use email for now.",
   };
 
-  async function requestOtp(e: FormEvent) {
+  function showGoogleUnavailable() {
+    setError("");
+    setSuccess(text.googleUnavailable);
+  }
+
+  async function requestCode(e: FormEvent) {
     e.preventDefault();
     setError("");
     setSuccess("");
@@ -79,17 +72,17 @@ export default function LoginPage() {
       setError(text.missingApiBase);
       return;
     }
-    if (!normalizedPhone) {
-      setError(text.invalidPhone);
+    if (!normalizedEmail) {
+      setError(text.invalidEmail);
       return;
     }
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/v1/auth/request-otp`, {
+      const res = await fetch(`${API_BASE}/v1/auth/request-email-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone_e164: normalizedPhone }),
+        body: JSON.stringify({ email: normalizedEmail }),
       });
 
       if (!res.ok) {
@@ -97,18 +90,18 @@ export default function LoginPage() {
         throw new Error(translateApiMessage("en", detail || `Failed with status ${res.status}`));
       }
 
-      const data = (await res.json()) as OTPRequestResponse;
+      const data = (await res.json()) as CodeRequestResponse;
       setNeedsName(Boolean(data.needs_name));
       setStep("verify");
-      setSuccess(text.otpRequested);
+      setSuccess(text.codeRequested);
     } catch (err) {
-      setError(err instanceof Error ? translateApiMessage("en", err.message) : text.requestOtpFailed);
+      setError(err instanceof Error ? translateApiMessage("en", err.message) : text.requestCodeFailed);
     } finally {
       setLoading(false);
     }
   }
 
-  async function verifyOtp(e: FormEvent) {
+  async function verifyCode(e: FormEvent) {
     e.preventDefault();
     setError("");
     setSuccess("");
@@ -117,12 +110,12 @@ export default function LoginPage() {
       setError(text.missingApiBase);
       return;
     }
-    if (needsName && !name.trim()) {
-      setError(text.enterName);
+    if (!normalizedEmail) {
+      setError(text.invalidEmail);
       return;
     }
-    if (!normalizedPhone) {
-      setError(text.phoneMustBeE164);
+    if (needsName && !name.trim()) {
+      setError(text.enterName);
       return;
     }
     if (!code.trim()) {
@@ -132,11 +125,11 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/v1/auth/verify-otp`, {
+      const res = await fetch(`${API_BASE}/v1/auth/verify-email-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phone_e164: normalizedPhone,
+          email: normalizedEmail,
           code: code.trim(),
           name: name.trim() || undefined,
         }),
@@ -157,7 +150,7 @@ export default function LoginPage() {
       window.dispatchEvent(new Event("nicherides-auth-changed"));
       window.location.replace("/");
     } catch (err) {
-      setError(err instanceof Error ? translateApiMessage("en", err.message) : text.verifyOtpFailed);
+      setError(err instanceof Error ? translateApiMessage("en", err.message) : text.verifyCodeFailed);
     } finally {
       setLoading(false);
     }
@@ -166,24 +159,30 @@ export default function LoginPage() {
   return (
     <main className="page shell auth-wrap">
       <section className="auth-card">
-        <p className="hero-kicker">Secure seller access</p>
+        <p className="hero-kicker">Secure account access</p>
         <h1>{text.title}</h1>
         <p className="auth-note">{text.note} <strong>0000</strong>.</p>
 
-        <form onSubmit={step === "request" ? requestOtp : verifyOtp} className="filters">
+        <div className="auth-provider-stack">
+          <button type="button" className="btn btn-secondary auth-google-btn" onClick={showGoogleUnavailable}>
+            {text.google}
+          </button>
+        </div>
+
+        <form onSubmit={step === "request" ? requestCode : verifyCode} className="filters">
           <div>
-            <label className="label" htmlFor="phone">{text.phoneLabel}</label>
+            <label className="label" htmlFor="email">{text.emailLabel}</label>
             <input
-              id="phone"
+              id="email"
               className="input"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel-national"
-              placeholder="(555) 555-0123"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
-            {normalizedPhone ? <p className="helper-text">Using {normalizedPhone}</p> : null}
+            {normalizedEmail ? <p className="helper-text">Using {normalizedEmail}</p> : null}
           </div>
 
           {needsName && (
@@ -201,10 +200,11 @@ export default function LoginPage() {
 
           {step !== "request" && (
             <div>
-              <label className="label" htmlFor="otp">{text.otpCodeLabel}</label>
+              <label className="label" htmlFor="login-code">{text.codeLabel}</label>
               <input
-                id="otp"
+                id="login-code"
                 className="input"
+                inputMode="numeric"
                 placeholder="0000"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
@@ -215,7 +215,7 @@ export default function LoginPage() {
           <div className="auth-actions">
             {step === "request" ? (
               <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? text.requesting : text.requestOtp}
+                {loading ? text.requesting : text.requestCode}
               </button>
             ) : (
               <>
@@ -243,7 +243,6 @@ export default function LoginPage() {
           {error && <p className="notice error">{error}</p>}
           {success && <p className="notice success">{success}</p>}
         </form>
-
       </section>
     </main>
   );

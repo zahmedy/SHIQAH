@@ -6,12 +6,14 @@ from unittest.mock import patch
 
 from fastapi import HTTPException
 from opensearchpy.exceptions import ConnectionError as OpenSearchConnectionError
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, SQLModel, create_engine, select
 
+from app.api.v1.routes.auth import request_email_code, verify_email_code
 from app.api.v1.routes.cars import archive_owner_car, restore_archived_owner_car
 from app.api.v1.routes.search import _db_search_cars, search_cars
 from app.models.car import CarListing, CarStatus
 from app.models.user import User, UserRole
+from app.schemas.auth import EmailCodeRequest, EmailCodeVerify
 from app.services.niche_scoring import BUDGET_DAILY_NICHE_ID, score_listing_for_niche
 from app.services.search_intent import parse_search_intent
 
@@ -77,6 +79,27 @@ class PreDeploymentNicheScoringTests(unittest.TestCase):
         self.assertGreater(efficient["score"], thirsty["score"])
         self.assertLessEqual(thirsty["score"], 55)
         self.assertIn("8-cylinder fuel cost", thirsty["warnings"])
+
+
+class PreDeploymentAuthTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.engine = create_engine("sqlite:///:memory:")
+        SQLModel.metadata.create_all(self.engine)
+
+    def test_email_code_login_creates_user_without_phone(self) -> None:
+        with Session(self.engine) as session:
+            request_result = request_email_code(EmailCodeRequest(email="Driver@Example.com"), session=session)
+            token_result = verify_email_code(
+                EmailCodeVerify(email="Driver@Example.com", code="0000", name="Driver"),
+                session=session,
+            )
+            user = session.exec(select(User).where(User.email == "driver@example.com")).first()
+
+        self.assertTrue(request_result["needs_name"])
+        self.assertTrue(token_result.access_token)
+        self.assertIsNotNone(user)
+        self.assertEqual(user.phone_e164, None)
+        self.assertEqual(user.name, "Driver")
 
 
 class PreDeploymentListingLifecycleTests(unittest.TestCase):

@@ -2557,6 +2557,17 @@ a {
   gap: 0.6rem;
 }
 
+.auth-provider-stack {
+  display: grid;
+  gap: 0.65rem;
+  margin: 1rem 0;
+}
+
+.auth-google-btn {
+  width: 100%;
+  min-height: 3rem;
+}
+
 .auth-next {
   margin-top: 1rem;
 }

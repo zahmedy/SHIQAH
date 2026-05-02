@@ -84,7 +84,7 @@ const API_MESSAGE_LABELS: Record<string, string> = {
   "Invalid offer type": "Invalid offer type",
   "Invalid offer amount": "Invalid offer amount",
   "You cannot bid on your own listing": "You cannot bid on your own listing",
-  "A verified phone number is required to bid": "A verified phone number is required to bid",
+  "A verified phone number is required to bid": "Sign in before placing a bid",
   "Bidding is closed for this listing": "Bidding is closed for this listing",
   "Only the listing owner can manage offers": "Only the listing owner can manage offers",
   "Only the listing owner can accept offers": "Only the listing owner can accept offers",

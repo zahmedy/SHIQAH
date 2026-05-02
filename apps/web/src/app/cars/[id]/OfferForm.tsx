@@ -87,7 +87,7 @@ export default function OfferForm({
     recentBids: "Recent Offers",
     amount: "Your bid",
     signIn: "Sign in to bid or send an offer",
-    signInHint: "Your saved account phone number will be used automatically.",
+    signInHint: "Your signed-in account will be used automatically.",
     minBid: (amount: number) => `For a public bid, your amount must be higher than ${formatPrice(amount, locale)}.`,
     publicHint: "Public bids are visible to everyone and raise the current highest bid.",
     privateHint: "Private offers are shared only with the listing owner.",

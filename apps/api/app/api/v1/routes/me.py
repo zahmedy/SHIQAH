@@ -23,6 +23,7 @@ def serialize_me(user: User) -> dict:
         "id": user.id,
         "name": user.name,
         "user_id": user.user_id,
+        "email": user.email,
         "phone_e164": user.phone_e164,
         "contact_text_enabled": user.contact_text_enabled,
         "contact_whatsapp_enabled": user.contact_whatsapp_enabled,

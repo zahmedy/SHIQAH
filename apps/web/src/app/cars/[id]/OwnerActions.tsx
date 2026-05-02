@@ -16,7 +16,7 @@ type OwnerActionsProps = {
 
 type MeResponse = {
   id: number;
-  phone_e164: string;
+  phone_e164: string | null;
   role: string;
   verified_at: string | null;
 };

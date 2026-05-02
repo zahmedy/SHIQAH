@@ -11,7 +11,8 @@ type MeResponse = {
   id: number;
   name: string | null;
   user_id: string | null;
-  phone_e164: string;
+  email: string | null;
+  phone_e164: string | null;
   role: string;
   verified_at: string | null;
 };
@@ -70,7 +71,7 @@ export default function TopbarUser() {
         if (resolvedName) {
           localStorage.setItem(NAME_KEY, resolvedName);
         }
-        setLabel(me.user_id ? `@${me.user_id}` : resolvedName || me.phone_e164 || text.loggedIn);
+        setLabel(me.user_id ? `@${me.user_id}` : resolvedName || me.email || me.phone_e164 || text.loggedIn);
       } finally {
         setReady(true);
       }

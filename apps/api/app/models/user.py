@@ -18,11 +18,12 @@ class User(SQLModel, table=True):
     role: UserRole = Field(default=UserRole.buyer, index=True)
     name: Optional[str] = None
     user_id: Optional[str] = Field(default=None, index=True, unique=True)
-    phone_e164: str = Field(index=True, unique=True)
+    email: Optional[str] = Field(default=None, index=True, unique=True)
+    phone_e164: Optional[str] = Field(default=None, index=True, unique=True)
     contact_text_enabled: bool = Field(default=False)
     contact_whatsapp_enabled: bool = Field(default=False)
 
-    # For MVP: we fake OTP; later integrate Twilio Verify
+    # For MVP: email verification uses a fixed code; later send real codes or use OAuth.
     is_banned: bool = Field(default=False, index=True)
     verified_at: Optional[datetime] = Field(default=None, index=True)
 
