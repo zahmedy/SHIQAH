@@ -12,7 +12,7 @@ type SellCarLinkProps = {
   children?: React.ReactNode;
 };
 
-export default function SellCarLink({ className = "btn btn-primary", children = "Sell your car" }: SellCarLinkProps) {
+export default function SellCarLink({ className = "btn btn-primary", children = "Sell A Car" }: SellCarLinkProps) {
   const [href, setHref] = useState("/login");
 
   useEffect(() => {

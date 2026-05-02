@@ -15,7 +15,6 @@ import {
 import { getServerLocale } from "@/lib/server-locale";
 import {
   DEFAULT_NICHE_ID,
-  NICHES,
   getNiche,
   nicheBadges,
   nicheHref,
@@ -77,7 +76,6 @@ const FUEL_TYPE_OPTIONS = [
 ] as const;
 const DRIVETRAIN_OPTIONS = ["AWD", "4WD", "FWD", "RWD"] as const;
 const BODY_TYPE_OPTIONS = ["SUV", "Hatchback", "Sedan", "Pickup", "Van", "Wagon", "Convertible"] as const;
-const NICHE_RESET_KEYS = ["price_max", "mileage_max", "fuel_type", "drivetrain", "body_type", "sort"] as const;
 const LOW_RESULT_THRESHOLD = 3;
 const FILTER_KEYS = [
   "city",
@@ -107,16 +105,6 @@ function locationUserAndTime(locale: Locale, city?: string, district?: string, s
   }
   parts.push(formatRelativeHours(publishedAt, locale));
   return parts.join(" • ");
-}
-
-function buildSearchNicheHref(params: Query, nicheId: string): string {
-  const next = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (!value || NICHE_RESET_KEYS.includes(key as (typeof NICHE_RESET_KEYS)[number])) continue;
-    next.set(key, value);
-  }
-  next.set("niche", nicheId);
-  return `/search?${next.toString()}`;
 }
 
 function hasActiveFilters(params: Query): boolean {
@@ -189,21 +177,6 @@ export default async function SearchPage({
         <aside className="panel">
           <form className="filters" method="get">
             <input type="hidden" name="niche" value={selectedNiche.id} />
-            <div className="niche-picker">
-              <p className="home-quick-filters-label">Niche</p>
-              <div className="home-quick-filter-list">
-                {NICHES.map((niche) => (
-                  <Link
-                    key={niche.id}
-                    href={buildSearchNicheHref(params, niche.id)}
-                    className={selectedNiche.id === niche.id ? "home-niche-filter-active" : ""}
-                    aria-current={selectedNiche.id === niche.id ? "true" : undefined}
-                  >
-                    {niche.shortName}
-                  </Link>
-                ))}
-              </div>
-            </div>
             <NearbySearch initialRadiusKm={initialRadiusKm} />
             {params.lat ? <input type="hidden" name="lat" value={params.lat} /> : null}
             {params.lon ? <input type="hidden" name="lon" value={params.lon} /> : null}

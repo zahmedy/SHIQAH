@@ -1,6 +1,5 @@
 import { apiGet } from "@/lib/api";
 import HomeListingCard from "@/components/HomeListingCard";
-import HomeFilterControls from "@/components/HomeFilterControls";
 import SellCarLink from "@/components/SellCarLink";
 import { formatListingPrice, formatMileage, formatRelativeHours, type Locale } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
@@ -129,10 +128,10 @@ export default async function HomePage({
           <p className="home-hero-sub">
             NicheRides makes it simple to search by real needs, create a clean listing, and help buyers understand where your car fits.
           </p>
-        </div>
-
-        <div className="home-hero-rail" aria-label="Homepage filters">
-          <HomeFilterControls params={params} />
+          <div className="home-hero-actions">
+            <a href={`/search?niche=${selectedNiche.id}`} className="btn btn-primary">Browse cars</a>
+            <SellCarLink className="btn btn-secondary" />
+          </div>
         </div>
       </section>
 

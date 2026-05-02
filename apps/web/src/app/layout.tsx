@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
+import GlobalNicheSelect from "@/components/GlobalNicheSelect";
 import LocaleProvider from "@/components/LocaleProvider";
 import LogoMark from "@/components/LogoMark";
 import TopbarCreate from "@/components/TopbarCreate";
@@ -30,6 +32,18 @@ export default async function RootLayout({
               <Link href="/" className="brand" aria-label="NicheRides home">
                 <LogoMark className="brand-logo" />
               </Link>
+              <Suspense
+                fallback={
+                  <label className="global-niche-select" aria-label="Select niche">
+                    <span>Niche</span>
+                    <select defaultValue="cold_weather_commuter" disabled>
+                      <option value="cold_weather_commuter">Cold weather</option>
+                    </select>
+                  </label>
+                }
+              >
+                <GlobalNicheSelect />
+              </Suspense>
               <form action="/search" method="get" className="topbar-search" role="search">
                 <input
                   type="search"

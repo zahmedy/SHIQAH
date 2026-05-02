@@ -587,7 +587,7 @@ export default function CarDraftForm({
     saveBeforeMainPhoto: "Save the listing before changing the main photo.",
     mainPhotoUpdated: "Main photo updated.",
     updateMainPhotoFailed: "Failed to update main photo.",
-    createDraftTitle: "Sell your car",
+    createDraftTitle: "Sell A Car",
     editListingTitle: "Edit listing",
     formNote: mode === "create" ? "Start with photos and basic details. Use VIN decoding, pricing guidance, and buyer-ready copy tools." : "Update the details buyers need.",
     sectionBasics: "Vehicle basics",
