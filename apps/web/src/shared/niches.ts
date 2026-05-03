@@ -54,8 +54,8 @@ export const DEFAULT_NICHE_ID = "cold_weather_commuter";
 export const NICHES: NicheDefinition[] = [
   {
     id: DEFAULT_NICHE_ID,
-    name: "Cold-weather commuter",
-    shortName: "Cold weather",
+    name: "Winter Value",
+    shortName: "Winter Value",
     intro: "Affordable cars for snow, cold starts, short commutes, and rough winter weeks.",
     scoreLabel: "Cold-weather fit",
     signals: ["AWD / 4WD", "Winter equipment", "Lower miles"],
@@ -77,8 +77,8 @@ export const NICHES: NicheDefinition[] = [
   },
   {
     id: "budget_daily_driver",
-    name: "Budget daily driver",
-    shortName: "Budget daily",
+    name: "Budget Daily",
+    shortName: "Budget Daily",
     intro: "Simple, affordable cars for daily errands, work commutes, and first-time buyers.",
     scoreLabel: "Daily-driver fit",
     signals: ["Lower miles", "Efficient fuel", "Easy body styles"],

@@ -37,7 +37,7 @@ export default async function RootLayout({
                   <label className="global-niche-select" aria-label="Select niche">
                     <span>Niche</span>
                     <select defaultValue="cold_weather_commuter" disabled>
-                      <option value="cold_weather_commuter">Cold weather</option>
+                      <option value="cold_weather_commuter">Winter Value</option>
                     </select>
                   </label>
                 }
