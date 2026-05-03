@@ -99,6 +99,21 @@ def _viewer_private_offers_for_car(session: Session, car_id: int, viewer_id: int
     return _dedupe_highest_offers(offers)[:limit]
 
 
+def _highest_buyer_offer_for_car(session: Session, car_id: int, buyer_id: int) -> Lead | None:
+    offers = session.exec(
+        select(Lead)
+        .where(
+            Lead.car_id == car_id,
+            Lead.channel.in_(ALL_OFFER_CHANNELS),
+            Lead.buyer_user_id == buyer_id,
+            Lead.amount.is_not(None),
+            Lead.rejected_at.is_(None),
+        )
+        .order_by(Lead.amount.desc(), Lead.created_at.desc(), Lead.id.desc())
+    ).all()
+    return next(iter(_dedupe_highest_offers(offers)), None)
+
+
 def _highest_offer_amount_for_car(session: Session, car_id: int) -> int | None:
     offer = next(iter(_top_offers_for_car(session, car_id, limit=1)), None)
     return offer.amount if offer and offer.amount is not None else None
@@ -190,14 +205,20 @@ def create_offer(
     if _accepted_offer_for_car(session, car_id):
         raise HTTPException(status_code=400, detail="Bidding is closed for this listing")
 
+    previous_buyer_offer = _highest_buyer_offer_for_car(session, car_id, user.id or 0)
+    if previous_buyer_offer is not None and payload.amount <= (previous_buyer_offer.amount or 0):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Your offer must be higher than your current offer of {previous_buyer_offer.amount} USD",
+        )
+
+    previous_public_offer = None
     if payload.visibility == "public":
         if not car.public_bidding_enabled:
             raise HTTPException(status_code=400, detail="Public bidding is disabled for this listing")
-        previous_highest_offer = _highest_public_offer_for_car(session, car_id)
-        if previous_highest_offer is not None and payload.amount <= (previous_highest_offer.amount or 0):
-            raise HTTPException(status_code=400, detail=f"Your bid must be higher than the current highest bid of {previous_highest_offer.amount} USD")
-    else:
-        previous_highest_offer = None
+        previous_public_offer = _highest_public_offer_for_car(session, car_id)
+        if previous_public_offer is not None and payload.amount <= (previous_public_offer.amount or 0):
+            raise HTTPException(status_code=400, detail=f"Your bid must be higher than the current highest bid of {previous_public_offer.amount} USD")
 
     offer_channel = "offer_public" if payload.visibility == "public" else "offer_private"
 
@@ -223,19 +244,19 @@ def create_offer(
     )
     if (
         payload.visibility == "public"
-        and previous_highest_offer
-        and previous_highest_offer.buyer_user_id
-        and previous_highest_offer.buyer_user_id != user.id
+        and previous_public_offer
+        and previous_public_offer.buyer_user_id
+        and previous_public_offer.buyer_user_id != user.id
     ):
         create_notification(
             session,
-            user_id=previous_highest_offer.buyer_user_id,
+            user_id=previous_public_offer.buyer_user_id,
             actor_user_id=user.id,
             car_id=car.id,
             notification_type="offer_outbid",
             title="You were outbid",
             body=f"A higher public bid was placed on {car.year} {car.make} {car.model}.",
-            metadata={"amount": payload.amount, "previous_amount": previous_highest_offer.amount},
+            metadata={"amount": payload.amount, "previous_amount": previous_public_offer.amount},
         )
     session.commit()
     session.refresh(lead)
@@ -258,6 +279,8 @@ def get_offers(
     if user:
         private_offers = _viewer_private_offers_for_car(session, car_id, user.id or 0)
         offers = _dedupe_highest_offers([*offers, *private_offers])[:10]
+        visible_highest_offer = next(iter(offers), None)
+        highest_offer = visible_highest_offer.amount if visible_highest_offer else highest_offer
     can_view_accepted_offer = (
         accepted_offer is not None
         and (

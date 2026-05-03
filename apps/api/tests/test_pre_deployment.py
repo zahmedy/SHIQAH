@@ -329,11 +329,47 @@ class PreDeploymentListingLifecycleTests(unittest.TestCase):
         self.assertEqual(len(owner_summary.offers), 1)
         self.assertEqual(owner_summary.offers[0].amount, 12_000)
         self.assertEqual(owner_summary.offers[0].visibility, "private")
+        self.assertEqual(buyer_summary.highest_offer, 12_000)
         self.assertEqual(len(buyer_summary.offers), 1)
         self.assertEqual(buyer_summary.offers[0].amount, 12_000)
         self.assertEqual(len(public_summary.offers), 1)
         self.assertEqual(public_summary.offers[0].amount, 10_000)
         self.assertEqual(len(owner_notifications), 2)
+
+    def test_repeat_private_offer_must_be_higher_than_buyers_current_offer(self) -> None:
+        with Session(self.engine) as session:
+            owner = User(role=UserRole.seller, name="Owner", email="owner-repeat@example.com", verified_at=datetime.utcnow())
+            buyer = User(role=UserRole.buyer, name="Buyer", email="buyer-repeat@example.com", verified_at=datetime.utcnow())
+            session.add(owner)
+            session.add(buyer)
+            session.commit()
+            session.refresh(owner)
+            session.refresh(buyer)
+
+            listing = make_listing(owner.id, public_bidding_enabled=True)
+            session.add(listing)
+            session.commit()
+            session.refresh(listing)
+
+            first_offer = create_offer(listing.id, OfferCreate(amount=12_000, visibility="private"), session=session, user=buyer)
+            with self.assertRaises(HTTPException) as raised:
+                create_offer(listing.id, OfferCreate(amount=11_000, visibility="private"), session=session, user=buyer)
+            higher_offer = create_offer(listing.id, OfferCreate(amount=13_000, visibility="private"), session=session, user=buyer)
+
+            owner_summary = get_manage_offers(listing.id, session=session, user=owner)
+            buyer_summary = get_offers(listing.id, session=session, user=buyer)
+            public_summary = get_offers(listing.id, session=session, user=None)
+
+        self.assertEqual(first_offer.amount, 12_000)
+        self.assertEqual(raised.exception.status_code, 400)
+        self.assertIn("higher than your current offer", raised.exception.detail)
+        self.assertEqual(higher_offer.amount, 13_000)
+        self.assertEqual(owner_summary.offer_count, 1)
+        self.assertEqual(owner_summary.offers[0].amount, 13_000)
+        self.assertEqual(buyer_summary.highest_offer, 13_000)
+        self.assertEqual(buyer_summary.offers[0].amount, 13_000)
+        self.assertEqual(public_summary.highest_offer, None)
+        self.assertEqual(public_summary.offers, [])
 
     def test_reject_offer_rejects_current_buyer_offer_without_resurrecting_lower_bids(self) -> None:
         with Session(self.engine) as session:

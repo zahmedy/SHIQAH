@@ -89,7 +89,7 @@ export default function OfferForm({
     amount: "Your bid",
     signIn: "Sign in to bid or send an offer",
     signInHint: "Your signed-in account will be used automatically.",
-    minBid: (amount: number) => `For a public bid, your amount must be higher than ${formatPrice(amount, locale)}.`,
+    minOffer: (amount: number) => `Your next offer must be higher than ${formatPrice(amount, locale)}.`,
     publicHint: "Public bids are visible to everyone and raise the current highest bid.",
     privateHint: "Private offers are shared only with the listing owner.",
     privateOnlyHint: "This seller accepts private offers only. Public bidding is off for this listing.",
@@ -125,7 +125,7 @@ export default function OfferForm({
     loading: "Loading offers...",
     missingApi: "NEXT_PUBLIC_API_BASE is missing.",
     invalidAmount: "Enter a valid offer amount.",
-    lowerThanHighest: (amount: number) => `Your bid must be higher than ${formatPrice(amount, locale)}.`,
+    lowerThanHighest: (amount: number) => `Your offer must be higher than ${formatPrice(amount, locale)}.`,
     success: "Bid placed.",
     privateSuccess: "Private offer sent.",
     acceptedSuccess: "Offer accepted and bidding closed.",
@@ -140,7 +140,7 @@ export default function OfferForm({
   const acceptedOffer = currentSummary?.accepted_offer ?? null;
   const biddingOpen = currentSummary?.bidding_open ?? true;
   const publicBiddingEnabled = currentSummary?.public_bidding_enabled ?? publicBiddingEnabledProp;
-  const minimumBid = publicBiddingEnabled ? (currentSummary?.highest_offer ?? 0) + 1 : 1;
+  const minimumOffer = (currentSummary?.highest_offer ?? 0) + 1;
   const acceptedOwnerOffer = isOwner && acceptedOffer && isOwnerOfferEntry(acceptedOffer) ? acceptedOffer : null;
   const acceptedBidderLabel = acceptedOwnerOffer?.buyer_user_label || acceptedOwnerOffer?.phone_e164 || null;
   const acceptedBidderPhone = acceptedOwnerOffer?.phone_e164 || null;
@@ -330,8 +330,8 @@ export default function OfferForm({
       return;
     }
 
-    if (nextVisibility === "public" && parsedAmount < minimumBid) {
-      setError(text.lowerThanHighest(minimumBid - 1));
+    if (parsedAmount < minimumOffer) {
+      setError(text.lowerThanHighest(minimumOffer - 1));
       return;
     }
     if (nextVisibility === "public" && !publicBiddingEnabled) {
@@ -594,7 +594,7 @@ export default function OfferForm({
               id={`offer-amount-${carId}`}
               className="input"
               type="number"
-              min={minimumBid}
+              min={minimumOffer}
               inputMode="numeric"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -602,7 +602,7 @@ export default function OfferForm({
           </div>
 
           <p className="helper-text">
-            {publicBiddingEnabled ? text.minBid(minimumBid - 1) : text.privateOnlyHint}
+            {currentSummary?.highest_offer ? text.minOffer(minimumOffer - 1) : publicBiddingEnabled ? text.publicHint : text.privateOnlyHint}
           </p>
 
           <div className="contact-actions">
