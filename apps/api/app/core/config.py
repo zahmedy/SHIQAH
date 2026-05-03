@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str | None = None
     GOOGLE_REDIRECT_URI: str | None = None
     GOOGLE_LOGIN_SUCCESS_URL: str | None = None
+    GOOGLE_ALLOWED_SUCCESS_URLS: str = ""
 
     OPENSEARCH_URL: str = "http://localhost:9200"
     OPENSEARCH_INDEX: str = "autointel_cars"

@@ -85,6 +85,48 @@ function sellerAndTime(locale: Locale, sellerUserId?: string | null, sellerName?
   return parts.join(" • ");
 }
 
+function SpecSection({
+  title,
+  items,
+  collapsible = false,
+  defaultOpen = true,
+}: {
+  title: string;
+  items: { label: string; value: string | number }[];
+  collapsible?: boolean;
+  defaultOpen?: boolean;
+}) {
+  if (collapsible) {
+    return (
+      <details className="listing-info-section listing-info-disclosure" open={defaultOpen}>
+        <summary className="listing-section-title listing-section-summary">{title}</summary>
+        <div className="specs">
+          {items.map((item) => (
+            <article className="spec" key={item.label}>
+              <p className="spec-key">{item.label}</p>
+              <p className="spec-val">{item.value}</p>
+            </article>
+          ))}
+        </div>
+      </details>
+    );
+  }
+
+  return (
+    <section className="listing-info-section">
+      <h2 className="listing-section-title">{title}</h2>
+      <div className="specs">
+        {items.map((item) => (
+          <article className="spec" key={item.label}>
+            <p className="spec-key">{item.label}</p>
+            <p className="spec-val">{item.value}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default async function CarDetailPage({
   params,
   searchParams,
@@ -118,6 +160,25 @@ export default async function CarDetailPage({
   }
 
   const car = data.listing;
+  const vehicleDetails = [
+    { label: "Make", value: translateValue(locale, specValue(car.make)) },
+    { label: "Model", value: specValue(car.model) },
+    { label: "Year", value: specValue(car.year) },
+    { label: "Mileage", value: car.mileage ? formatDistance(car.mileage, locale) : "—" },
+    { label: "City", value: specValue(car.city) },
+    { label: "District", value: specValue(car.district) },
+    { label: "Condition", value: translateValue(locale, car.condition) },
+    { label: "Color", value: translateValue(locale, car.color) },
+  ];
+  const technicalSpecs = [
+    { label: "Transmission", value: translateValue(locale, car.transmission) },
+    { label: "Fuel", value: translateValue(locale, car.fuel_type) },
+    { label: "Drivetrain", value: translateValue(locale, car.drivetrain) },
+    { label: "Engine Cylinders", value: specValue(car.engine_cylinders) },
+    { label: "Engine Volume", value: car.engine_volume ? `${car.engine_volume} L` : "—" },
+    { label: "Body Type", value: translateValue(locale, car.body_type) },
+  ];
+
   return (
     <main className="page shell two-col">
       <section className="panel">
@@ -136,64 +197,8 @@ export default async function CarDetailPage({
           <div className="notice spaced-top-sm">No photos yet.</div>
         )}
 
-        <div className="specs">
-          <article className="spec">
-            <p className="spec-key">Make</p>
-            <p className="spec-val">{translateValue(locale, specValue(car.make))}</p>
-          </article>
-          <article className="spec">
-            <p className="spec-key">Model</p>
-            <p className="spec-val">{specValue(car.model)}</p>
-          </article>
-          <article className="spec">
-            <p className="spec-key">Year</p>
-            <p className="spec-val">{specValue(car.year)}</p>
-          </article>
-          <article className="spec">
-            <p className="spec-key">Mileage</p>
-            <p className="spec-val">{car.mileage ? formatDistance(car.mileage, locale) : "—"}</p>
-          </article>
-          <article className="spec">
-            <p className="spec-key">City</p>
-            <p className="spec-val">{specValue(car.city)}</p>
-          </article>
-          <article className="spec">
-            <p className="spec-key">District</p>
-            <p className="spec-val">{specValue(car.district)}</p>
-          </article>
-          <article className="spec">
-            <p className="spec-key">Transmission</p>
-            <p className="spec-val">{translateValue(locale, car.transmission)}</p>
-          </article>
-          <article className="spec">
-            <p className="spec-key">Fuel</p>
-            <p className="spec-val">{translateValue(locale, car.fuel_type)}</p>
-          </article>
-          <article className="spec">
-            <p className="spec-key">Drivetrain</p>
-            <p className="spec-val">{translateValue(locale, car.drivetrain)}</p>
-          </article>
-          <article className="spec">
-            <p className="spec-key">Engine Cylinders</p>
-            <p className="spec-val">{specValue(car.engine_cylinders)}</p>
-          </article>
-          <article className="spec">
-            <p className="spec-key">Engine Volume</p>
-            <p className="spec-val">{car.engine_volume ? `${car.engine_volume} L` : "—"}</p>
-          </article>
-          <article className="spec">
-            <p className="spec-key">Body Type</p>
-            <p className="spec-val">{translateValue(locale, car.body_type)}</p>
-          </article>
-          <article className="spec">
-            <p className="spec-key">Condition</p>
-            <p className="spec-val">{translateValue(locale, car.condition)}</p>
-          </article>
-          <article className="spec">
-            <p className="spec-key">Color</p>
-            <p className="spec-val">{translateValue(locale, car.color)}</p>
-          </article>
-        </div>
+        <SpecSection title="Details" items={vehicleDetails} />
+        <SpecSection title="Specs" items={technicalSpecs} collapsible defaultOpen={false} />
 
         <NicheScoreSelector listing={car} locale={locale} initialNicheId={selectedNiche.id} />
 

@@ -1,6 +1,6 @@
 from datetime import datetime
 import json
-from urllib.parse import urlencode, urlparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit, urlunsplit
 import urllib.error
 import urllib.request
 
@@ -125,10 +125,47 @@ def _login_success_url(request: Request) -> str:
     )
 
 
-def _create_google_state(request: Request) -> str:
+def _configured_google_success_urls(request: Request) -> set[str]:
+    configured_urls = {
+        url.strip()
+        for url in settings.GOOGLE_ALLOWED_SUCCESS_URLS.split(",")
+        if url.strip()
+    }
+    configured_urls.add(_login_success_url(request))
+    return configured_urls
+
+
+def _validate_google_success_url(request: Request, success_url: str | None) -> str:
+    if not success_url:
+        return _login_success_url(request)
+    if success_url in _configured_google_success_urls(request):
+        return success_url
+    raise HTTPException(status_code=400, detail="Invalid Google auth callback URL")
+
+
+def _safe_google_success_url(request: Request, success_url: str | None) -> str:
+    try:
+        return _validate_google_success_url(request, success_url)
+    except HTTPException:
+        return _login_success_url(request)
+
+
+def _append_auth_result(success_url: str, key: str, value: str) -> str:
+    parsed = urlsplit(success_url)
+    if parsed.scheme in {"http", "https"}:
+        fragment_params = parse_qsl(parsed.fragment, keep_blank_values=True)
+        fragment_params.append((key, value))
+        return urlunsplit(parsed._replace(fragment=urlencode(fragment_params)))
+
+    query_params = parse_qsl(parsed.query, keep_blank_values=True)
+    query_params.append((key, value))
+    return urlunsplit(parsed._replace(query=urlencode(query_params)))
+
+
+def _create_google_state(request: Request, success_url: str | None = None) -> str:
     payload = {
         "sub": "google_oauth_state",
-        "success_url": _login_success_url(request),
+        "success_url": _validate_google_success_url(request, success_url),
         "iat": int(datetime.utcnow().timestamp()),
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=ALGORITHM)
@@ -221,16 +258,24 @@ def verify_email_code(payload: EmailCodeVerify, session: Session = Depends(get_s
 
 
 @router.get("/google/start")
-def start_google_login(request: Request):
+def start_google_login(
+    request: Request,
+    success_url: str | None = None,
+    callback_url: str | None = None,
+):
     if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
         raise HTTPException(status_code=503, detail="Google login is not configured")
+    if success_url and callback_url and success_url != callback_url:
+        raise HTTPException(status_code=400, detail="Conflicting Google auth callback URLs")
+
+    requested_success_url = callback_url or success_url
 
     query = urlencode({
         "client_id": settings.GOOGLE_CLIENT_ID,
         "redirect_uri": _google_redirect_uri(request),
         "response_type": "code",
         "scope": GOOGLE_SCOPE,
-        "state": _create_google_state(request),
+        "state": _create_google_state(request, requested_success_url),
         "prompt": "select_account",
     })
     return RedirectResponse(f"{GOOGLE_AUTH_URL}?{query}", status_code=302)
@@ -244,29 +289,28 @@ def google_callback(
     error: str | None = None,
     session: Session = Depends(get_session),
 ):
-    success_url = _decode_google_state(state or "") or _login_success_url(request)
+    success_url = _safe_google_success_url(request, _decode_google_state(state or ""))
     if error:
-        return RedirectResponse(f"{success_url}#auth_error={error}", status_code=302)
+        return RedirectResponse(_append_auth_result(success_url, "auth_error", error), status_code=302)
     if not code:
-        return RedirectResponse(f"{success_url}#auth_error=missing_code", status_code=302)
+        return RedirectResponse(_append_auth_result(success_url, "auth_error", "missing_code"), status_code=302)
 
     token_payload = _exchange_google_code(code, _google_redirect_uri(request))
     google_access_token = token_payload.get("access_token")
     if not google_access_token:
-        return RedirectResponse(f"{success_url}#auth_error=missing_google_token", status_code=302)
+        return RedirectResponse(_append_auth_result(success_url, "auth_error", "missing_google_token"), status_code=302)
 
     profile = _fetch_google_userinfo(google_access_token)
     if not profile.get("email_verified", False):
-        return RedirectResponse(f"{success_url}#auth_error=email_not_verified", status_code=302)
+        return RedirectResponse(_append_auth_result(success_url, "auth_error", "email_not_verified"), status_code=302)
 
     email = profile.get("email")
     if not email:
-        return RedirectResponse(f"{success_url}#auth_error=missing_email", status_code=302)
+        return RedirectResponse(_append_auth_result(success_url, "auth_error", "missing_email"), status_code=302)
 
     name = profile.get("name") if isinstance(profile.get("name"), str) else None
     app_token = _issue_token_for_email(session, email, name).access_token
-    separator = "&" if "#" in success_url else "#"
-    return RedirectResponse(f"{success_url}{separator}access_token={app_token}", status_code=302)
+    return RedirectResponse(_append_auth_result(success_url, "access_token", app_token), status_code=302)
 
 @router.post("/request-otp", response_model=OTPRequestResponse)
 def request_otp(payload: OTPRequest, session: Session = Depends(get_session)):

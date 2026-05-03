@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 from datetime import datetime, timedelta
 from types import SimpleNamespace
+from urllib.parse import parse_qs, urlparse
 from unittest.mock import patch
 
 from fastapi import HTTPException
@@ -15,6 +16,7 @@ from app.api.v1.routes.auth import (
     _login_success_url,
     google_callback,
     request_email_code,
+    start_google_login,
     verify_email_code,
 )
 from app.api.v1.routes.comments import create_comment
@@ -140,6 +142,65 @@ class PreDeploymentAuthTests(unittest.TestCase):
         self.assertIn("http://localhost:3001/login#access_token=", response.headers["location"])
         self.assertIsNotNone(user)
         self.assertEqual(user.name, "Driver")
+
+    def test_google_callback_redirects_native_app_with_token(self) -> None:
+        request = SimpleNamespace(
+            headers={"x-forwarded-host": "api.nicherides.com", "x-forwarded-proto": "https"},
+            url=SimpleNamespace(scheme="http", netloc="api:8000"),
+        )
+        with patch("app.api.v1.routes.auth.settings.GOOGLE_ALLOWED_SUCCESS_URLS", "nicherides://auth"):
+            state = _create_google_state(request, "nicherides://auth")
+
+        with Session(self.engine) as session:
+            with (
+                patch("app.api.v1.routes.auth.settings.GOOGLE_ALLOWED_SUCCESS_URLS", "nicherides://auth"),
+                patch("app.api.v1.routes.auth._exchange_google_code", return_value={"access_token": "google-token"}),
+                patch(
+                    "app.api.v1.routes.auth._fetch_google_userinfo",
+                    return_value={"email": "driver-native@example.com", "email_verified": True, "name": "Driver"},
+                ),
+            ):
+                response = google_callback(request, code="code", state=state, session=session)
+            user = session.exec(select(User).where(User.email == "driver-native@example.com")).first()
+
+        parsed_location = urlparse(response.headers["location"])
+        query = parse_qs(parsed_location.query)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(f"{parsed_location.scheme}://{parsed_location.netloc}{parsed_location.path}", "nicherides://auth")
+        self.assertTrue(query["access_token"][0])
+        self.assertIsNotNone(user)
+
+    def test_google_callback_redirects_native_app_with_error(self) -> None:
+        request = SimpleNamespace(
+            headers={"x-forwarded-host": "api.nicherides.com", "x-forwarded-proto": "https"},
+            url=SimpleNamespace(scheme="http", netloc="api:8000"),
+        )
+        with patch("app.api.v1.routes.auth.settings.GOOGLE_ALLOWED_SUCCESS_URLS", "nicherides://auth"):
+            state = _create_google_state(request, "nicherides://auth")
+
+        with Session(self.engine) as session:
+            with patch("app.api.v1.routes.auth.settings.GOOGLE_ALLOWED_SUCCESS_URLS", "nicherides://auth"):
+                response = google_callback(request, error="access_denied", state=state, session=session)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["location"], "nicherides://auth?auth_error=access_denied")
+
+    def test_google_start_rejects_unapproved_callback_url(self) -> None:
+        request = SimpleNamespace(
+            headers={"x-forwarded-host": "api.nicherides.com", "x-forwarded-proto": "https"},
+            url=SimpleNamespace(scheme="http", netloc="api:8000"),
+        )
+
+        with (
+            patch("app.api.v1.routes.auth.settings.GOOGLE_CLIENT_ID", "client"),
+            patch("app.api.v1.routes.auth.settings.GOOGLE_CLIENT_SECRET", "secret"),
+            patch("app.api.v1.routes.auth.settings.GOOGLE_ALLOWED_SUCCESS_URLS", "nicherides://auth"),
+            self.assertRaises(HTTPException) as raised,
+        ):
+            start_google_login(request, callback_url="https://evil.example/auth")
+
+        self.assertEqual(raised.exception.status_code, 400)
+        self.assertEqual(raised.exception.detail, "Invalid Google auth callback URL")
 
     def test_google_urls_ignore_localhost_config_on_public_origin(self) -> None:
         request = SimpleNamespace(

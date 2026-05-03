@@ -2314,11 +2314,62 @@ a {
 
 /* ─── Specs ───────────────────────────────────────────────────────────── */
 
+.listing-info-section {
+  margin-top: 1rem;
+}
+
+.listing-info-section + .listing-info-section {
+  margin-top: 1.35rem;
+}
+
+.listing-section-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.listing-info-disclosure {
+  border-top: 1px solid var(--line);
+  padding-top: 0.9rem;
+}
+
+.listing-section-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.listing-section-summary::-webkit-details-marker {
+  display: none;
+}
+
+.listing-section-summary::after {
+  content: "+";
+  display: inline-flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.listing-info-disclosure[open] .listing-section-summary::after {
+  content: "−";
+}
+
 .specs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.55rem;
-  margin-top: 0.9rem;
+  margin-top: 0.6rem;
 }
 
 .spec {
