@@ -37,8 +37,13 @@ def public_car_detail(car_id: int, session: Session = Depends(get_session)):
 
     seller_phone = seller.phone_e164 if seller else None
     message_text = f"Hello, I'm interested in listing #{car.id}: {car.make} {car.model} {car.year}."
+    email_url = None
     sms_url = None
     whatsapp_url = None
+    if seller and seller.email:
+        subject = f"Question about {car.year} {car.make} {car.model}"
+        email = quote(seller.email, safe="@.+-_")
+        email_url = f"mailto:{email}?subject={quote(subject)}&body={quote(message_text)}"
     if seller and seller_phone and seller.contact_text_enabled:
         sms_url = f"sms:{seller_phone}?&body={quote(message_text)}"
     if seller and seller_phone and seller.contact_whatsapp_enabled:
@@ -53,6 +58,7 @@ def public_car_detail(car_id: int, session: Session = Depends(get_session)):
             "user_id": seller.user_id if seller else None,
         },
         "contact": {
+            "email_url": email_url,
             "sms_url": sms_url,
             "whatsapp_url": whatsapp_url,
         },

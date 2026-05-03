@@ -19,6 +19,7 @@ from app.api.v1.routes.auth import (
 )
 from app.api.v1.routes.me import MeUpdate, update_me
 from app.api.v1.routes.cars import archive_owner_car, restore_archived_owner_car
+from app.api.v1.routes.public import public_car_detail
 from app.api.v1.routes.search import _db_search_cars, search_cars
 from app.models.car import CarListing, CarStatus
 from app.models.user import User, UserRole
@@ -268,6 +269,29 @@ class PreDeploymentListingLifecycleTests(unittest.TestCase):
 
         self.assertEqual(result["total"], 1)
         self.assertEqual(result["items"][0]["title"], "Boundary car")
+
+    def test_public_car_detail_includes_email_contact_when_seller_has_email(self) -> None:
+        with Session(self.engine) as session:
+            user = User(
+                role=UserRole.seller,
+                name="Seller",
+                user_id="email-seller",
+                email="seller@example.com",
+                verified_at=datetime.utcnow(),
+            )
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+
+            listing = make_listing(user.id, make="Mazda", model="CX-90", year=2024)
+            session.add(listing)
+            session.commit()
+            session.refresh(listing)
+
+            result = public_car_detail(listing.id, session=session)
+
+        self.assertIn("mailto:seller@example.com", result["contact"]["email_url"])
+        self.assertIn("Question%20about%202024%20Mazda%20CX-90", result["contact"]["email_url"])
 
     def test_keyword_search_falls_back_to_database_when_opensearch_is_down(self) -> None:
         with Session(self.engine) as session:

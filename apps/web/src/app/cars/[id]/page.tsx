@@ -54,6 +54,7 @@ type PublicCarResponse = {
     user_id: string | null;
   };
   contact: {
+    email_url: string | null;
     sms_url: string | null;
     whatsapp_url: string | null;
   };
@@ -208,6 +209,12 @@ export default async function CarDetailPage({
           <p className="car-meta">{sellerLabel(data.seller.user_id, data.seller.name)}</p>
         ) : null}
         <div className="contact-actions">
+          {data.contact.email_url && (
+            <a href={data.contact.email_url} className="btn btn-secondary">
+              Email Seller
+            </a>
+          )}
+
           {data.contact.sms_url && (
             <a href={data.contact.sms_url} className="btn btn-secondary">
               Text Seller
@@ -220,7 +227,7 @@ export default async function CarDetailPage({
             </a>
           )}
         </div>
-        {!data.contact.sms_url && !data.contact.whatsapp_url ? (
+        {!data.contact.email_url && !data.contact.sms_url && !data.contact.whatsapp_url ? (
           <p className="helper-text spaced-top-sm">Seller has not enabled direct messaging.</p>
         ) : null}
 

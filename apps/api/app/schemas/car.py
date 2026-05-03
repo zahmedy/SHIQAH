@@ -207,6 +207,7 @@ class PublicSellerOut(BaseModel):
 
 
 class PublicContactOut(BaseModel):
+    email_url: Optional[str]
     sms_url: Optional[str]
     whatsapp_url: Optional[str]
 
