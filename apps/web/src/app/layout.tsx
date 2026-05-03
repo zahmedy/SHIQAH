@@ -29,7 +29,7 @@ export default async function RootLayout({
       <body>
         <LocaleProvider locale={locale}>
           <header className="topbar">
-            <div className="shell topbar-inner">
+            <div className="shell topbar-shell topbar-inner">
               <Link href="/" className="brand" aria-label="NicheRides home">
                 <LogoMark className="brand-logo" />
               </Link>
@@ -54,11 +54,13 @@ export default async function RootLayout({
                   aria-label="Search cars"
                 />
               </form>
-              <nav className="topnav">
+              <nav className="topnav topnav-primary" aria-label="Primary navigation">
                 <Link href="/search" className="nav-link topnav-browse">
                   Browse
                 </Link>
                 <TopbarCreate />
+              </nav>
+              <nav className="topnav topnav-account" aria-label="Account navigation">
                 <TopbarNotifications />
                 <TopbarUser />
               </nav>

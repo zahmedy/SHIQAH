@@ -23,7 +23,6 @@ export default function TopbarUser() {
   const text = {
     loggedIn: "Logged in",
     login: "Login",
-    logout: "Logout",
   };
 
   useEffect(() => {
@@ -91,15 +90,6 @@ export default function TopbarUser() {
     };
   }, [text.loggedIn]);
 
-  function handleLogout() {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(NAME_KEY);
-    setLabel("");
-    setReady(true);
-    window.dispatchEvent(new Event("nicherides-auth-changed"));
-    window.location.replace("/");
-  }
-
   if (!ready) return null;
 
   if (!label) {
@@ -111,13 +101,8 @@ export default function TopbarUser() {
   }
 
   return (
-    <>
-      <Link href="/my-cars" className="user-pill" role="button">
-        {label}
-      </Link>
-      <button type="button" className="nav-link" onClick={handleLogout}>
-        {text.logout}
-      </button>
-    </>
+    <Link href="/my-cars" className="user-pill" role="button">
+      {label}
+    </Link>
   );
 }

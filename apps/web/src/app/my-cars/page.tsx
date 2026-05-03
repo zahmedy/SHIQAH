@@ -15,6 +15,7 @@ import {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const TOKEN_KEY = "nicherides_access_token";
+const NAME_KEY = "nicherides_user_name";
 const FLASH_KEY = "nicherides_flash";
 
 type CarPhoto = {
@@ -169,6 +170,7 @@ export default function MyCarsPage() {
     enableText: "Enable text messages",
     enableWhatsApp: "Enable WhatsApp",
     saveMessaging: "Save Messaging",
+    logout: "Logout",
     listingsSection: "Your Cars",
     listingsSectionHelp: "Draft, publish, edit, or archive.",
     adminBadge: "Admin",
@@ -205,6 +207,13 @@ export default function MyCarsPage() {
     archiveRestoreUnavailable: "Archived listing cannot be restored.",
     currentStatus: "Current status",
   };
+
+  function handleLogout() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(NAME_KEY);
+    window.dispatchEvent(new Event("nicherides-auth-changed"));
+    window.location.replace("/");
+  }
 
   const canLoad = useMemo(() => Boolean(API_BASE), []);
   const visibleCars = useMemo(
@@ -731,6 +740,9 @@ export default function MyCarsPage() {
               <span>{contactWhatsappEnabled ? text.enableWhatsApp : "WhatsApp off"}</span>
               {isAdmin ? <span>{text.adminBadge}</span> : null}
             </div>
+            <button type="button" className="btn btn-secondary profile-logout-button" onClick={handleLogout}>
+              {text.logout}
+            </button>
           </div>
         </section>
       )}
