@@ -7,6 +7,7 @@ from app.models.car import CarListing
 from app.models.chat import ChatMessage
 from app.models.user import User
 from app.schemas.chat import ChatMessageCreate, ChatMessageOut
+from app.services.notifications import create_notification
 
 router = APIRouter(tags=["comments"])
 
@@ -62,6 +63,18 @@ def create_comment(
         message=text,
     )
     session.add(message)
+    session.commit()
+    session.refresh(message)
+    create_notification(
+        session,
+        user_id=car.owner_id,
+        actor_user_id=user.id,
+        car_id=car_id,
+        notification_type="comment_created",
+        title="New comment",
+        body=f"Someone commented on {car.year} {car.make} {car.model}.",
+        metadata={"comment_id": message.id},
+    )
     session.commit()
     session.refresh(message)
     return ChatMessageOut(

@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.db.session import engine
 from app.models.car import CarListing, CarMedia, CarStatus
 from app.models.user import User
+from app.services.notifications import create_notification
 from app.services.opensearch import delete_car, upsert_car
 
 AUTO_REVIEW_SOURCE = "auto"
@@ -82,6 +83,15 @@ def approve_listing(
     car.review_reason = review_reason
 
     session.add(car)
+    create_notification(
+        session,
+        user_id=car.owner_id,
+        notification_type="listing_approved",
+        title="Listing approved",
+        body=f"Your {car.year} {car.make} {car.model} listing is live.",
+        car_id=car.id,
+        metadata={"review_source": review_source},
+    )
     session.commit()
     session.refresh(car)
     upsert_car(str(car.id), build_search_doc(session, car))
@@ -102,6 +112,15 @@ def reject_listing(
     car.review_reason = review_reason
 
     session.add(car)
+    create_notification(
+        session,
+        user_id=car.owner_id,
+        notification_type="listing_rejected",
+        title="Listing needs changes",
+        body=review_reason,
+        car_id=car.id,
+        metadata={"review_source": review_source},
+    )
     session.commit()
     session.refresh(car)
     delete_car(str(car.id))

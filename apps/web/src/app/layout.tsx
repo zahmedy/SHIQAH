@@ -6,6 +6,7 @@ import GlobalNicheSelect from "@/components/GlobalNicheSelect";
 import LocaleProvider from "@/components/LocaleProvider";
 import LogoMark from "@/components/LogoMark";
 import TopbarCreate from "@/components/TopbarCreate";
+import TopbarNotifications from "@/components/TopbarNotifications";
 import TopbarUser from "@/components/TopbarUser";
 import { getDirection } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
@@ -58,6 +59,7 @@ export default async function RootLayout({
                   Browse
                 </Link>
                 <TopbarCreate />
+                <TopbarNotifications />
                 <TopbarUser />
               </nav>
             </div>

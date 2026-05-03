@@ -17,14 +17,17 @@ from app.api.v1.routes.auth import (
     request_email_code,
     verify_email_code,
 )
+from app.api.v1.routes.comments import create_comment
 from app.api.v1.routes.me import MeUpdate, update_me
 from app.api.v1.routes.cars import archive_owner_car, restore_archived_owner_car
 from app.api.v1.routes.leads import create_offer, get_manage_offers, get_offers, reject_offer
 from app.api.v1.routes.public import public_car_detail
 from app.api.v1.routes.search import _db_search_cars, search_cars
 from app.models.car import CarListing, CarStatus
+from app.models.notification import Notification
 from app.models.user import User, UserRole
 from app.schemas.auth import EmailCodeRequest, EmailCodeVerify
+from app.schemas.chat import ChatMessageCreate
 from app.schemas.lead import OfferCreate
 from app.services.niche_scoring import BUDGET_DAILY_NICHE_ID, score_listing_for_niche
 from app.services.search_intent import parse_search_intent
@@ -316,6 +319,9 @@ class PreDeploymentListingLifecycleTests(unittest.TestCase):
             owner_summary = get_manage_offers(listing.id, session=session, user=owner)
             buyer_summary = get_offers(listing.id, session=session, user=buyer)
             public_summary = get_offers(listing.id, session=session, user=None)
+            owner_notifications = session.exec(
+                select(Notification).where(Notification.user_id == owner.id, Notification.type == "offer_created")
+            ).all()
 
         self.assertEqual(public_offer.amount, 10_000)
         self.assertEqual(private_offer.amount, 12_000)
@@ -327,6 +333,7 @@ class PreDeploymentListingLifecycleTests(unittest.TestCase):
         self.assertEqual(buyer_summary.offers[0].amount, 12_000)
         self.assertEqual(len(public_summary.offers), 1)
         self.assertEqual(public_summary.offers[0].amount, 10_000)
+        self.assertEqual(len(owner_notifications), 2)
 
     def test_reject_offer_rejects_current_buyer_offer_without_resurrecting_lower_bids(self) -> None:
         with Session(self.engine) as session:
@@ -349,11 +356,41 @@ class PreDeploymentListingLifecycleTests(unittest.TestCase):
             reject_offer(listing.id, private_offer.id, session=session, user=owner)
             owner_summary = get_manage_offers(listing.id, session=session, user=owner)
             public_summary = get_offers(listing.id, session=session, user=None)
+            buyer_notifications = session.exec(
+                select(Notification).where(Notification.user_id == buyer.id, Notification.type == "offer_rejected")
+            ).all()
+            listing_id = listing.id
 
         self.assertEqual(owner_summary.offer_count, 0)
         self.assertEqual(owner_summary.offers, [])
         self.assertEqual(public_summary.highest_offer, None)
         self.assertEqual(public_summary.offers, [])
+        self.assertEqual(len(buyer_notifications), 1)
+        self.assertEqual(buyer_notifications[0].car_id, listing_id)
+
+    def test_comment_creates_owner_notification(self) -> None:
+        with Session(self.engine) as session:
+            owner = User(role=UserRole.seller, name="Owner", email="comment-owner@example.com", verified_at=datetime.utcnow())
+            commenter = User(role=UserRole.buyer, name="Commenter", email="commenter@example.com", verified_at=datetime.utcnow())
+            session.add(owner)
+            session.add(commenter)
+            session.commit()
+            session.refresh(owner)
+            session.refresh(commenter)
+
+            listing = make_listing(owner.id)
+            session.add(listing)
+            session.commit()
+            session.refresh(listing)
+
+            create_comment(listing.id, ChatMessageCreate(message="Is this still available?"), session=session, user=commenter)
+            notification = session.exec(
+                select(Notification).where(Notification.user_id == owner.id, Notification.type == "comment_created")
+            ).first()
+            listing_id = listing.id
+
+        self.assertIsNotNone(notification)
+        self.assertEqual(notification.car_id, listing_id)
 
     def test_keyword_search_falls_back_to_database_when_opensearch_is_down(self) -> None:
         with Session(self.engine) as session:

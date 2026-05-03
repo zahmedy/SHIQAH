@@ -17,6 +17,7 @@ from app.schemas.lead import (
     OwnerOfferSummaryOut,
 )
 from app.core.deps import get_current_user, get_optional_current_user
+from app.services.notifications import create_notification
 
 router = APIRouter(tags=["leads"])
 PUBLIC_OFFER_CHANNELS = {"offer", "offer_public"}
@@ -101,6 +102,10 @@ def _viewer_private_offers_for_car(session: Session, car_id: int, viewer_id: int
 def _highest_offer_amount_for_car(session: Session, car_id: int) -> int | None:
     offer = next(iter(_top_offers_for_car(session, car_id, limit=1)), None)
     return offer.amount if offer and offer.amount is not None else None
+
+
+def _highest_public_offer_for_car(session: Session, car_id: int) -> Lead | None:
+    return next(iter(_top_offers_for_car(session, car_id, limit=1)), None)
 
 
 def _offer_visibility(offer: Lead) -> str:
@@ -188,9 +193,11 @@ def create_offer(
     if payload.visibility == "public":
         if not car.public_bidding_enabled:
             raise HTTPException(status_code=400, detail="Public bidding is disabled for this listing")
-        highest_offer = _highest_offer_amount_for_car(session, car_id)
-        if highest_offer is not None and payload.amount <= highest_offer:
-            raise HTTPException(status_code=400, detail=f"Your bid must be higher than the current highest bid of {highest_offer} USD")
+        previous_highest_offer = _highest_public_offer_for_car(session, car_id)
+        if previous_highest_offer is not None and payload.amount <= (previous_highest_offer.amount or 0):
+            raise HTTPException(status_code=400, detail=f"Your bid must be higher than the current highest bid of {previous_highest_offer.amount} USD")
+    else:
+        previous_highest_offer = None
 
     offer_channel = "offer_public" if payload.visibility == "public" else "offer_private"
 
@@ -204,6 +211,32 @@ def create_offer(
         channel=offer_channel,
     )
     session.add(lead)
+    create_notification(
+        session,
+        user_id=car.owner_id,
+        actor_user_id=user.id,
+        car_id=car.id,
+        notification_type="offer_created",
+        title="New offer",
+        body=f"New {_offer_visibility(lead)} offer of {payload.amount} USD on {car.year} {car.make} {car.model}.",
+        metadata={"amount": payload.amount, "visibility": payload.visibility},
+    )
+    if (
+        payload.visibility == "public"
+        and previous_highest_offer
+        and previous_highest_offer.buyer_user_id
+        and previous_highest_offer.buyer_user_id != user.id
+    ):
+        create_notification(
+            session,
+            user_id=previous_highest_offer.buyer_user_id,
+            actor_user_id=user.id,
+            car_id=car.id,
+            notification_type="offer_outbid",
+            title="You were outbid",
+            body=f"A higher public bid was placed on {car.year} {car.make} {car.model}.",
+            metadata={"amount": payload.amount, "previous_amount": previous_highest_offer.amount},
+        )
     session.commit()
     session.refresh(lead)
 
@@ -303,6 +336,16 @@ def accept_offer(
     if not offer.accepted_at:
         offer.accepted_at = datetime.utcnow()
         session.add(offer)
+        create_notification(
+            session,
+            user_id=offer.buyer_user_id,
+            actor_user_id=user.id,
+            car_id=car.id,
+            notification_type="offer_accepted",
+            title="Offer accepted",
+            body=f"Your offer of {offer.amount} USD was accepted for {car.year} {car.make} {car.model}.",
+            metadata={"offer_id": offer.id, "amount": offer.amount},
+        )
         session.commit()
         session.refresh(offer)
 
@@ -396,6 +439,16 @@ def reject_offer(
     for offer_to_reject in offers_to_reject:
         offer_to_reject.rejected_at = now
         session.add(offer_to_reject)
+    create_notification(
+        session,
+        user_id=offer.buyer_user_id,
+        actor_user_id=user.id,
+        car_id=car.id,
+        notification_type="offer_rejected",
+        title="Offer rejected",
+        body=f"Your offer for {car.year} {car.make} {car.model} was rejected.",
+        metadata={"offer_id": offer.id, "amount": offer.amount},
+    )
     session.commit()
     session.refresh(offer)
 
