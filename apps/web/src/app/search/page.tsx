@@ -65,6 +65,7 @@ type Query = {
   sort?: string;
   lat?: string;
   lon?: string;
+  radius_mi?: string;
   radius_km?: string;
 };
 
@@ -90,6 +91,7 @@ const FILTER_KEYS = [
   "sort",
   "lat",
   "lon",
+  "radius_mi",
   "radius_km",
 ] as const;
 
@@ -120,8 +122,13 @@ export default async function SearchPage({
   const params = await searchParams;
   const locale = await getServerLocale();
   const selectedNiche = getNiche(params.niche);
-  const radiusKm = Number(params.radius_km);
-  const initialRadiusKm = Number.isFinite(radiusKm) && radiusKm >= 1 && radiusKm <= 500 ? radiusKm : 50;
+  const radiusMi = Number(params.radius_mi);
+  const oldRadiusKm = Number(params.radius_km);
+  const initialRadiusMi = Number.isFinite(radiusMi) && radiusMi >= 1 && radiusMi <= 500
+    ? radiusMi
+    : Number.isFinite(oldRadiusKm) && oldRadiusKm >= 1 && oldRadiusKm <= 805
+      ? Math.max(1, Math.round(oldRadiusKm / 1.60934))
+      : 50;
 
   const qs = new URLSearchParams();
   if (params.niche) qs.set("niche", params.niche);
@@ -142,7 +149,8 @@ export default async function SearchPage({
   if (params.sort) qs.set("sort", params.sort);
   if (params.lat) qs.set("lat", params.lat);
   if (params.lon) qs.set("lon", params.lon);
-  if (params.radius_km) qs.set("radius_km", params.radius_km);
+  if (params.radius_mi) qs.set("radius_mi", params.radius_mi);
+  else if (params.radius_km) qs.set("radius_km", params.radius_km);
 
   qs.delete("niche");
   const path = qs.toString() ? `/v1/search/cars?${qs.toString()}` : "/v1/search/cars";
@@ -178,10 +186,10 @@ export default async function SearchPage({
                 ))}
               </div>
             </nav>
-            <NearbySearch initialRadiusKm={initialRadiusKm} />
+            <NearbySearch initialRadiusMi={initialRadiusMi} />
             {params.lat ? <input type="hidden" name="lat" value={params.lat} /> : null}
             {params.lon ? <input type="hidden" name="lon" value={params.lon} /> : null}
-            {params.radius_km ? <input type="hidden" name="radius_km" value={params.radius_km} /> : null}
+            {params.radius_mi ? <input type="hidden" name="radius_mi" value={params.radius_mi} /> : null}
             <div>
               <label className="label" htmlFor="q">Keyword</label>
               <input id="q" name="q" defaultValue={params.q ?? ""} placeholder="snow tires, heated seats, Bolt" className="input" />

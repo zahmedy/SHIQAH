@@ -69,6 +69,27 @@ export default function NotificationsPage() {
     const nextToken = window.localStorage.getItem(TOKEN_KEY) || "";
     setToken(nextToken);
     void loadNotifications(nextToken);
+    if (!nextToken) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => void loadNotifications(nextToken), 30000);
+    function handleVisibilityChange() {
+      if (!document.hidden) {
+        void loadNotifications(nextToken);
+      }
+    }
+    function handleFocus() {
+      void loadNotifications(nextToken);
+    }
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [loadNotifications]);
 
   async function markRead(notificationId: number) {

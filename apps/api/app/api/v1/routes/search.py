@@ -13,6 +13,17 @@ from app.services.niche_scoring import score_listing_for_all_niches
 from app.services.search_intent import build_smart_should_clauses, parse_search_intent
 
 router = APIRouter(prefix="/search", tags=["search"])
+MILES_TO_KM = 1.60934
+
+
+def _radius_mi_to_km(radius_mi: int | None, radius_km: int | None = None) -> int | None:
+    if not isinstance(radius_mi, int):
+        radius_mi = None
+    if not isinstance(radius_km, int):
+        radius_km = None
+    if radius_mi is not None:
+        return max(1, round(radius_mi * MILES_TO_KM))
+    return radius_km
 
 
 def _photos_by_listing(session: Session, listing_ids: list[int]) -> dict[int, list[dict]]:
@@ -104,7 +115,7 @@ def _db_search_cars(
     if city:
         statement = statement.where(CarListing.city == city)
     elif lat is not None and lon is not None:
-        statement = statement.where(CarListing.city.in_(nearby_cities(lat, lon, radius_km or 50)))
+        statement = statement.where(CarListing.city.in_(nearby_cities(lat, lon, radius_km or 80)))
     if make:
         statement = statement.where(CarListing.make == make)
     if model:
@@ -204,7 +215,8 @@ def search_cars(
     body_type: str | None = None,
     lat: float | None = Query(default=None, ge=-90, le=90),
     lon: float | None = Query(default=None, ge=-180, le=180),
-    radius_km: int | None = Query(default=None, ge=1, le=500),
+    radius_mi: int | None = Query(default=None, ge=1, le=500),
+    radius_km: int | None = Query(default=None, ge=1, le=805),
 
     sort: str = Query(default="newest", pattern="^(newest|price_asc|price_desc|mileage_asc)$"),
     page: int = Query(default=1, ge=1),
@@ -228,6 +240,7 @@ def search_cars(
     body_type = body_type or intent.get("body_type")
     if sort == "newest" and intent.get("sort"):
         sort = intent["sort"]
+    radius_distance_km = _radius_mi_to_km(radius_mi, radius_km)
 
     filters: list[dict] = []
     if city:
@@ -254,7 +267,7 @@ def search_cars(
     if mileage_max is not None:
         filters.append({"range": {"mileage": {"lte": mileage_max}}})
     if lat is not None and lon is not None:
-        distance_km = radius_km or 50
+        distance_km = radius_distance_km or 80
         location_should: list[dict] = [
             {
                 "geo_distance": {
@@ -302,7 +315,7 @@ def search_cars(
             body_type=body_type,
             lat=lat,
             lon=lon,
-            radius_km=radius_km,
+            radius_km=radius_distance_km,
             keyword_query=None,
             sort=sort,
             page=page,
@@ -355,7 +368,7 @@ def search_cars(
             body_type=body_type,
             lat=lat,
             lon=lon,
-            radius_km=radius_km,
+            radius_km=radius_distance_km,
             keyword_query=text_query,
             sort=sort,
             page=page,

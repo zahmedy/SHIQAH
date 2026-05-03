@@ -43,6 +43,7 @@ type Query = {
   sort?: string;
   lat?: string;
   lon?: string;
+  radius_mi?: string;
   radius_km?: string;
 };
 
@@ -79,7 +80,8 @@ function buildHomeSearchPath(params: Query): string {
   if (params.sort) qs.set("sort", params.sort);
   if (params.lat) qs.set("lat", params.lat);
   if (params.lon) qs.set("lon", params.lon);
-  if (params.radius_km) qs.set("radius_km", params.radius_km);
+  if (params.radius_mi) qs.set("radius_mi", params.radius_mi);
+  else if (params.radius_km) qs.set("radius_km", params.radius_km);
   return `/v1/search/cars?${qs.toString()}`;
 }
 
