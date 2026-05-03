@@ -19,11 +19,13 @@ from app.api.v1.routes.auth import (
 )
 from app.api.v1.routes.me import MeUpdate, update_me
 from app.api.v1.routes.cars import archive_owner_car, restore_archived_owner_car
+from app.api.v1.routes.leads import create_offer, get_manage_offers, get_offers, reject_offer
 from app.api.v1.routes.public import public_car_detail
 from app.api.v1.routes.search import _db_search_cars, search_cars
 from app.models.car import CarListing, CarStatus
 from app.models.user import User, UserRole
 from app.schemas.auth import EmailCodeRequest, EmailCodeVerify
+from app.schemas.lead import OfferCreate
 from app.services.niche_scoring import BUDGET_DAILY_NICHE_ID, score_listing_for_niche
 from app.services.search_intent import parse_search_intent
 
@@ -292,6 +294,66 @@ class PreDeploymentListingLifecycleTests(unittest.TestCase):
 
         self.assertIn("mailto:seller@example.com", result["contact"]["email_url"])
         self.assertIn("Question%20about%202024%20Mazda%20CX-90", result["contact"]["email_url"])
+
+    def test_offer_lists_show_only_each_buyers_highest_visible_offer(self) -> None:
+        with Session(self.engine) as session:
+            owner = User(role=UserRole.seller, name="Owner", email="owner@example.com", verified_at=datetime.utcnow())
+            buyer = User(role=UserRole.buyer, name="Buyer", email="buyer@example.com", verified_at=datetime.utcnow())
+            session.add(owner)
+            session.add(buyer)
+            session.commit()
+            session.refresh(owner)
+            session.refresh(buyer)
+
+            listing = make_listing(owner.id, public_bidding_enabled=True)
+            session.add(listing)
+            session.commit()
+            session.refresh(listing)
+
+            public_offer = create_offer(listing.id, OfferCreate(amount=10_000, visibility="public"), session=session, user=buyer)
+            private_offer = create_offer(listing.id, OfferCreate(amount=12_000, visibility="private"), session=session, user=buyer)
+
+            owner_summary = get_manage_offers(listing.id, session=session, user=owner)
+            buyer_summary = get_offers(listing.id, session=session, user=buyer)
+            public_summary = get_offers(listing.id, session=session, user=None)
+
+        self.assertEqual(public_offer.amount, 10_000)
+        self.assertEqual(private_offer.amount, 12_000)
+        self.assertEqual(owner_summary.offer_count, 1)
+        self.assertEqual(len(owner_summary.offers), 1)
+        self.assertEqual(owner_summary.offers[0].amount, 12_000)
+        self.assertEqual(owner_summary.offers[0].visibility, "private")
+        self.assertEqual(len(buyer_summary.offers), 1)
+        self.assertEqual(buyer_summary.offers[0].amount, 12_000)
+        self.assertEqual(len(public_summary.offers), 1)
+        self.assertEqual(public_summary.offers[0].amount, 10_000)
+
+    def test_reject_offer_rejects_current_buyer_offer_without_resurrecting_lower_bids(self) -> None:
+        with Session(self.engine) as session:
+            owner = User(role=UserRole.seller, name="Owner", email="owner2@example.com", verified_at=datetime.utcnow())
+            buyer = User(role=UserRole.buyer, name="Buyer", email="buyer2@example.com", verified_at=datetime.utcnow())
+            session.add(owner)
+            session.add(buyer)
+            session.commit()
+            session.refresh(owner)
+            session.refresh(buyer)
+
+            listing = make_listing(owner.id, public_bidding_enabled=True)
+            session.add(listing)
+            session.commit()
+            session.refresh(listing)
+
+            create_offer(listing.id, OfferCreate(amount=10_000, visibility="public"), session=session, user=buyer)
+            private_offer = create_offer(listing.id, OfferCreate(amount=12_000, visibility="private"), session=session, user=buyer)
+
+            reject_offer(listing.id, private_offer.id, session=session, user=owner)
+            owner_summary = get_manage_offers(listing.id, session=session, user=owner)
+            public_summary = get_offers(listing.id, session=session, user=None)
+
+        self.assertEqual(owner_summary.offer_count, 0)
+        self.assertEqual(owner_summary.offers, [])
+        self.assertEqual(public_summary.highest_offer, None)
+        self.assertEqual(public_summary.offers, [])
 
     def test_keyword_search_falls_back_to_database_when_opensearch_is_down(self) -> None:
         with Session(self.engine) as session:

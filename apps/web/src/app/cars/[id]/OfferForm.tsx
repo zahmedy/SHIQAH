@@ -68,6 +68,7 @@ export default function OfferForm({
   const [viewerId, setViewerId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [acceptingId, setAcceptingId] = useState<number | null>(null);
+  const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [unacceptingId, setUnacceptingId] = useState<number | null>(null);
   const [confirmAmount, setConfirmAmount] = useState<number | null>(null);
   const [confirmVisibility, setConfirmVisibility] = useState<"public" | "private" | null>(null);
@@ -108,6 +109,8 @@ export default function OfferForm({
     bidder: "Bidder",
     accept: "Accept Offer",
     accepting: "Accepting...",
+    reject: "Reject Offer",
+    rejecting: "Rejecting...",
     accepted: "Accepted",
     acceptedSummary: "An offer has been accepted for this listing.",
     unaccept: "Unaccept Offer",
@@ -126,9 +129,11 @@ export default function OfferForm({
     success: "Bid placed.",
     privateSuccess: "Private offer sent.",
     acceptedSuccess: "Offer accepted and bidding closed.",
+    rejectedSuccess: "Offer rejected.",
     loginRequired: "You must sign in before placing a bid.",
     failed: "Failed to send offer.",
     acceptFailed: "Failed to accept offer.",
+    rejectFailed: "Failed to reject offer.",
   };
 
   const currentSummary = isOwner && ownerSummary ? ownerSummary : summary;
@@ -436,6 +441,50 @@ export default function OfferForm({
     }
   }
 
+  async function handleReject(offerId: number) {
+    if (!API_BASE || !token) {
+      setError(text.loginRequired);
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+    setRejectingId(offerId);
+    try {
+      const res = await fetch(`${API_BASE}/v1/cars/${carId}/offers/${offerId}/reject`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const contentType = res.headers.get("content-type") || "";
+        const payload = contentType.includes("application/json") ? await res.json() : await res.text();
+        const detail = typeof payload === "string" ? payload : payload?.detail;
+        throw new Error(translateApiMessage(locale, detail || text.rejectFailed));
+      }
+
+      setSuccess(text.rejectedSuccess);
+      await Promise.all([loadOffers(), (async () => {
+        const manageRes = await fetch(`${API_BASE}/v1/cars/${carId}/offers/manage`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          cache: "no-store",
+        });
+        if (manageRes.ok) {
+          const data = (await manageRes.json()) as OwnerOfferSummary;
+          setOwnerSummary(data);
+        }
+      })()]);
+    } catch (err) {
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.rejectFailed);
+    } finally {
+      setRejectingId(null);
+    }
+  }
+
   return (
     <section className="offer-panel">
       <h3 className="subheading">{isOwner ? text.ownerTitle : text.title}</h3>
@@ -507,14 +556,24 @@ export default function OfferForm({
                   offer.accepted_at ? (
                     <span className="offer-list-badge">{text.accepted}</span>
                   ) : biddingOpen ? (
-                    <button
-                      type="button"
-                      className="btn btn-secondary offer-list-action"
-                      disabled={acceptingId === offer.id}
-                      onClick={() => void handleAccept(offer.id)}
-                    >
-                      {acceptingId === offer.id ? text.accepting : text.accept}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className="btn btn-secondary offer-list-action"
+                        disabled={acceptingId === offer.id || rejectingId === offer.id}
+                        onClick={() => void handleAccept(offer.id)}
+                      >
+                        {acceptingId === offer.id ? text.accepting : text.accept}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-danger offer-list-action"
+                        disabled={acceptingId === offer.id || rejectingId === offer.id}
+                        onClick={() => void handleReject(offer.id)}
+                      >
+                        {rejectingId === offer.id ? text.rejecting : text.reject}
+                      </button>
+                    </>
                   ) : null
                 ) : null}
               </div>

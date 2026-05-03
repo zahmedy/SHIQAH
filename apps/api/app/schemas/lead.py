@@ -21,6 +21,7 @@ class LeadOut(BaseModel):
     message: Optional[str]
     amount: Optional[int]
     accepted_at: Optional[datetime]
+    rejected_at: Optional[datetime] = None
     channel: str
     created_at: datetime
 

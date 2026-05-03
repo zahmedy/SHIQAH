@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select
 
 from app.db.session import get_session
 from app.models.user import User
@@ -37,63 +37,69 @@ def _accepted_offer_for_car(session: Session, car_id: int) -> Lead | None:
             Lead.car_id == car_id,
             Lead.channel.in_(ALL_OFFER_CHANNELS),
             Lead.amount.is_not(None),
+            Lead.rejected_at.is_(None),
             Lead.accepted_at.is_not(None),
         )
         .order_by(Lead.accepted_at.desc(), Lead.id.desc())
     ).first()
 
 
-def _offer_count_for_car(session: Session, car_id: int) -> int:
-    total_count_result = session.exec(
-        select(func.count()).select_from(Lead).where(
-            Lead.car_id == car_id,
-            Lead.channel.in_(PUBLIC_OFFER_CHANNELS),
-            Lead.amount.is_not(None),
-        )
-    ).one()
-    try:
-        return int(total_count_result)
-    except (TypeError, ValueError):
-        return int(total_count_result[0])
+def _offer_sort_key(offer: Lead) -> tuple[int, float, int]:
+    return (
+        offer.amount or 0,
+        offer.created_at.timestamp() if offer.created_at else 0,
+        offer.id or 0,
+    )
 
 
-def _top_offers_for_car(session: Session, car_id: int, limit: int = 5) -> list[Lead]:
+def _dedupe_highest_offers(offers: list[Lead]) -> list[Lead]:
+    highest_by_buyer: dict[str, Lead] = {}
+    for offer in offers:
+        buyer_key = f"user:{offer.buyer_user_id}" if offer.buyer_user_id is not None else f"offer:{offer.id}"
+        current = highest_by_buyer.get(buyer_key)
+        if current is None or _offer_sort_key(offer) > _offer_sort_key(current):
+            highest_by_buyer[buyer_key] = offer
+    return sorted(highest_by_buyer.values(), key=_offer_sort_key, reverse=True)
+
+
+def _active_offers_for_car(session: Session, car_id: int, channels: set[str]) -> list[Lead]:
     return session.exec(
         select(Lead)
         .where(
             Lead.car_id == car_id,
-            Lead.channel.in_(PUBLIC_OFFER_CHANNELS),
+            Lead.channel.in_(channels),
             Lead.amount.is_not(None),
+            Lead.rejected_at.is_(None),
         )
-        .order_by(Lead.amount.desc(), Lead.created_at.desc())
-        .limit(limit)
+        .order_by(Lead.amount.desc(), Lead.created_at.desc(), Lead.id.desc())
     ).all()
 
 
+def _offer_count_for_car(session: Session, car_id: int) -> int:
+    return len(_dedupe_highest_offers(_active_offers_for_car(session, car_id, PUBLIC_OFFER_CHANNELS)))
+
+
+def _top_offers_for_car(session: Session, car_id: int, limit: int = 5) -> list[Lead]:
+    return _dedupe_highest_offers(_active_offers_for_car(session, car_id, PUBLIC_OFFER_CHANNELS))[:limit]
+
+
 def _viewer_private_offers_for_car(session: Session, car_id: int, viewer_id: int, limit: int = 5) -> list[Lead]:
-    return session.exec(
+    offers = session.exec(
         select(Lead)
         .where(
             Lead.car_id == car_id,
             Lead.channel == "offer_private",
             Lead.buyer_user_id == viewer_id,
             Lead.amount.is_not(None),
+            Lead.rejected_at.is_(None),
         )
         .order_by(Lead.created_at.desc(), Lead.id.desc())
-        .limit(limit)
     ).all()
+    return _dedupe_highest_offers(offers)[:limit]
 
 
 def _highest_offer_amount_for_car(session: Session, car_id: int) -> int | None:
-    offer = session.exec(
-        select(Lead)
-        .where(
-            Lead.car_id == car_id,
-            Lead.channel.in_(PUBLIC_OFFER_CHANNELS),
-            Lead.amount.is_not(None),
-        )
-        .order_by(Lead.amount.desc(), Lead.created_at.desc())
-    ).first()
+    offer = next(iter(_top_offers_for_car(session, car_id, limit=1)), None)
     return offer.amount if offer and offer.amount is not None else None
 
 
@@ -218,14 +224,7 @@ def get_offers(
     offers = _top_offers_for_car(session, car_id)
     if user:
         private_offers = _viewer_private_offers_for_car(session, car_id, user.id or 0)
-        offers = sorted(
-            [*offers, *private_offers],
-            key=lambda offer: (
-                -(offer.amount or 0),
-                -(offer.created_at.timestamp() if offer.created_at else 0),
-                -(offer.id or 0),
-            ),
-        )[:10]
+        offers = _dedupe_highest_offers([*offers, *private_offers])[:10]
     can_view_accepted_offer = (
         accepted_offer is not None
         and (
@@ -254,15 +253,7 @@ def get_manage_offers(
     if user.id != car.owner_id:
         raise HTTPException(status_code=403, detail="Only the listing owner can manage offers")
 
-    offers = session.exec(
-        select(Lead)
-        .where(
-            Lead.car_id == car_id,
-            Lead.channel.in_(ALL_OFFER_CHANNELS),
-            Lead.amount.is_not(None),
-        )
-        .order_by(Lead.amount.desc(), Lead.created_at.desc())
-    ).all()
+    offers = _dedupe_highest_offers(_active_offers_for_car(session, car_id, ALL_OFFER_CHANNELS))
     buyer_ids = sorted({offer.buyer_user_id for offer in offers if offer.buyer_user_id})
     buyers = {}
     if buyer_ids:
@@ -299,6 +290,7 @@ def accept_offer(
             Lead.car_id == car_id,
             Lead.channel.in_(ALL_OFFER_CHANNELS),
             Lead.amount.is_not(None),
+            Lead.rejected_at.is_(None),
         )
     ).first()
     if not offer:
@@ -340,6 +332,7 @@ def unaccept_offer(
             Lead.car_id == car_id,
             Lead.channel.in_(ALL_OFFER_CHANNELS),
             Lead.amount.is_not(None),
+            Lead.rejected_at.is_(None),
         )
     ).first()
     if not offer:
@@ -349,6 +342,60 @@ def unaccept_offer(
 
     offer.accepted_at = None
     session.add(offer)
+    session.commit()
+    session.refresh(offer)
+
+    buyers = {}
+    if offer.buyer_user_id:
+        buyer = session.exec(select(User).where(User.id == offer.buyer_user_id)).first()
+        if buyer and buyer.id is not None:
+            buyers[buyer.id] = buyer
+
+    return _owner_offer_out(offer, buyers)
+
+
+@router.post("/cars/{car_id}/offers/{offer_id}/reject", response_model=OwnerOfferOut)
+def reject_offer(
+    car_id: int,
+    offer_id: int,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
+    car = _load_active_car(session, car_id)
+    if user.id != car.owner_id:
+        raise HTTPException(status_code=403, detail="Only the listing owner can reject offers")
+
+    offer = session.exec(
+        select(Lead).where(
+            Lead.id == offer_id,
+            Lead.car_id == car_id,
+            Lead.channel.in_(ALL_OFFER_CHANNELS),
+            Lead.amount.is_not(None),
+            Lead.rejected_at.is_(None),
+        )
+    ).first()
+    if not offer:
+        raise HTTPException(status_code=404, detail="Offer not found")
+    if offer.accepted_at:
+        raise HTTPException(status_code=400, detail="Unaccept the offer before rejecting it")
+
+    now = datetime.utcnow()
+    offers_to_reject = [offer]
+    if offer.buyer_user_id is not None:
+        offers_to_reject = session.exec(
+            select(Lead).where(
+                Lead.car_id == car_id,
+                Lead.channel.in_(ALL_OFFER_CHANNELS),
+                Lead.amount.is_not(None),
+                Lead.rejected_at.is_(None),
+                Lead.accepted_at.is_(None),
+                Lead.buyer_user_id == offer.buyer_user_id,
+            )
+        ).all()
+
+    for offer_to_reject in offers_to_reject:
+        offer_to_reject.rejected_at = now
+        session.add(offer_to_reject)
     session.commit()
     session.refresh(offer)
 
