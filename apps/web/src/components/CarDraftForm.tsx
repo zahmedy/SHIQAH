@@ -1015,6 +1015,8 @@ export default function CarDraftForm({
 
     const price = parseOptionalInteger(form.price);
     const mileageMiles = parseOptionalInteger(form.mileage);
+    const engineCylinders = parseOptionalInteger(form.engine_cylinders);
+    const engineVolume = parseOptionalFloat(form.engine_volume);
 
     setDescriptionFilling(true);
     try {
@@ -1031,11 +1033,13 @@ export default function CarDraftForm({
           model,
           year,
           price: price && price > 0 ? price : undefined,
-          mileage: mileageMiles !== undefined && mileageMiles >= 0 ? milesToKm(mileageMiles) : undefined,
+          mileage: mileageMiles !== undefined && mileageMiles >= 0 ? mileageMiles : undefined,
           body_type: form.body_type.trim() || undefined,
           transmission: form.transmission.trim() || undefined,
           fuel_type: form.fuel_type.trim() || undefined,
           drivetrain: form.drivetrain.trim() || undefined,
+          engine_cylinders: engineCylinders && engineCylinders > 0 ? engineCylinders : undefined,
+          engine_volume: engineVolume && engineVolume > 0 ? engineVolume : undefined,
           condition: form.condition.trim() || undefined,
           color: form.color.trim() || undefined,
           title: form.title.trim() || undefined,

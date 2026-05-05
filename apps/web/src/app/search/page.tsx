@@ -17,7 +17,6 @@ import {
   DEFAULT_NICHE_ID,
   getNiche,
   nicheBadges,
-  nicheHref,
   nicheScoreLabel,
   type NicheScoreResult,
 } from "@/shared/niches";
@@ -176,16 +175,6 @@ export default async function SearchPage({
         <aside className="panel">
           <form className="filters" method="get">
             <input type="hidden" name="niche" value={selectedNiche.id} />
-            <nav className="home-quick-filters" aria-label="Quick filters">
-              <p className="home-quick-filters-label">Quick filters</p>
-              <div className="home-quick-filter-list">
-                {selectedNiche.searchLinks.slice(0, 3).map((link) => (
-                  <Link key={link.label} href={nicheHref("/search", selectedNiche, link.query)}>
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-            </nav>
             <NearbySearch initialRadiusMi={initialRadiusMi} />
             {params.lat ? <input type="hidden" name="lat" value={params.lat} /> : null}
             {params.lon ? <input type="hidden" name="lon" value={params.lon} /> : null}

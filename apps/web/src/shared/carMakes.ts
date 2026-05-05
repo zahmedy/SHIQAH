@@ -44,7 +44,13 @@ export const CAR_MAKES: CarMake[] = [
     key: "lexus",
     name: "Lexus",
     domain: "lexus.com",
-    models: ["RX 350", "NX 350", "ES 350", "GX 550", "LX 600", "IS 350", "TX 350", "RC 350", "LS 500", "UX 300h"],
+    models: [
+      "CT 200h", "ES 250", "ES 300", "ES 300h", "ES 350", "GS 350", "GX 460", "GX 470", "GX 550",
+      "HS 250h", "IS 250", "IS 300", "IS 350", "IS 500", "LC 500", "LS 460", "LS 500",
+      "LX 570", "LX 600", "NX 250", "NX 300", "NX 300h", "NX 350", "NX 350h",
+      "RC 350", "RX 350", "RX 350h", "RX 450h", "RX 500h", "TX 350", "TX 500h",
+      "UX 200", "UX 250h", "UX 300h",
+    ],
   },
   {
     key: "gmc",
@@ -74,13 +80,13 @@ export const CAR_MAKES: CarMake[] = [
     key: "bmw",
     name: "BMW",
     domain: "bmw.com",
-    models: ["2 Series", "3 Series", "4 Series", "5 Series", "7 Series", "X1", "X3", "X5", "X7", "i4", "iX"],
+    models: ["2 Series", "3 Series", "4 Series", "5 Series", "7 Series", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "i3", "i4", "i5", "i7", "iX"],
   },
   {
     key: "mercedes-benz",
     name: "Mercedes-Benz",
     domain: "mercedes-benz.com",
-    models: ["C-Class", "E-Class", "S-Class", "GLA", "GLC", "GLE", "GLS", "EQB", "EQE", "G-Class"],
+    models: ["A-Class", "C-Class", "E-Class", "S-Class", "CLA", "CLS", "GLA", "GLB", "GLC", "GLE", "GLS", "EQB", "EQE", "EQS", "G-Class", "Sprinter"],
   },
   {
     key: "mitsubishi",
@@ -147,6 +153,54 @@ export const CAR_MAKES: CarMake[] = [
     name: "Subaru",
     domain: "subaru.com",
     models: ["Impreza", "Legacy", "WRX", "Crosstrek", "Forester", "Outback", "Ascent", "BRZ", "Solterra"],
+  },
+  {
+    key: "acura",
+    name: "Acura",
+    domain: "acura.com",
+    models: ["ILX", "Integra", "TL", "TLX", "TSX", "RLX", "MDX", "RDX", "ZDX", "NSX"],
+  },
+  {
+    key: "genesis",
+    name: "Genesis",
+    domain: "genesis.com",
+    models: ["G70", "G80", "G90", "GV60", "GV70", "GV80"],
+  },
+  {
+    key: "volvo",
+    name: "Volvo",
+    domain: "volvocars.com",
+    models: ["S60", "S90", "V60", "V90", "XC40", "XC60", "XC90", "C40", "EX30", "EX90"],
+  },
+  {
+    key: "porsche",
+    name: "Porsche",
+    domain: "porsche.com",
+    models: ["718 Boxster", "718 Cayman", "911", "Panamera", "Macan", "Cayenne", "Taycan"],
+  },
+  {
+    key: "lincoln",
+    name: "Lincoln",
+    domain: "lincoln.com",
+    models: ["MKZ", "Continental", "Corsair", "Nautilus", "Aviator", "Navigator"],
+  },
+  {
+    key: "buick",
+    name: "Buick",
+    domain: "buick.com",
+    models: ["Encore", "Encore GX", "Envista", "Envision", "Enclave", "LaCrosse", "Regal"],
+  },
+  {
+    key: "chrysler",
+    name: "Chrysler",
+    domain: "chrysler.com",
+    models: ["200", "300", "Pacifica", "Voyager", "Town & Country"],
+  },
+  {
+    key: "mini",
+    name: "MINI",
+    domain: "miniusa.com",
+    models: ["Cooper", "Cooper S", "Clubman", "Countryman", "Convertible", "Hardtop 2 Door", "Hardtop 4 Door"],
   },
 ];
 

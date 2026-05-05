@@ -139,7 +139,8 @@ SUPPORTED_MAKES = [
     "Toyota", "Hyundai", "Nissan", "Kia", "Honda", "Lexus", "GMC",
     "Chevrolet", "Ford", "Tesla", "BMW", "Mercedes-Benz", "Mitsubishi",
     "Land Rover", "Jeep", "Dodge", "Ram", "Volkswagen", "Audi", "Mazda",
-    "Infiniti", "Cadillac", "Subaru",
+    "Infiniti", "Cadillac", "Subaru", "Acura", "Genesis", "Volvo",
+    "Porsche", "Lincoln", "Buick", "Chrysler", "MINI",
 ]
 
 MAKE_LOOKUP = {make.lower(): make for make in SUPPORTED_MAKES}
@@ -171,9 +172,12 @@ SUPPORTED_MODELS_BY_MAKE = {
         "Ridgeline", "Prologue", "Fit", "Insight", "Elysion",
     ],
     "Lexus": [
-        "RX 350", "RX 450", "NX 350", "ES 350", "ES 300", "GX 550", "GX 460",
-        "GX 470", "LX 600", "LS 500", "LS 460", "IS 350", "IS 250",
-        "RC 350", "TX 350", "UX 300h", "CT 200h", "HS 250h",
+        "CT 200h", "ES 250", "ES 300", "ES 300h", "ES 350", "GS 350",
+        "GX 460", "GX 470", "GX 550", "HS 250h", "IS 250", "IS 300",
+        "IS 350", "IS 500", "LC 500", "LS 460", "LS 500", "LX 570",
+        "LX 600", "NX 250", "NX 300", "NX 300h", "NX 350", "NX 350h",
+        "RC 350", "RX 350", "RX 350h", "RX 450", "RX 450h", "RX 500h",
+        "TX 350", "TX 500h", "UX 200", "UX 250h", "UX 300h",
     ],
     "GMC": [
         "Terrain", "Acadia", "Yukon", "Yukon XL", "Canyon", "Sierra 1500",
@@ -195,11 +199,12 @@ SUPPORTED_MODELS_BY_MAKE = {
     ],
     "BMW": [
         "2 Series", "3 Series", "4 Series", "5 Series", "7 Series",
-        "X1", "X3", "X5", "X6", "X7", "i4", "iX",
+        "X1", "X2", "X3", "X4", "X5", "X6", "X7", "i3", "i4", "i5", "i7", "iX",
     ],
     "Mercedes-Benz": [
-        "C-Class", "E-Class", "S-Class", "CLA", "CLS", "GLA", "GLC",
-        "GLE", "GLS", "GL", "ML", "EQB", "EQE", "G-Class", "Sprinter", "Vito",
+        "A-Class", "C-Class", "E-Class", "S-Class", "CLA", "CLS", "GLA",
+        "GLB", "GLC", "GLE", "GLS", "GL", "ML", "EQB", "EQE", "EQS",
+        "G-Class", "Sprinter", "Vito",
     ],
     "Mitsubishi": [
         "Mirage", "Outlander", "Outlander Sport", "Eclipse Cross",
@@ -241,6 +246,31 @@ SUPPORTED_MODELS_BY_MAKE = {
         "Impreza", "Legacy", "WRX", "Crosstrek", "Forester", "Outback",
         "Ascent", "BRZ", "Solterra", "XV",
     ],
+    "Acura": [
+        "ILX", "Integra", "TL", "TLX", "TSX", "RLX", "MDX", "RDX", "ZDX", "NSX",
+    ],
+    "Genesis": [
+        "G70", "G80", "G90", "GV60", "GV70", "GV80",
+    ],
+    "Volvo": [
+        "S60", "S90", "V60", "V90", "XC40", "XC60", "XC90", "C40", "EX30", "EX90",
+    ],
+    "Porsche": [
+        "718 Boxster", "718 Cayman", "911", "Panamera", "Macan", "Cayenne", "Taycan",
+    ],
+    "Lincoln": [
+        "MKZ", "Continental", "Corsair", "Nautilus", "Aviator", "Navigator",
+    ],
+    "Buick": [
+        "Encore", "Encore GX", "Envista", "Envision", "Enclave", "LaCrosse", "Regal",
+    ],
+    "Chrysler": [
+        "200", "300", "Pacifica", "Voyager", "Town & Country",
+    ],
+    "MINI": [
+        "Cooper", "Cooper S", "Clubman", "Countryman", "Convertible",
+        "Hardtop 2 Door", "Hardtop 4 Door",
+    ],
 }
 
 MODEL_ALIASES = {
@@ -261,9 +291,13 @@ MODEL_ALIASES = {
     "gx460": "GX 460",
     "gx470": "GX 470",
     "rx450": "RX 450",
+    "rx450h": "RX 450h",
     "es300": "ES 300",
+    "es300h": "ES 300h",
     "ls460": "LS 460",
     "is250": "IS 250",
+    "is300": "IS 300",
+    "is350": "IS 350",
     "ct200h": "CT 200h",
     "hs250h": "HS 250h",
     "cruzelt": "Cruze",

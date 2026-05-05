@@ -97,6 +97,14 @@ SUPPORTED_MAKES = {
     "infiniti": "Infiniti",
     "cadillac": "Cadillac",
     "subaru": "Subaru",
+    "acura": "Acura",
+    "genesis": "Genesis",
+    "volvo": "Volvo",
+    "porsche": "Porsche",
+    "lincoln": "Lincoln",
+    "buick": "Buick",
+    "chrysler": "Chrysler",
+    "mini": "MINI",
 }
 
 def _as_positive_int(value: Any, *, maximum: int | None = None) -> int | None:
