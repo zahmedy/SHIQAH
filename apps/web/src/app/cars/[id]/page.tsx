@@ -7,6 +7,7 @@ import { formatDateTime, formatDistance, formatListingPrice, translateValue, typ
 import { getServerLocale } from "@/lib/server-locale";
 import { getNiche, type NicheScoreResult } from "@/shared/niches";
 import ChatPanel from "./ChatPanel";
+import ListingReportButton from "./ListingReportButton";
 import OfferForm from "./OfferForm";
 import OwnerActions from "./OwnerActions";
 
@@ -235,6 +236,7 @@ export default async function CarDetailPage({
         {!data.contact.email_url && !data.contact.sms_url && !data.contact.whatsapp_url ? (
           <p className="helper-text spaced-top-sm">Seller has not enabled direct messaging.</p>
         ) : null}
+        <ListingReportButton carId={car.id} ownerId={car.owner_id} />
 
         <hr className="separator" />
 

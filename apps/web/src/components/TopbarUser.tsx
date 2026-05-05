@@ -19,6 +19,7 @@ type MeResponse = {
 
 export default function TopbarUser() {
   const [label, setLabel] = useState<string>("");
+  const [isAdmin, setIsAdmin] = useState(false);
   const [ready, setReady] = useState(false);
   const text = {
     loggedIn: "Logged in",
@@ -37,6 +38,7 @@ export default function TopbarUser() {
       const fallbackName = localStorage.getItem(NAME_KEY) || "";
       if (!token) {
         setLabel("");
+        setIsAdmin(false);
         setReady(true);
         return;
       }
@@ -48,6 +50,7 @@ export default function TopbarUser() {
         });
         if (!res.ok) {
           setLabel(fallbackName);
+          setIsAdmin(false);
           setReady(true);
           return;
         }
@@ -71,6 +74,7 @@ export default function TopbarUser() {
           localStorage.setItem(NAME_KEY, resolvedName);
         }
         setLabel(me.user_id ? `@${me.user_id}` : resolvedName || me.email || me.phone_e164 || text.loggedIn);
+        setIsAdmin(me.role === "admin");
       } finally {
         setReady(true);
       }
@@ -101,8 +105,15 @@ export default function TopbarUser() {
   }
 
   return (
-    <Link href="/my-cars" className="user-pill" role="button">
-      {label}
-    </Link>
+    <>
+      {isAdmin ? (
+        <Link href="/admin/reports" className="nav-link">
+          Reports
+        </Link>
+      ) : null}
+      <Link href="/my-cars" className="user-pill" role="button">
+        {label}
+      </Link>
+    </>
   );
 }

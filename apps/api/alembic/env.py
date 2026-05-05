@@ -8,6 +8,7 @@ from sqlmodel import SQLModel, create_engine
 from app.models.user import User  # noqa
 from app.models.car import CarListing, CarMedia  # noqa
 from app.models.lead import Lead  # noqa
+from app.models.report import UserReport  # noqa
 
 config = context.config
 fileConfig(config.config_file_name)

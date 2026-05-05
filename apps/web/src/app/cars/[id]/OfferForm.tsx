@@ -8,6 +8,14 @@ import { formatDateTime, formatPrice, translateApiMessage } from "@/lib/locale";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const TOKEN_KEY = "nicherides_access_token";
+const FALSE_BID_REASONS = [
+  ["fake_bid", "Fake bid"],
+  ["no_show", "No-show after accepted offer"],
+  ["spam", "Spam"],
+  ["could_not_contact", "Could not contact bidder"],
+  ["payment_issue", "Payment issue"],
+  ["other", "Other"],
+] as const;
 
 type OfferEntry = {
   id: number;
@@ -70,6 +78,10 @@ export default function OfferForm({
   const [acceptingId, setAcceptingId] = useState<number | null>(null);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [unacceptingId, setUnacceptingId] = useState<number | null>(null);
+  const [reportingId, setReportingId] = useState<number | null>(null);
+  const [reportOffer, setReportOffer] = useState<OwnerOfferEntry | null>(null);
+  const [reportReason, setReportReason] = useState("fake_bid");
+  const [reportNotes, setReportNotes] = useState("");
   const [confirmAmount, setConfirmAmount] = useState<number | null>(null);
   const [confirmVisibility, setConfirmVisibility] = useState<"public" | "private" | null>(null);
   const [loading, setLoading] = useState(true);
@@ -111,6 +123,14 @@ export default function OfferForm({
     accepting: "Accepting...",
     reject: "Reject Offer",
     rejecting: "Rejecting...",
+    reportFalseBid: "Report false bid",
+    reportingFalseBid: "Reporting...",
+    reportFalseBidTitle: "Report false bid",
+    reportFalseBidHelp: "Reports go to admins for review before any buyer action is taken.",
+    reportReason: "Reason",
+    reportNotes: "Notes optional",
+    reportSubmitted: "False bid report submitted for admin review.",
+    reportFailed: "Failed to submit report.",
     accepted: "Accepted",
     acceptedSummary: "An offer has been accepted for this listing.",
     unaccept: "Unaccept Offer",
@@ -485,6 +505,50 @@ export default function OfferForm({
     }
   }
 
+  async function handleFalseBidReport(event: FormEvent) {
+    event.preventDefault();
+    if (!reportOffer) {
+      return;
+    }
+    if (!API_BASE || !token) {
+      setError(text.loginRequired);
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+    setReportingId(reportOffer.id);
+    try {
+      const res = await fetch(`${API_BASE}/v1/cars/${carId}/offers/${reportOffer.id}/reports`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          reason: reportReason,
+          notes: reportNotes.trim() || undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const contentType = res.headers.get("content-type") || "";
+        const payload = contentType.includes("application/json") ? await res.json() : await res.text();
+        const detail = typeof payload === "string" ? payload : payload?.detail;
+        throw new Error(translateApiMessage(locale, detail || text.reportFailed));
+      }
+
+      setSuccess(text.reportSubmitted);
+      setReportOffer(null);
+      setReportReason("fake_bid");
+      setReportNotes("");
+    } catch (err) {
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.reportFailed);
+    } finally {
+      setReportingId(null);
+    }
+  }
+
   return (
     <section className="offer-panel">
       <h3 className="subheading">{isOwner ? text.ownerTitle : text.title}</h3>
@@ -532,6 +596,18 @@ export default function OfferForm({
             >
               {unacceptingId === acceptedOwnerOffer.id ? text.unaccepting : text.unaccept}
             </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={reportingId === acceptedOwnerOffer.id}
+              onClick={() => {
+                setReportOffer(acceptedOwnerOffer);
+                setError("");
+                setSuccess("");
+              }}
+            >
+              {reportingId === acceptedOwnerOffer.id ? text.reportingFalseBid : text.reportFalseBid}
+            </button>
           </div>
         </div>
       ) : null}
@@ -573,6 +649,20 @@ export default function OfferForm({
                       >
                         {rejectingId === offer.id ? text.rejecting : text.reject}
                       </button>
+                      {isOwnerOfferEntry(offer) ? (
+                        <button
+                          type="button"
+                          className="btn btn-secondary offer-list-action"
+                          disabled={reportingId === offer.id}
+                          onClick={() => {
+                            setReportOffer(offer);
+                            setError("");
+                            setSuccess("");
+                          }}
+                        >
+                          {reportingId === offer.id ? text.reportingFalseBid : text.reportFalseBid}
+                        </button>
+                      ) : null}
                     </>
                   ) : null
                 ) : null}
@@ -672,6 +762,58 @@ export default function OfferForm({
               </button>
             </div>
           </div>
+        </div>
+      ) : null}
+
+      {reportOffer ? (
+        <div className="photo-viewer" role="dialog" aria-modal="true" aria-label={text.reportFalseBidTitle}>
+          <button
+            type="button"
+            className="photo-viewer-backdrop"
+            aria-label={text.cancelBid}
+            onClick={() => {
+              if (reportingId === null) {
+                setReportOffer(null);
+              }
+            }}
+          />
+          <form className="photo-viewer-card offer-confirm-card" onSubmit={handleFalseBidReport}>
+            <h4 className="offer-confirm-title">{text.reportFalseBidTitle}</h4>
+            <p className="offer-confirm-copy">
+              {formatPrice(reportOffer.amount, locale)} · {reportOffer.buyer_user_label || reportOffer.phone_e164 || `#${reportOffer.buyer_user_id ?? reportOffer.id}`}
+            </p>
+            <p className="offer-confirm-copy">{text.reportFalseBidHelp}</p>
+            <label className="label" htmlFor={`false-bid-reason-${reportOffer.id}`}>{text.reportReason}</label>
+            <select
+              id={`false-bid-reason-${reportOffer.id}`}
+              className="select"
+              value={reportReason}
+              onChange={(event) => setReportReason(event.target.value)}
+              disabled={reportingId !== null}
+            >
+              {FALSE_BID_REASONS.map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+            <label className="label spaced-top-sm" htmlFor={`false-bid-notes-${reportOffer.id}`}>{text.reportNotes}</label>
+            <textarea
+              id={`false-bid-notes-${reportOffer.id}`}
+              className="textarea"
+              rows={4}
+              value={reportNotes}
+              onChange={(event) => setReportNotes(event.target.value)}
+              disabled={reportingId !== null}
+              placeholder="Add contact attempts, no-show details, or other context."
+            />
+            <div className="offer-confirm-actions">
+              <button type="button" className="btn btn-secondary" disabled={reportingId !== null} onClick={() => setReportOffer(null)}>
+                {text.cancelBid}
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={reportingId !== null}>
+                {reportingId !== null ? text.reportingFalseBid : text.reportFalseBid}
+              </button>
+            </div>
+          </form>
         </div>
       ) : null}
     </section>
