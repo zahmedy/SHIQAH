@@ -9,7 +9,7 @@ import MakeModelField from "@/components/MakeModelField";
 import { useLocale } from "@/components/LocaleProvider";
 import { translateApiMessage, translateReviewReason, translateStatus, translateValue } from "@/lib/locale";
 import { findNearestCity } from "@/shared/cities";
-import { findMake } from "@/shared/carMakes";
+import { canonicalizeMakeModel } from "@/shared/carMakes";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const TOKEN_KEY = "nicherides_access_token";
@@ -366,24 +366,18 @@ async function getVinPhotoQualityIssue(file: File, text: {
   return null;
 }
 
-function normalizeVehicleToken(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
 function normalizeVinEntry(value: string): string {
   return value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 17);
 }
 
 function normalizeDecodedVehicleFields(data: VinScanResponse) {
-  const makeData = data.make ? findMake(data.make) : undefined;
-  const normalizedModel = data.model && makeData
-    ? makeData.models.find((model) => normalizeVehicleToken(model) === normalizeVehicleToken(data.model || ""))
-    : undefined;
-
-  return {
-    make: makeData?.name ?? data.make,
-    model: normalizedModel ?? data.model,
-  };
+  return canonicalizeMakeModel({
+    make: data.make,
+    model: data.model,
+    year: data.year,
+    fuelType: data.fuel_type,
+    engineVolume: data.engine_volume,
+  });
 }
 
 function buildVinConfirmationRows(data: VinScanResponse): Array<[string, string]> {

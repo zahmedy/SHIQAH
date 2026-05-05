@@ -75,6 +75,7 @@ export default function MakeModelField(props: MakeModelFieldProps) {
 
   const makeData = findMake(selectedMake);
   const models = makeData?.models ?? [];
+  const hasSelectedModelOption = !selectedModel || models.some((model) => model === selectedModel);
 
   const filteredMakes: (CarMake & { logoUrl: string })[] = query.trim()
     ? CAR_MAKES.filter((m) => m.name.toLowerCase().includes(query.toLowerCase())).map((m) => ({ ...m, logoUrl: getLogoUrl(m.domain) }))
@@ -247,6 +248,11 @@ export default function MakeModelField(props: MakeModelFieldProps) {
           >
             {!isControlled && <option value="">{defaultLabels.anyModel}</option>}
             {isControlled && <option value="">— Select model —</option>}
+            {!hasSelectedModelOption && (
+              <option value={selectedModel}>
+                {selectedModel}
+              </option>
+            )}
             {models.map((model) => (
               <option key={model} value={model}>
                 {model}

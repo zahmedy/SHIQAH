@@ -113,6 +113,18 @@ function hasActiveFilters(params: Query): boolean {
   return FILTER_KEYS.some((key) => Boolean(params[key]));
 }
 
+function filterFormKey(params: Query): string {
+  const query = new URLSearchParams();
+  if (params.niche) query.set("niche", params.niche);
+  for (const key of FILTER_KEYS) {
+    const value = params[key];
+    if (value) {
+      query.set(key, value);
+    }
+  }
+  return query.toString() || "empty";
+}
+
 export default async function SearchPage({
   searchParams,
 }: {
@@ -164,6 +176,7 @@ export default async function SearchPage({
   }
   const resultCount = data.items.length;
   const showClearFilters = hasActiveFilters(params) && resultCount > 0 && resultCount <= LOW_RESULT_THRESHOLD;
+  const formKey = filterFormKey(params);
 
   return (
     <main className="page shell">
@@ -173,7 +186,7 @@ export default async function SearchPage({
 
       <section className="search-grid">
         <aside className="panel">
-          <form className="filters" method="get">
+          <form key={formKey} className="filters" method="get">
             <input type="hidden" name="niche" value={selectedNiche.id} />
             <NearbySearch initialRadiusMi={initialRadiusMi} />
             {params.lat ? <input type="hidden" name="lat" value={params.lat} /> : null}

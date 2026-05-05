@@ -2,6 +2,8 @@ import json
 import urllib.parse
 import urllib.request
 
+from app.services.pricing import canonicalize_vehicle_make_model
+
 
 def _clean_value(value: str | None) -> str | None:
     if not value:
@@ -129,18 +131,28 @@ def decode_vin_with_raw(vin: str) -> tuple[dict, dict]:
     if model_year and model_year.isdigit():
         year = int(model_year)
 
+    fuel_type = _map_fuel_type(result.get("FuelTypePrimary"))
+    engine_volume = _parse_positive_float(result.get("DisplacementL"))
+    make, model = canonicalize_vehicle_make_model(
+        result.get("Make"),
+        result.get("Model"),
+        year=year,
+        fuel_type=fuel_type,
+        engine_volume=engine_volume,
+    )
+
     return (
         {
             "vin": vin,
-            "make": _title_vehicle_value(result.get("Make")),
-            "model": _title_vehicle_value(result.get("Model")),
+            "make": make or _title_vehicle_value(result.get("Make")),
+            "model": model or _title_vehicle_value(result.get("Model")),
             "year": year,
             "body_type": _map_body_type(result.get("BodyClass")),
             "transmission": _map_transmission(result.get("TransmissionStyle")),
-            "fuel_type": _map_fuel_type(result.get("FuelTypePrimary")),
+            "fuel_type": fuel_type,
             "drivetrain": _map_drivetrain(result.get("DriveType")),
             "engine_cylinders": _parse_positive_int(result.get("EngineCylinders")),
-            "engine_volume": _parse_positive_float(result.get("DisplacementL")),
+            "engine_volume": engine_volume,
             "message": "VIN detected and decoded.",
         },
         result,

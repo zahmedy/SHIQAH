@@ -144,6 +144,14 @@ SUPPORTED_MAKES = [
 ]
 
 MAKE_LOOKUP = {make.lower(): make for make in SUPPORTED_MAKES}
+MAKE_ALIASES = {
+    "chevy": "Chevrolet",
+    "mercedes": "Mercedes-Benz",
+    "mercedesbenz": "Mercedes-Benz",
+    "landrover": "Land Rover",
+    "vw": "Volkswagen",
+    "mini": "MINI",
+}
 
 SUPPORTED_MODELS_BY_MAKE = {
     "Toyota": [
@@ -366,7 +374,7 @@ def _normalize_make(value: str | None) -> str | None:
     normalized = value.strip().lower()
     if not normalized:
         return None
-    return MAKE_LOOKUP.get(normalized)
+    return MAKE_LOOKUP.get(normalized) or MAKE_ALIASES.get(_make_model_key(normalized))
 
 
 def _normalize_color(value: str | None) -> str | None:
@@ -419,6 +427,101 @@ def _canonicalize_model(make: str | None, raw_model: str | None) -> str | None:
         if raw_key.startswith(model_key):
             return canonical_model
     return None
+
+
+def _model_from_series_specs(
+    make: str | None,
+    raw_model: str | None,
+    *,
+    year: int | None = None,
+    fuel_type: str | None = None,
+    engine_volume: float | None = None,
+) -> str | None:
+    if not make or not raw_model:
+        return None
+
+    raw_key = _make_model_key(raw_model)
+    fuel_key = (fuel_type or "").lower()
+    is_hybrid = "hybrid" in fuel_key
+    displacement = float(engine_volume or 0)
+
+    if make == "Lexus":
+        if raw_key == "ct":
+            return "CT 200h"
+        if raw_key == "hs":
+            return "HS 250h"
+        if raw_key == "is":
+            if displacement >= 4.8:
+                return "IS 500"
+            if displacement >= 3.3:
+                return "IS 350"
+            if displacement >= 2.9 or (year and year >= 2016):
+                return "IS 300"
+            if displacement >= 2.4:
+                return "IS 250"
+        if raw_key == "es":
+            if is_hybrid:
+                return "ES 300h"
+            if displacement >= 3.3:
+                return "ES 350"
+            if displacement >= 2.4:
+                return "ES 250"
+        if raw_key == "gs":
+            return "GS 350"
+        if raw_key == "gx":
+            if displacement >= 5.0 or (year and year >= 2024):
+                return "GX 550"
+            if displacement >= 4.65:
+                return "GX 470"
+            if displacement >= 4.5:
+                return "GX 460"
+        if raw_key == "lx":
+            if displacement >= 5.6:
+                return "LX 570"
+            if displacement >= 3.3 or (year and year >= 2022):
+                return "LX 600"
+        if raw_key == "nx":
+            if is_hybrid:
+                return "NX 350h"
+            if displacement >= 2.35:
+                return "NX 350" if year and year >= 2022 else "NX 300"
+            if displacement >= 2.0:
+                return "NX 250" if year and year >= 2022 else "NX 300"
+        if raw_key == "rx":
+            if is_hybrid and displacement >= 3.3:
+                return "RX 450h"
+            if is_hybrid and displacement >= 2.35:
+                return "RX 500h" if year and year >= 2023 else "RX 350h"
+            return "RX 350"
+        if raw_key == "tx":
+            return "TX 500h" if is_hybrid else "TX 350"
+        if raw_key == "ux":
+            if is_hybrid:
+                return "UX 300h" if year and year >= 2025 else "UX 250h"
+            return "UX 200"
+
+    return None
+
+
+def canonicalize_vehicle_make_model(
+    raw_make: str | None,
+    raw_model: str | None,
+    *,
+    year: int | None = None,
+    fuel_type: str | None = None,
+    engine_volume: float | None = None,
+) -> tuple[str | None, str | None]:
+    make = _normalize_make(raw_make)
+    model = _canonicalize_model(make, raw_model)
+    if not model:
+        model = _model_from_series_specs(
+            make,
+            raw_model,
+            year=year,
+            fuel_type=fuel_type,
+            engine_volume=engine_volume,
+        )
+    return make, model
 
 
 def _normalize_engine_volume(value: float | None) -> float:
