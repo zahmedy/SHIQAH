@@ -16,7 +16,7 @@ export type NicheScoreConfidence = "low" | "medium" | "high";
 export type NicheScoreResult = {
   score: number;
   confidence: NicheScoreConfidence;
-  label: "Strong niche fit" | "Good niche fit" | "Basic niche fit" | "Weak niche fit";
+  label: string;
   reasons: string[];
   warnings: string[];
   missing_signals: string[];
@@ -60,7 +60,7 @@ function emptyNicheScore(): NicheScoreResult {
   return {
     score: 0,
     confidence: "low",
-    label: "Weak niche fit",
+    label: "Weak",
     reasons: [],
     warnings: [],
     missing_signals: ["Niche score unavailable"],
@@ -76,8 +76,24 @@ export function nicheScore(listing: NicheListingSignal, nicheId?: string | null)
   return nicheScoreDetails(listing, nicheId).score;
 }
 
+function nicheFitName(niche: NicheDefinition): string {
+  if (niche.id === DEFAULT_NICHE_ID) return "winter";
+  if (niche.id === "budget_daily_driver") return "budget";
+  return niche.shortName.split(/\s+/)[0]?.toLowerCase() || "niche";
+}
+
+function fitStrength(label: string): "Strong" | "Good" | "Basic" | "Weak" {
+  const normalized = label.trim().toLowerCase();
+  if (normalized.startsWith("strong")) return "Strong";
+  if (normalized.startsWith("good")) return "Good";
+  if (normalized.startsWith("basic")) return "Basic";
+  return "Weak";
+}
+
 export function nicheScoreLabel(listing: NicheListingSignal, nicheId?: string | null): string {
-  return nicheScoreDetails(listing, nicheId).label;
+  const niche = getNiche(nicheId);
+  const details = nicheScoreDetails(listing, niche.id);
+  return `${fitStrength(details.label)} ${nicheFitName(niche)} fit`;
 }
 
 function meaningfulBadge(value: string): boolean {
@@ -110,5 +126,5 @@ export function nicheBadges(listing: NicheListingSignal, _locale: unknown, niche
     return warnings.slice(0, 3);
   }
 
-  return [details.label];
+  return [nicheScoreLabel(listing, nicheId)];
 }

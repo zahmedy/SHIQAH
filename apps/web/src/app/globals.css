@@ -1450,6 +1450,10 @@ a {
   display: block;
 }
 
+.car-photo-strip {
+  display: none;
+}
+
 .car-card:hover {
   transform: translateY(-4px);
   border-color: color-mix(in srgb, var(--brand) 30%, var(--line));
@@ -3011,6 +3015,44 @@ a {
   margin-bottom: 1rem;
 }
 
+.draft-section-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  min-height: 48px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.draft-section-summary::-webkit-details-marker {
+  display: none;
+}
+
+.draft-section-summary::after {
+  content: "+";
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--brand);
+  font-size: 1.1rem;
+  font-weight: 900;
+  background: #ffffff;
+}
+
+.draft-disclosure-section[open] .draft-section-summary {
+  margin-bottom: 1rem;
+}
+
+.draft-disclosure-section[open] .draft-section-summary::after {
+  content: "-";
+}
+
 .draft-kicker {
   margin: 0 0 0.2rem;
   font-size: 0.72rem;
@@ -3968,6 +4010,38 @@ a {
     grid-template-columns: 1fr;
   }
 
+  .car-media-link {
+    display: none;
+  }
+
+  .car-photo-strip {
+    display: flex;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .car-photo-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .car-thumb-strip-image {
+    flex: 0 0 100%;
+    scroll-snap-align: center;
+    background-position: center;
+    background-size: cover;
+  }
+
+  .car-thumb-nav,
+  .car-thumb-count {
+    display: none;
+  }
+
+  .car-card:hover .car-thumb {
+    transform: none;
+  }
+
   .car-detail-page {
     gap: 0.55rem;
   }
@@ -4349,7 +4423,37 @@ a {
     border-radius: 18px;
   }
 
+  .car-media-link {
+    display: none;
+  }
+
+  .car-photo-strip {
+    display: flex;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .car-photo-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .car-thumb-strip-image {
+    flex: 0 0 100%;
+    scroll-snap-align: center;
+  }
+
+  .car-thumb-nav,
+  .car-thumb-count {
+    display: none;
+  }
+
   .car-thumb {
     height: 210px;
+  }
+
+  .car-card:hover .car-thumb {
+    transform: none;
   }
 }

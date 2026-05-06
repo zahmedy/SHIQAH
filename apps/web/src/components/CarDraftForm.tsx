@@ -2329,12 +2329,12 @@ export default function CarDraftForm({
               </div>
             </section>
 
-            <section className="field-section">
-              <div className="draft-section-head">
+            <details className="field-section draft-disclosure-section">
+              <summary className="draft-section-summary">
                 <div>
                   <h2 className="subheading">{text.sectionSpecs}</h2>
                 </div>
-              </div>
+              </summary>
 
               <div className="field-grid field-grid-4">
                 <div className="field-card">
@@ -2477,7 +2477,7 @@ export default function CarDraftForm({
                   </select>
                 </div>
               </div>
-            </section>
+            </details>
 
             <section className="field-section">
               <div className="draft-section-head">

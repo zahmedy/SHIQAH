@@ -103,6 +103,20 @@ export default function HomeListingCard({
             <div className="car-thumb" aria-hidden="true" />
           )}
         </Link>
+        <Link href={href} className="car-photo-strip" aria-label={title}>
+          {orderedPhotos.length ? (
+            orderedPhotos.map((photo, index) => (
+              <span
+                key={photo.id ?? `${photo.public_url}-${index}`}
+                className="car-thumb car-thumb-strip-image"
+                style={{ backgroundImage: `url(${photo.public_url})` }}
+                aria-hidden="true"
+              />
+            ))
+          ) : (
+            <div className="car-thumb car-thumb-strip-image" aria-hidden="true" />
+          )}
+        </Link>
         {hasMultiplePhotos ? (
           <>
             <button

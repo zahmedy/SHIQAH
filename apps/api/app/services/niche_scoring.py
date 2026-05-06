@@ -13,7 +13,7 @@ LOW_MILEAGE_KM = LOW_MILEAGE_MILES * 1.60934
 DAILY_MILEAGE_KM = DAILY_MILEAGE_MILES * 1.60934
 
 NicheScoreConfidence = Literal["low", "medium", "high"]
-NicheScoreLabel = Literal["Strong niche fit", "Good niche fit", "Basic niche fit", "Weak niche fit"]
+NicheScoreLabel = str
 
 
 @dataclass(frozen=True)
@@ -122,24 +122,24 @@ def _confidence_from_signals(signals: list[ScoreSignal]) -> NicheScoreConfidence
     return "low"
 
 
-def _label_for_score(score: int) -> NicheScoreLabel:
+def _label_for_score(score: int, fit_name: str) -> NicheScoreLabel:
     if score >= 80:
-        return "Strong niche fit"
+        return f"Strong {fit_name} fit"
     if score >= 62:
-        return "Good niche fit"
+        return f"Good {fit_name} fit"
     if score >= 42:
-        return "Basic niche fit"
-    return "Weak niche fit"
+        return f"Basic {fit_name} fit"
+    return f"Weak {fit_name} fit"
 
 
-def _finalize_score(signals: list[ScoreSignal]) -> dict[str, Any]:
+def _finalize_score(signals: list[ScoreSignal], fit_name: str) -> dict[str, Any]:
     total_weight = sum(signal.weight for signal in signals)
     raw_score = sum(signal.weight * signal.value for signal in signals)
     score = round(max(0, min(1, raw_score / total_weight if total_weight else 0)) * 100)
     return {
         "score": score,
         "confidence": _confidence_from_signals(signals),
-        "label": _label_for_score(score),
+        "label": _label_for_score(score, fit_name),
         "reasons": _unique_compact_tags(
             signal.reason
             for signal in sorted(signals, key=lambda item: item.weight * item.value, reverse=True)
@@ -225,7 +225,7 @@ def _cold_weather_scorecard(listing: Any) -> dict[str, Any]:
     else:
         signals.append(ScoreSignal(weight=12, value=0.2))
 
-    return _finalize_score(signals)
+    return _finalize_score(signals, "winter")
 
 
 def _budget_daily_scorecard(listing: Any) -> dict[str, Any]:
@@ -294,7 +294,7 @@ def _budget_daily_scorecard(listing: Any) -> dict[str, Any]:
     else:
         signals.append(ScoreSignal(weight=6, value=0, missing="No maintenance, title, ownership, or tire-care note"))
 
-    return _finalize_score(signals)
+    return _finalize_score(signals, "budget")
 
 
 def score_listing_for_niche(listing: Any, niche_id: str | None) -> dict[str, Any]:
