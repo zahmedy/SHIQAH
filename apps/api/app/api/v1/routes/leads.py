@@ -369,9 +369,6 @@ def accept_offer(
     user: User = Depends(get_current_user),
 ):
     car = _load_active_car(session, car_id)
-    if user.id != car.owner_id:
-        raise HTTPException(status_code=403, detail="Only the listing owner can accept offers")
-
     offer = session.exec(
         select(Lead).where(
             Lead.id == offer_id,
@@ -383,6 +380,14 @@ def accept_offer(
     ).first()
     if not offer:
         raise HTTPException(status_code=404, detail="Offer not found")
+
+    is_counteroffer = _is_counteroffer(offer)
+    if is_counteroffer:
+        if user.id != offer.buyer_user_id:
+            raise HTTPException(status_code=403, detail="Only the original bidder can accept a counteroffer")
+    elif user.id != car.owner_id:
+        raise HTTPException(status_code=403, detail="Only the listing owner can accept offers")
+
     if _offer_is_expired(offer):
         raise HTTPException(status_code=400, detail="Offer has expired")
 
@@ -393,16 +398,28 @@ def accept_offer(
     if not offer.accepted_at:
         offer.accepted_at = datetime.utcnow()
         session.add(offer)
-        create_notification(
-            session,
-            user_id=offer.buyer_user_id,
-            actor_user_id=user.id,
-            car_id=car.id,
-            notification_type="offer_accepted",
-            title="Offer accepted",
-            body=f"Your offer of {offer.amount} USD was accepted for {car.year} {car.make} {car.model}.",
-            metadata={"offer_id": offer.id, "amount": offer.amount},
-        )
+        if is_counteroffer:
+            create_notification(
+                session,
+                user_id=car.owner_id,
+                actor_user_id=user.id,
+                car_id=car.id,
+                notification_type="offer_accepted",
+                title="Counteroffer accepted",
+                body=f"Your counteroffer of {offer.amount} USD was accepted for {car.year} {car.make} {car.model}.",
+                metadata={"offer_id": offer.id, "amount": offer.amount, "is_counteroffer": True},
+            )
+        else:
+            create_notification(
+                session,
+                user_id=offer.buyer_user_id,
+                actor_user_id=user.id,
+                car_id=car.id,
+                notification_type="offer_accepted",
+                title="Offer accepted",
+                body=f"Your offer of {offer.amount} USD was accepted for {car.year} {car.make} {car.model}.",
+                metadata={"offer_id": offer.id, "amount": offer.amount, "is_counteroffer": False},
+            )
         session.commit()
         session.refresh(offer)
 

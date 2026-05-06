@@ -130,6 +130,7 @@ export default function OfferForm({
     ownerNoOffers: "No active offers to manage yet.",
     bidder: "Buyer",
     accept: "Accept Offer",
+    acceptCounter: "Accept Counteroffer",
     accepting: "Accepting...",
     reject: "Reject",
     rejecting: "Rejecting...",
@@ -168,6 +169,7 @@ export default function OfferForm({
     invalidAmount: "Enter a valid offer amount.",
     success: "Offer sent.",
     acceptedSuccess: "Offer accepted and offers closed.",
+    counterAcceptedSuccess: "Counteroffer accepted and offers closed.",
     rejectedSuccess: "Offer rejected.",
     loginRequired: "You must sign in before making an offer.",
     failed: "Failed to send offer.",
@@ -362,7 +364,7 @@ export default function OfferForm({
     startOffer();
   }
 
-  async function handleAccept(offerId: number) {
+  async function handleAccept(offerId: number, isCounteroffer = false) {
     if (!API_BASE || !token) {
       setError(text.loginRequired);
       return;
@@ -378,7 +380,7 @@ export default function OfferForm({
       });
       if (!res.ok) throw new Error(await parseApiError(res, text.acceptFailed));
 
-      setSuccess(text.acceptedSuccess);
+      setSuccess(isCounteroffer ? text.counterAcceptedSuccess : text.acceptedSuccess);
       await Promise.all([loadOffers(), reloadOwnerOffers()]);
     } catch (err) {
       setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.acceptFailed);
@@ -623,27 +625,31 @@ export default function OfferForm({
                     <span className="offer-list-badge">{text.accepted}</span>
                   ) : offersOpen ? (
                     <>
-                      <button
-                        type="button"
-                        className="btn btn-secondary offer-list-action"
-                        disabled={acceptingId === offer.id || rejectingId === offer.id || counteringId === offer.id}
-                        onClick={() => void handleAccept(offer.id)}
-                      >
-                        {acceptingId === offer.id ? text.accepting : text.accept}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-secondary offer-list-action"
-                        disabled={acceptingId === offer.id || rejectingId === offer.id || counteringId === offer.id}
-                        onClick={() => {
-                          setCounterOffer(offer);
-                          setCounterAmount("");
-                          setError("");
-                          setSuccess("");
-                        }}
-                      >
-                        {counteringId === offer.id ? text.countering : text.counter}
-                      </button>
+                      {offer.is_counteroffer ? null : (
+                        <>
+                          <button
+                            type="button"
+                            className="btn btn-secondary offer-list-action"
+                            disabled={acceptingId === offer.id || rejectingId === offer.id || counteringId === offer.id}
+                            onClick={() => void handleAccept(offer.id)}
+                          >
+                            {acceptingId === offer.id ? text.accepting : text.accept}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary offer-list-action"
+                            disabled={acceptingId === offer.id || rejectingId === offer.id || counteringId === offer.id}
+                            onClick={() => {
+                              setCounterOffer(offer);
+                              setCounterAmount("");
+                              setError("");
+                              setSuccess("");
+                            }}
+                          >
+                            {counteringId === offer.id ? text.countering : text.counter}
+                          </button>
+                        </>
+                      )}
                       <button
                         type="button"
                         className="btn btn-danger offer-list-action"
@@ -654,6 +660,15 @@ export default function OfferForm({
                       </button>
                     </>
                   ) : null
+                ) : !isOwner && offer.is_counteroffer && !offer.accepted_at && offersOpen ? (
+                  <button
+                    type="button"
+                    className="btn btn-secondary offer-list-action"
+                    disabled={acceptingId === offer.id}
+                    onClick={() => void handleAccept(offer.id, true)}
+                  >
+                    {acceptingId === offer.id ? text.accepting : text.acceptCounter}
+                  </button>
                 ) : null}
               </div>
             </div>

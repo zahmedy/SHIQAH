@@ -22,7 +22,14 @@ from app.api.v1.routes.auth import (
 from app.api.v1.routes.comments import create_comment
 from app.api.v1.routes.me import MeUpdate, update_me
 from app.api.v1.routes.cars import archive_owner_car, restore_archived_owner_car
-from app.api.v1.routes.leads import create_offer, get_manage_offers, get_offers, reject_offer
+from app.api.v1.routes.leads import (
+    accept_offer,
+    counter_offer,
+    create_offer,
+    get_manage_offers,
+    get_offers,
+    reject_offer,
+)
 from app.api.v1.routes.public import public_car_detail
 from app.api.v1.routes.search import _db_search_cars, search_cars
 from app.models.car import CarListing, CarStatus
@@ -30,7 +37,7 @@ from app.models.notification import Notification
 from app.models.user import User, UserRole
 from app.schemas.auth import EmailCodeRequest, EmailCodeVerify
 from app.schemas.chat import ChatMessageCreate
-from app.schemas.lead import OfferCreate
+from app.schemas.lead import CounterOfferCreate, OfferCreate
 from app.services.niche_scoring import BUDGET_DAILY_NICHE_ID, score_listing_for_niche
 from app.services.search_intent import parse_search_intent
 
@@ -461,6 +468,54 @@ class PreDeploymentListingLifecycleTests(unittest.TestCase):
         self.assertEqual(public_summary.offers, [])
         self.assertEqual(len(buyer_notifications), 1)
         self.assertEqual(buyer_notifications[0].car_id, listing_id)
+
+    def test_counteroffer_must_be_accepted_by_original_bidder(self) -> None:
+        with Session(self.engine) as session:
+            owner = User(role=UserRole.seller, name="Owner", email="counter-owner@example.com", verified_at=datetime.utcnow())
+            buyer = User(role=UserRole.buyer, name="Buyer", email="counter-buyer@example.com", verified_at=datetime.utcnow())
+            other_buyer = User(role=UserRole.buyer, name="Other", email="counter-other@example.com", verified_at=datetime.utcnow())
+            session.add(owner)
+            session.add(buyer)
+            session.add(other_buyer)
+            session.commit()
+            session.refresh(owner)
+            session.refresh(buyer)
+            session.refresh(other_buyer)
+
+            listing = make_listing(owner.id)
+            session.add(listing)
+            session.commit()
+            session.refresh(listing)
+
+            offer = create_offer(listing.id, OfferCreate(amount=18_000), session=session, user=buyer)
+            counter = counter_offer(
+                listing.id,
+                offer.id,
+                CounterOfferCreate(amount=19_000),
+                session=session,
+                user=owner,
+            )
+
+            with self.assertRaises(HTTPException) as owner_error:
+                accept_offer(listing.id, counter.id, session=session, user=owner)
+            with self.assertRaises(HTTPException) as other_error:
+                accept_offer(listing.id, counter.id, session=session, user=other_buyer)
+
+            accepted_counter = accept_offer(listing.id, counter.id, session=session, user=buyer)
+            owner_summary = get_manage_offers(listing.id, session=session, user=owner)
+            owner_notifications = session.exec(
+                select(Notification).where(Notification.user_id == owner.id, Notification.type == "offer_accepted")
+            ).all()
+
+        self.assertEqual(owner_error.exception.status_code, 403)
+        self.assertEqual(other_error.exception.status_code, 403)
+        self.assertEqual(accepted_counter.amount, 19_000)
+        self.assertTrue(accepted_counter.is_counteroffer)
+        self.assertIsNotNone(accepted_counter.accepted_at)
+        self.assertFalse(owner_summary.offers_open)
+        self.assertEqual(owner_summary.accepted_offer.amount, 19_000)
+        self.assertEqual(len(owner_notifications), 1)
+        self.assertEqual(owner_notifications[0].title, "Counteroffer accepted")
 
     def test_comment_creates_owner_notification(self) -> None:
         with Session(self.engine) as session:
