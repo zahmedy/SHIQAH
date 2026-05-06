@@ -57,6 +57,7 @@ class OwnerOfferOut(BaseModel):
     buyer_user_id: Optional[int] = None
     buyer_user_label: Optional[str] = None
     phone_e164: Optional[str] = None
+    false_bid_report_count: int = 0
 
 
 class OwnerOfferSummaryOut(BaseModel):

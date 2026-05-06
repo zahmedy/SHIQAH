@@ -38,6 +38,7 @@ type OwnerOfferEntry = OfferEntry & {
   buyer_user_id: number | null;
   buyer_user_label: string | null;
   phone_e164: string | null;
+  false_bid_report_count: number;
 };
 
 type OwnerOfferSummary = {
@@ -123,10 +124,11 @@ export default function OfferForm({
     accepting: "Accepting...",
     reject: "Reject Offer",
     rejecting: "Rejecting...",
-    reportFalseBid: "Report false bid",
-    reportingFalseBid: "Reporting...",
-    reportFalseBidTitle: "Report false bid",
+    reportFalseBid: "Flag false bid",
+    reportingFalseBid: "Flagging...",
+    reportFalseBidTitle: "Flag false bid",
     reportFalseBidHelp: "Reports go to admins for review before any buyer action is taken.",
+    flaggedFalseBid: "Flagged for admin review",
     reportReason: "Reason",
     reportNotes: "Notes optional",
     reportSubmitted: "False bid report submitted for admin review.",
@@ -539,6 +541,19 @@ export default function OfferForm({
       }
 
       setSuccess(text.reportSubmitted);
+      setOwnerSummary((current) => {
+        if (!current) return current;
+        const markFlagged = (offer: OwnerOfferEntry) => (
+          offer.id === reportOffer.id
+            ? { ...offer, false_bid_report_count: Math.max(1, offer.false_bid_report_count || 0) }
+            : offer
+        );
+        return {
+          ...current,
+          accepted_offer: current.accepted_offer ? markFlagged(current.accepted_offer) : null,
+          offers: current.offers.map(markFlagged),
+        };
+      });
       setReportOffer(null);
       setReportReason("fake_bid");
       setReportNotes("");
@@ -572,6 +587,9 @@ export default function OfferForm({
         <div className="offer-contact-card spaced-top-sm">
           <p className="offer-list-title">{text.acceptedContactTitle}</p>
           {acceptedBidderLabel ? <p className="car-meta">{acceptedBidderLabel}</p> : null}
+          {acceptedOwnerOffer.false_bid_report_count > 0 ? (
+            <p className="offer-list-badge">{text.flaggedFalseBid}</p>
+          ) : null}
           {acceptedBidderPhone ? (
             <>
               <p className="car-meta">{text.bidderPhone}: {acceptedBidderPhone}</p>
@@ -599,14 +617,14 @@ export default function OfferForm({
             <button
               type="button"
               className="btn btn-secondary"
-              disabled={reportingId === acceptedOwnerOffer.id}
+              disabled={reportingId === acceptedOwnerOffer.id || acceptedOwnerOffer.false_bid_report_count > 0}
               onClick={() => {
                 setReportOffer(acceptedOwnerOffer);
                 setError("");
                 setSuccess("");
               }}
             >
-              {reportingId === acceptedOwnerOffer.id ? text.reportingFalseBid : text.reportFalseBid}
+              {acceptedOwnerOffer.false_bid_report_count > 0 ? text.flaggedFalseBid : reportingId === acceptedOwnerOffer.id ? text.reportingFalseBid : text.reportFalseBid}
             </button>
           </div>
         </div>
@@ -622,6 +640,7 @@ export default function OfferForm({
               <div className="offer-list-body">
                 <strong>{formatPrice(offer.amount, locale)}</strong>
                 {offer.visibility === "private" ? <span>{text.privateBadge}</span> : null}
+                {isOwnerOfferEntry(offer) && offer.false_bid_report_count > 0 ? <span>{text.flaggedFalseBid}</span> : null}
                 {isOwner && isOwnerOfferEntry(offer) ? (
                   <span>{text.bidder}: {offer.buyer_user_label || offer.phone_e164 || `#${offer.buyer_user_id ?? offer.id}`}</span>
                 ) : null}
@@ -653,14 +672,14 @@ export default function OfferForm({
                         <button
                           type="button"
                           className="btn btn-secondary offer-list-action"
-                          disabled={reportingId === offer.id}
+                          disabled={reportingId === offer.id || offer.false_bid_report_count > 0}
                           onClick={() => {
                             setReportOffer(offer);
                             setError("");
                             setSuccess("");
                           }}
                         >
-                          {reportingId === offer.id ? text.reportingFalseBid : text.reportFalseBid}
+                          {offer.false_bid_report_count > 0 ? text.flaggedFalseBid : reportingId === offer.id ? text.reportingFalseBid : text.reportFalseBid}
                         </button>
                       ) : null}
                     </>

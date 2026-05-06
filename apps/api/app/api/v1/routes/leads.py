@@ -7,6 +7,7 @@ from app.db.session import get_session
 from app.models.user import User
 from app.models.car import CarListing, CarStatus
 from app.models.lead import Lead
+from app.models.report import ReportType, UserReport
 from app.schemas.lead import (
     LeadCreate,
     LeadOut,
@@ -137,7 +138,25 @@ def _offer_out(offer: Lead) -> OfferOut:
     )
 
 
-def _owner_offer_out(offer: Lead, buyers: dict[int, User]) -> OwnerOfferOut:
+def _false_bid_report_counts(session: Session, car_id: int, offer_ids: list[int]) -> dict[int, int]:
+    if not offer_ids:
+        return {}
+
+    reports = session.exec(
+        select(UserReport).where(
+            UserReport.car_id == car_id,
+            UserReport.offer_id.in_(offer_ids),
+            UserReport.report_type == ReportType.false_bid,
+        )
+    ).all()
+    counts: dict[int, int] = {}
+    for report in reports:
+        if report.offer_id is not None:
+            counts[report.offer_id] = counts.get(report.offer_id, 0) + 1
+    return counts
+
+
+def _owner_offer_out(offer: Lead, buyers: dict[int, User], false_bid_report_count: int = 0) -> OwnerOfferOut:
     buyer = buyers.get(offer.buyer_user_id or -1)
     buyer_label = None
     if buyer:
@@ -151,6 +170,7 @@ def _owner_offer_out(offer: Lead, buyers: dict[int, User]) -> OwnerOfferOut:
         buyer_user_id=offer.buyer_user_id,
         buyer_user_label=buyer_label,
         phone_e164=offer.phone_e164,
+        false_bid_report_count=false_bid_report_count,
     )
 
 
@@ -318,14 +338,15 @@ def get_manage_offers(
 
     accepted_offer = _accepted_offer_for_car(session, car_id)
     highest_offer = offers[0].amount if offers else None
+    report_counts = _false_bid_report_counts(session, car_id, [offer.id or 0 for offer in offers if offer.id])
 
     return OwnerOfferSummaryOut(
         highest_offer=highest_offer,
         offer_count=len(offers),
         bidding_open=accepted_offer is None,
         public_bidding_enabled=car.public_bidding_enabled,
-        accepted_offer=_owner_offer_out(accepted_offer, buyers) if accepted_offer else None,
-        offers=[_owner_offer_out(offer, buyers) for offer in offers],
+        accepted_offer=_owner_offer_out(accepted_offer, buyers, report_counts.get(accepted_offer.id or 0, 0)) if accepted_offer else None,
+        offers=[_owner_offer_out(offer, buyers, report_counts.get(offer.id or 0, 0)) for offer in offers],
     )
 
 
@@ -378,7 +399,8 @@ def accept_offer(
         if buyer and buyer.id is not None:
             buyers[buyer.id] = buyer
 
-    return _owner_offer_out(offer, buyers)
+    report_counts = _false_bid_report_counts(session, car_id, [offer.id or 0] if offer.id else [])
+    return _owner_offer_out(offer, buyers, report_counts.get(offer.id or 0, 0))
 
 
 @router.post("/cars/{car_id}/offers/{offer_id}/unaccept", response_model=OwnerOfferOut)
@@ -417,7 +439,8 @@ def unaccept_offer(
         if buyer and buyer.id is not None:
             buyers[buyer.id] = buyer
 
-    return _owner_offer_out(offer, buyers)
+    report_counts = _false_bid_report_counts(session, car_id, [offer.id or 0] if offer.id else [])
+    return _owner_offer_out(offer, buyers, report_counts.get(offer.id or 0, 0))
 
 
 @router.post("/cars/{car_id}/offers/{offer_id}/reject", response_model=OwnerOfferOut)
@@ -481,7 +504,8 @@ def reject_offer(
         if buyer and buyer.id is not None:
             buyers[buyer.id] = buyer
 
-    return _owner_offer_out(offer, buyers)
+    report_counts = _false_bid_report_counts(session, car_id, [offer.id or 0] if offer.id else [])
+    return _owner_offer_out(offer, buyers, report_counts.get(offer.id or 0, 0))
 
 
 @router.get("/seller/leads", response_model=list[LeadOut])

@@ -131,6 +131,16 @@ def report_false_bid(
     ).first()
     if not offer:
         raise HTTPException(status_code=404, detail="Offer not found")
+    existing_report = session.exec(
+        select(UserReport).where(
+            UserReport.report_type == ReportType.false_bid,
+            UserReport.car_id == car_id,
+            UserReport.offer_id == offer_id,
+            UserReport.reporter_user_id == user.id,
+        )
+    ).first()
+    if existing_report:
+        raise HTTPException(status_code=409, detail="This bid has already been flagged for admin review")
 
     report = UserReport(
         report_type=ReportType.false_bid,
