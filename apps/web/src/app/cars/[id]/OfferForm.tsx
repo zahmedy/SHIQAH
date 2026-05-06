@@ -127,12 +127,13 @@ export default function OfferForm({
     reportFalseBid: "Flag false bid",
     reportingFalseBid: "Flagging...",
     reportFalseBidTitle: "Flag false bid",
-    reportFalseBidHelp: "Reports go to admins for review before any buyer action is taken.",
+    reportFalseBidHelp: "Only accepted bids can be flagged. Reports go to admins for review before any buyer action is taken.",
     flaggedFalseBid: "Flagged for admin review",
     reportReason: "Reason",
     reportNotes: "Notes optional",
     reportSubmitted: "False bid report submitted for admin review.",
     reportFailed: "Failed to submit report.",
+    reportAcceptedOnly: "Only an accepted bid can be flagged.",
     accepted: "Accepted",
     acceptedSummary: "An offer has been accepted for this listing.",
     unaccept: "Unaccept Offer",
@@ -512,6 +513,11 @@ export default function OfferForm({
     if (!reportOffer) {
       return;
     }
+    if (!reportOffer.accepted_at) {
+      setError(text.reportAcceptedOnly);
+      setReportOffer(null);
+      return;
+    }
     if (!API_BASE || !token) {
       setError(text.loginRequired);
       return;
@@ -668,20 +674,6 @@ export default function OfferForm({
                       >
                         {rejectingId === offer.id ? text.rejecting : text.reject}
                       </button>
-                      {isOwnerOfferEntry(offer) ? (
-                        <button
-                          type="button"
-                          className="btn btn-secondary offer-list-action"
-                          disabled={reportingId === offer.id || offer.false_bid_report_count > 0}
-                          onClick={() => {
-                            setReportOffer(offer);
-                            setError("");
-                            setSuccess("");
-                          }}
-                        >
-                          {offer.false_bid_report_count > 0 ? text.flaggedFalseBid : reportingId === offer.id ? text.reportingFalseBid : text.reportFalseBid}
-                        </button>
-                      ) : null}
                     </>
                   ) : null
                 ) : null}

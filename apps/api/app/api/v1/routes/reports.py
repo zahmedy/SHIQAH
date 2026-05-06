@@ -127,10 +127,14 @@ def report_false_bid(
             Lead.car_id == car_id,
             Lead.amount.is_not(None),
             Lead.channel.in_(["offer", "offer_public", "offer_private"]),
+            Lead.rejected_at.is_(None),
         )
     ).first()
     if not offer:
         raise HTTPException(status_code=404, detail="Offer not found")
+    if not offer.accepted_at:
+        raise HTTPException(status_code=400, detail="Only an accepted bid can be flagged")
+
     existing_report = session.exec(
         select(UserReport).where(
             UserReport.report_type == ReportType.false_bid,
