@@ -1,4 +1,6 @@
 import uuid
+from pathlib import PurePath
+
 import boto3
 from botocore.config import Config
 
@@ -27,8 +29,21 @@ def s3_client(endpoint_url: str | None = None):
         config=S3_CLIENT_CONFIG,
     )
 
+IMAGE_EXTENSIONS = {
+    "gif",
+    "heic",
+    "heif",
+    "jpeg",
+    "jpg",
+    "png",
+    "webp",
+}
+
+
 def make_storage_key(car_id: int, filename: str) -> str:
-    ext = filename.split(".")[-1].lower()
+    cleaned_filename = PurePath(str(filename or "upload.jpg").replace("\\", "/")).name
+    suffix = PurePath(cleaned_filename).suffix.lower().lstrip(".")
+    ext = suffix if suffix in IMAGE_EXTENSIONS else "jpg"
     return f"cars/{car_id}/{uuid.uuid4().hex}.{ext}"
 
 def presign_put(storage_key: str, content_type: str, endpoint_url: str | None = None) -> str:

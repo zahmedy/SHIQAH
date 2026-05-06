@@ -245,7 +245,70 @@ async function parseApiError(res: Response): Promise<string> {
   const contentType = res.headers.get("content-type") || "";
   const payload = contentType.includes("application/json") ? await res.json() : await res.text();
   const detail = typeof payload === "string" ? payload : payload?.detail;
-  return translateApiMessage("en", detail || `Failed with status ${res.status}`);
+  const message = formatApiDetail(detail) || `Failed with status ${res.status}`;
+  return translateApiMessage("en", message);
+}
+
+function formatApiDetail(detail: unknown): string {
+  if (!detail) return "";
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (!item || typeof item !== "object") return "";
+        const record = item as { loc?: unknown; msg?: unknown };
+        const loc = Array.isArray(record.loc)
+          ? record.loc.filter((part) => part !== "body").join(".")
+          : "";
+        const msg = typeof record.msg === "string" ? record.msg : "";
+        return [loc, msg].filter(Boolean).join(": ");
+      })
+      .filter(Boolean)
+      .join("; ");
+  }
+  if (typeof detail === "object") {
+    const record = detail as { message?: unknown; msg?: unknown };
+    if (typeof record.message === "string") return record.message;
+    if (typeof record.msg === "string") return record.msg;
+  }
+  return "";
+}
+
+function getFileExtension(fileName: string): string {
+  const match = /\.([a-z0-9]+)$/i.exec(fileName.trim());
+  return match?.[1]?.toLowerCase() || "";
+}
+
+function inferImageContentType(file: File): string {
+  if (file.type.startsWith("image/")) {
+    return file.type.toLowerCase();
+  }
+
+  switch (getFileExtension(file.name)) {
+    case "gif":
+      return "image/gif";
+    case "heic":
+      return "image/heic";
+    case "heif":
+      return "image/heif";
+    case "jpeg":
+    case "jpg":
+      return "image/jpeg";
+    case "png":
+      return "image/png";
+    case "webp":
+      return "image/webp";
+    default:
+      return "image/jpeg";
+  }
+}
+
+function isImageFile(file: File): boolean {
+  return (
+    file.type.startsWith("image/") ||
+    ["gif", "heic", "heif", "jpeg", "jpg", "png", "webp"].includes(getFileExtension(file.name))
+  );
 }
 
 function readFileAsBase64(file: File): Promise<string> {
@@ -916,7 +979,7 @@ export default function CarDraftForm({
     setVinStatusTone("");
     setPendingVinData(null);
 
-    if (!file.type.startsWith("image/")) {
+    if (!isImageFile(file)) {
       setVinStatusTone("error");
       setVinStatus(text.imagesOnly);
       return;
@@ -960,7 +1023,7 @@ export default function CarDraftForm({
         },
         body: JSON.stringify({
           image_base64: imageBase64,
-          content_type: file.type || "image/jpeg",
+          content_type: inferImageContentType(file),
         }),
       });
 
@@ -1336,7 +1399,7 @@ export default function CarDraftForm({
       if (pendingPreviews.length > 0) {
         const uploadResult = await uploadSelectedPhotos(saved.id, pendingPreviews.map((preview) => preview.file), pendingPreviews);
         if (uploadResult.failedCount > 0) {
-          setError(text.photosAddFailed(uploadResult.failedCount));
+          setError(uploadResult.errorMessage || text.photosAddFailed(uploadResult.failedCount));
           return;
         }
       }
@@ -1383,7 +1446,7 @@ export default function CarDraftForm({
       if (pendingPreviews.length > 0) {
         const uploadResult = await uploadSelectedPhotos(saved.id, pendingPreviews.map((preview) => preview.file), pendingPreviews);
         if (uploadResult.failedCount > 0) {
-          setError(text.photosAddFailed(uploadResult.failedCount));
+          setError(uploadResult.errorMessage || text.photosAddFailed(uploadResult.failedCount));
           return;
         }
         if (uploadResult.totalPhotos < 4) {
@@ -1506,7 +1569,7 @@ export default function CarDraftForm({
     targetCarIdOverride?: number,
     filesToUpload?: File[],
     previewsToClear?: PendingPhotoPreview[],
-  ): Promise<{ uploadedCount: number; failedCount: number; totalPhotos: number }> {
+  ): Promise<{ uploadedCount: number; failedCount: number; totalPhotos: number; errorMessage?: string }> {
     setUploadError("");
     setUploadSuccess("");
 
@@ -1528,7 +1591,7 @@ export default function CarDraftForm({
       return { uploadedCount: 0, failedCount: 0, totalPhotos: photos.length };
     }
 
-    const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+    const imageFiles = files.filter(isImageFile);
     if (imageFiles.length === 0) {
       setUploadError(text.imagesOnly);
       return { uploadedCount: 0, failedCount: 0, totalPhotos: photos.length };
@@ -1546,19 +1609,24 @@ export default function CarDraftForm({
 
     let uploadedCount = 0;
     let failedCount = 0;
+    let firstUploadError = "";
     const nextPhotos = [...photos];
     const pendingCoverFile = previewsToClear?.find((preview) => preview.id === pendingMainPreviewId)?.file ?? null;
 
     for (const file of imageFiles) {
       try {
-        const contentType = file.type || "application/octet-stream";
+        const contentType = inferImageContentType(file);
         const presignRes = await fetch(`${API_BASE}/v1/cars/${targetCarId}/media/presign`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ filename: file.name, content_type: contentType }),
+          body: JSON.stringify({
+            filename: file.name || "upload.jpg",
+            content_type: contentType,
+            contentType,
+          }),
         });
 
         if (!presignRes.ok) {
@@ -1612,8 +1680,11 @@ export default function CarDraftForm({
           is_cover: isCover,
         });
         uploadedCount += 1;
-      } catch {
+      } catch (err) {
         failedCount += 1;
+        if (!firstUploadError) {
+          firstUploadError = err instanceof Error ? translateApiMessage(locale, err.message) : text.photosAddFailed(1);
+        }
       }
     }
 
@@ -1622,8 +1693,9 @@ export default function CarDraftForm({
     if (uploadedCount > 0) {
       setUploadSuccess(text.photosAdded(uploadedCount));
     }
-    if (failedCount > 0) {
-      setUploadError(text.photosAddFailed(failedCount));
+    const errorMessage = failedCount > 0 ? firstUploadError || text.photosAddFailed(failedCount) : undefined;
+    if (errorMessage) {
+      setUploadError(errorMessage);
     }
 
     for (const preview of previewsToClear ?? []) {
@@ -1635,7 +1707,7 @@ export default function CarDraftForm({
       );
     }
     setUploading(false);
-    return { uploadedCount, failedCount, totalPhotos: normalizedPhotos.length };
+    return { uploadedCount, failedCount, totalPhotos: normalizedPhotos.length, errorMessage };
   }
 
   function handlePhotoSelection(files: FileList | null) {
@@ -1645,7 +1717,7 @@ export default function CarDraftForm({
       return;
     }
 
-    const imageFiles = nextFiles.filter((file) => file.type.startsWith("image/"));
+    const imageFiles = nextFiles.filter(isImageFile);
     if (imageFiles.length === 0) {
       setUploadError(text.imagesOnly);
       return;

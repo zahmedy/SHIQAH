@@ -93,6 +93,17 @@ const FILTER_KEYS = [
   "radius_mi",
   "radius_km",
 ] as const;
+const COUNTED_FILTER_KEYS = [
+  "city",
+  "make",
+  "model",
+  "q",
+  "price_max",
+  "mileage_max",
+  "fuel_type",
+  "drivetrain",
+  "body_type",
+] as const;
 
 function locationUserAndTime(locale: Locale, city?: string, district?: string, sellerUserId?: string, publishedAt?: string) {
   const parts = [];
@@ -110,7 +121,25 @@ function locationUserAndTime(locale: Locale, city?: string, district?: string, s
 
 function hasActiveFilters(params: Query): boolean {
   if (params.niche && params.niche !== DEFAULT_NICHE_ID) return true;
-  return FILTER_KEYS.some((key) => Boolean(params[key]));
+  if (COUNTED_FILTER_KEYS.some((key) => Boolean(params[key]))) return true;
+  if (params.sort && params.sort !== "newest") return true;
+  return Boolean(params.lat || params.lon || params.radius_mi || params.radius_km);
+}
+
+function activeFilterCount(params: Query): number {
+  let count = params.niche && params.niche !== DEFAULT_NICHE_ID ? 1 : 0;
+  for (const key of COUNTED_FILTER_KEYS) {
+    if (params[key]) {
+      count += 1;
+    }
+  }
+  if (params.sort && params.sort !== "newest") {
+    count += 1;
+  }
+  if (params.lat || params.lon || params.radius_mi || params.radius_km) {
+    count += 1;
+  }
+  return count;
 }
 
 function filterFormKey(params: Query): string {
@@ -176,6 +205,7 @@ export default async function SearchPage({
   }
   const resultCount = data.items.length;
   const showClearFilters = hasActiveFilters(params) && resultCount > 0 && resultCount <= LOW_RESULT_THRESHOLD;
+  const filterCount = activeFilterCount(params);
   const formKey = filterFormKey(params);
 
   return (
@@ -185,88 +215,94 @@ export default async function SearchPage({
       </section>
 
       <section className="search-grid">
-        <aside className="panel">
-          <form key={formKey} className="filters" method="get">
-            <input type="hidden" name="niche" value={selectedNiche.id} />
-            <NearbySearch initialRadiusMi={initialRadiusMi} />
-            {params.lat ? <input type="hidden" name="lat" value={params.lat} /> : null}
-            {params.lon ? <input type="hidden" name="lon" value={params.lon} /> : null}
-            {params.radius_mi ? <input type="hidden" name="radius_mi" value={params.radius_mi} /> : null}
-            <div>
-              <label className="label" htmlFor="q">Keyword</label>
-              <input id="q" name="q" defaultValue={params.q ?? ""} placeholder="snow tires, heated seats, Bolt" className="input" />
-            </div>
-
-            <CityField
-              id="city"
-              label="City"
-              name="city"
-              defaultValue={params.city ?? ""}
-              blankLabel="Any city"
-              helperText="Search any city or use Nearby."
-              otherPlaceholder="Enter another city"
-            />
-
-            <MakeModelField
-              defaultMake={params.make ?? ""}
-              defaultModel={params.model ?? ""}
-            />
-
-            <div className="form-grid form-grid-2">
+        <aside className="panel search-filter-card">
+          <details className="search-filter-details">
+            <summary className="search-filter-summary">
+              <span>Search filters</span>
+              <span>{filterCount > 0 ? `${filterCount} active` : "Refine results"}</span>
+            </summary>
+            <form key={formKey} className="filters" method="get">
+              <input type="hidden" name="niche" value={selectedNiche.id} />
+              <NearbySearch initialRadiusMi={initialRadiusMi} />
+              {params.lat ? <input type="hidden" name="lat" value={params.lat} /> : null}
+              {params.lon ? <input type="hidden" name="lon" value={params.lon} /> : null}
+              {params.radius_mi ? <input type="hidden" name="radius_mi" value={params.radius_mi} /> : null}
               <div>
-                <label className="label" htmlFor="price_max">Max Price</label>
-                <input id="price_max" name="price_max" defaultValue={params.price_max ?? ""} placeholder="30000" className="input" inputMode="numeric" />
+                <label className="label" htmlFor="q">Keyword</label>
+                <input id="q" name="q" defaultValue={params.q ?? ""} placeholder="snow tires, heated seats, Bolt" className="input" />
               </div>
-              <div>
-                <label className="label" htmlFor="mileage_max">Max Mileage</label>
-                <input id="mileage_max" name="mileage_max" defaultValue={params.mileage_max ?? ""} placeholder="100000" className="input" inputMode="numeric" />
-              </div>
-            </div>
 
-            <div className="form-grid form-grid-2">
-              <div>
-                <label className="label" htmlFor="fuel_type">Fuel</label>
-                <select id="fuel_type" name="fuel_type" defaultValue={params.fuel_type ?? ""} className="select">
-                  <option value="">Any fuel</option>
-                  {FUEL_TYPE_OPTIONS.map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="label" htmlFor="drivetrain">Drivetrain</label>
-                <select id="drivetrain" name="drivetrain" defaultValue={params.drivetrain ?? ""} className="select">
-                  <option value="">Any drivetrain</option>
-                  {DRIVETRAIN_OPTIONS.map((value) => (
-                    <option key={value} value={value}>{value}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+              <CityField
+                id="city"
+                label="City"
+                name="city"
+                defaultValue={params.city ?? ""}
+                blankLabel="Any city"
+                helperText="Search any city or use Nearby."
+                otherPlaceholder="Enter another city"
+              />
 
-            <div className="form-grid form-grid-2">
-              <div>
-                <label className="label" htmlFor="body_type">Body</label>
-                <select id="body_type" name="body_type" defaultValue={params.body_type ?? ""} className="select">
-                  <option value="">Any body</option>
-                  {BODY_TYPE_OPTIONS.map((value) => (
-                    <option key={value} value={value}>{value}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="label" htmlFor="sort">Sort</label>
-                <select id="sort" name="sort" defaultValue={params.sort ?? "newest"} className="select">
-                  <option value="newest">Newest</option>
-                  <option value="price_asc">Lowest price</option>
-                  <option value="price_desc">Highest price</option>
-                  <option value="mileage_asc">Lowest mileage</option>
-                </select>
-              </div>
-            </div>
+              <MakeModelField
+                defaultMake={params.make ?? ""}
+                defaultModel={params.model ?? ""}
+              />
 
-            <button type="submit" className="btn btn-primary">Show Cars</button>
-          </form>
+              <div className="form-grid form-grid-2">
+                <div>
+                  <label className="label" htmlFor="price_max">Max Price</label>
+                  <input id="price_max" name="price_max" defaultValue={params.price_max ?? ""} placeholder="30000" className="input" inputMode="numeric" />
+                </div>
+                <div>
+                  <label className="label" htmlFor="mileage_max">Max Mileage</label>
+                  <input id="mileage_max" name="mileage_max" defaultValue={params.mileage_max ?? ""} placeholder="100000" className="input" inputMode="numeric" />
+                </div>
+              </div>
+
+              <div className="form-grid form-grid-2">
+                <div>
+                  <label className="label" htmlFor="fuel_type">Fuel</label>
+                  <select id="fuel_type" name="fuel_type" defaultValue={params.fuel_type ?? ""} className="select">
+                    <option value="">Any fuel</option>
+                    {FUEL_TYPE_OPTIONS.map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="label" htmlFor="drivetrain">Drivetrain</label>
+                  <select id="drivetrain" name="drivetrain" defaultValue={params.drivetrain ?? ""} className="select">
+                    <option value="">Any drivetrain</option>
+                    {DRIVETRAIN_OPTIONS.map((value) => (
+                      <option key={value} value={value}>{value}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-grid form-grid-2">
+                <div>
+                  <label className="label" htmlFor="body_type">Body</label>
+                  <select id="body_type" name="body_type" defaultValue={params.body_type ?? ""} className="select">
+                    <option value="">Any body</option>
+                    {BODY_TYPE_OPTIONS.map((value) => (
+                      <option key={value} value={value}>{value}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="label" htmlFor="sort">Sort</label>
+                  <select id="sort" name="sort" defaultValue={params.sort ?? "newest"} className="select">
+                    <option value="newest">Newest</option>
+                    <option value="price_asc">Lowest price</option>
+                    <option value="price_desc">Highest price</option>
+                    <option value="mileage_asc">Lowest mileage</option>
+                  </select>
+                </div>
+              </div>
+
+              <button type="submit" className="btn btn-primary">Show Cars</button>
+            </form>
+          </details>
         </aside>
 
         <section>
