@@ -128,6 +128,11 @@ function SpecSection({
   );
 }
 
+function compactFact(value?: string | number | null) {
+  if (value === null || value === undefined || value === "" || value === "—") return null;
+  return value;
+}
+
 export default async function CarDetailPage({
   params,
   searchParams,
@@ -179,16 +184,28 @@ export default async function CarDetailPage({
     { label: "Engine Volume", value: car.engine_volume ? `${car.engine_volume} L` : "—" },
     { label: "Body Type", value: translateValue(locale, car.body_type) },
   ];
+  const primaryFacts = [
+    compactFact(car.year),
+    car.mileage ? formatDistance(car.mileage, locale) : null,
+    compactFact(translateValue(locale, car.transmission)),
+    compactFact(car.city),
+  ].filter(Boolean);
+  const sellerName = sellerLabel(data.seller.user_id, data.seller.name);
 
   return (
-    <main className="page shell two-col">
-      <section className="panel">
+    <main className="page shell car-detail-page">
+      <section className="panel car-detail-main">
         <header className="listing-head">
           <h1 className="listing-title">{car.title}</h1>
           <div className="listing-price-row">
             <p className="car-price-meta">{sellerAndTime(locale, data.seller.user_id, data.seller.name, car.published_at)}</p>
             <p className="car-price">{formatListingPrice(car.price, locale)}</p>
           </div>
+          {primaryFacts.length ? (
+            <div className="listing-primary-facts" aria-label="Listing highlights">
+              {primaryFacts.map((fact) => <span key={String(fact)}>{fact}</span>)}
+            </div>
+          ) : null}
           <OwnerActions ownerId={car.owner_id} carId={car.id} initialStatus={car.status} />
         </header>
 
@@ -197,56 +214,55 @@ export default async function CarDetailPage({
         ) : (
           <div className="notice spaced-top-sm">No photos yet.</div>
         )}
-
-        <SpecSection title="Details" items={vehicleDetails} />
-        <SpecSection title="Specs" items={technicalSpecs} collapsible defaultOpen={false} />
-
-        <NicheScoreSelector listing={car} locale={locale} initialNicheId={selectedNiche.id} />
-
-        <div className="panel panel-soft">
-          <h2 className="subheading">Description</h2>
-          <p className="body-copy">{car.description}</p>
-        </div>
       </section>
 
-      <aside className="panel">
-        <h2 className="subheading">Contact Seller</h2>
-        {sellerLabel(data.seller.user_id, data.seller.name) ? (
-          <p className="car-meta">{sellerLabel(data.seller.user_id, data.seller.name)}</p>
-        ) : null}
-        <div className="contact-actions">
-          {data.contact.email_url && (
-            <a href={data.contact.email_url} className="btn btn-secondary">
-              Email Seller
-            </a>
-          )}
-
-          {data.contact.sms_url && (
-            <a href={data.contact.sms_url} className="btn btn-secondary">
-              Text Seller
-            </a>
-          )}
-
-          {data.contact.whatsapp_url && (
-            <a href={data.contact.whatsapp_url} target="_blank" rel="noreferrer" className="btn btn-secondary">
-              Open WhatsApp
-            </a>
-          )}
-        </div>
-        {!data.contact.email_url && !data.contact.sms_url && !data.contact.whatsapp_url ? (
-          <p className="helper-text spaced-top-sm">Seller has not enabled direct messaging.</p>
-        ) : null}
-        <ListingReportButton carId={car.id} ownerId={car.owner_id} />
-
-        <hr className="separator" />
-
+      <aside className="panel car-detail-actions">
         <OfferForm carId={car.id} ownerId={car.owner_id} publicBiddingEnabled={car.public_bidding_enabled} />
 
         <hr className="separator" />
 
-        <h3 className="subheading">Comments</h3>
-        <ChatPanel carId={car.id} />
+        <section>
+          <h2 className="subheading">Contact</h2>
+          {sellerName ? <p className="car-meta">{sellerName}</p> : null}
+          <div className="contact-actions compact-contact-actions">
+            {data.contact.email_url && <a href={data.contact.email_url} className="btn btn-secondary">Email</a>}
+            {data.contact.sms_url && <a href={data.contact.sms_url} className="btn btn-secondary">Text</a>}
+            {data.contact.whatsapp_url && (
+              <a href={data.contact.whatsapp_url} target="_blank" rel="noreferrer" className="btn btn-secondary">
+                WhatsApp
+              </a>
+            )}
+          </div>
+          {!data.contact.email_url && !data.contact.sms_url && !data.contact.whatsapp_url ? (
+            <p className="helper-text spaced-top-sm">No direct contact enabled.</p>
+          ) : null}
+        </section>
+
+        <details className="listing-info-section listing-info-disclosure car-secondary-disclosure">
+          <summary className="listing-section-title listing-section-summary">More</summary>
+          <ListingReportButton carId={car.id} ownerId={car.owner_id} />
+        </details>
+
+        <details className="listing-info-section listing-info-disclosure car-secondary-disclosure">
+          <summary className="listing-section-title listing-section-summary">Comments</summary>
+          <ChatPanel carId={car.id} />
+        </details>
       </aside>
+
+      <section className="panel car-detail-secondary">
+        <SpecSection title="Details" items={vehicleDetails} collapsible defaultOpen={false} />
+        <SpecSection title="Specs" items={technicalSpecs} collapsible defaultOpen={false} />
+
+        <details className="listing-info-section listing-info-disclosure car-secondary-disclosure">
+          <summary className="listing-section-title listing-section-summary">Description</summary>
+          <p className="body-copy">{car.description}</p>
+        </details>
+
+        <details className="listing-info-section listing-info-disclosure car-secondary-disclosure">
+          <summary className="listing-section-title listing-section-summary">Fit score</summary>
+          <NicheScoreSelector listing={car} locale={locale} initialNicheId={selectedNiche.id} />
+        </details>
+      </section>
     </main>
   );
 }

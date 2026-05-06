@@ -40,14 +40,14 @@ export default function ChatPanel({ carId }: { carId: number }) {
   const [sending, setSending] = useState(false);
   const text = {
     loadChatFailed: "Failed to load comments.",
-    sendMessageFailed: "Failed to post comment.",
-    loginToChat: "Login to Comment",
-    loadingChat: "Loading comments...",
-    noMessages: "No comments yet.",
-    typeMessage: "Write your comment...",
-    loginToStart: "Login to start commenting",
+    sendMessageFailed: "Failed to post.",
+    loginToChat: "Login",
+    loadingChat: "Loading...",
+    noMessages: "No comments.",
+    typeMessage: "Comment...",
+    loginToStart: "Login to comment",
     sending: "Sending...",
-    send: "Add Comment",
+    send: "Post",
     user: "User",
   };
 

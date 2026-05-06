@@ -118,16 +118,16 @@ export default function OfferForm({
     recentOffers: "Your Offer",
     amount: "Offer amount",
     signIn: "Sign in to make an offer",
-    offerHelp: "Offers are private and expire after 7 days.",
-    disclaimer: "NicheRides is not the seller, dealer, broker, or escrow provider. Buyers and sellers are responsible for inspection, payment, title transfer, taxes, registration, and any escrow or shipping arrangements.",
-    warningTitle: "Before making an offer",
-    warningBody: "This offer is between you and the seller. NicheRides does not hold funds, verify payment, broker the sale, or provide escrow.",
+    offerHelp: "Private. Expires in 7 days.",
+    disclaimer: "NicheRides is not the seller, dealer, broker, or escrow provider. Buyers and sellers handle inspection, payment, title, taxes, registration, escrow, and shipping.",
+    warningTitle: "Confirm Offer",
+    warningBody: "You deal directly with the seller. NicheRides does not hold funds or escrow.",
     confirmOffer: "Make Offer",
     cancel: "Cancel",
     confirmAmount: "Offer amount",
-    closedHint: "Offers are closed after an offer is accepted.",
-    ownerHint: "Offers are private. Active offers and counteroffers expire after 7 days.",
-    ownerNoOffers: "No active offers to manage yet.",
+    closedHint: "Offers closed.",
+    ownerHint: "Active offers",
+    ownerNoOffers: "No active offers.",
     bidder: "Buyer",
     accept: "Accept Offer",
     acceptCounter: "Accept Counteroffer",
@@ -145,7 +145,7 @@ export default function OfferForm({
     reportFalseBid: "Flag false bid",
     reportingFalseBid: "Flagging...",
     reportFalseBidTitle: "Flag false bid",
-    reportFalseBidHelp: "Only accepted offers can be flagged. Reports go to admins for review before any buyer action is taken.",
+    reportFalseBidHelp: "Only accepted offers can be flagged. Admins review reports.",
     flaggedFalseBid: "Flagged for admin review",
     reportReason: "Reason",
     reportNotes: "Notes optional",
@@ -153,7 +153,7 @@ export default function OfferForm({
     reportFailed: "Failed to submit report.",
     reportAcceptedOnly: "Only an accepted offer can be flagged.",
     accepted: "Accepted",
-    acceptedSummary: "An offer has been accepted for this listing.",
+    acceptedSummary: "Accepted:",
     unaccept: "Reopen Offers",
     unaccepting: "Reopening...",
     unacceptedSuccess: "Offer acceptance removed and offers reopened.",
@@ -540,10 +540,15 @@ export default function OfferForm({
         <p className="offer-summary-value">
           {currentSummary?.list_price ? formatPrice(currentSummary.list_price, locale) : text.noPrice}
         </p>
-        <p className="offer-summary-count">{text.offerCount(currentSummary?.offer_count ?? 0)}</p>
+        {(currentSummary?.offer_count ?? 0) > 0 ? (
+          <p className="offer-summary-count">{text.offerCount(currentSummary?.offer_count ?? 0)}</p>
+        ) : null}
       </div>
       <p className="helper-text spaced-top-sm">{text.offerHelp}</p>
-      <p className="notice spaced-top-sm">{text.disclaimer}</p>
+      <details className="offer-disclaimer spaced-top-sm">
+        <summary>Notice</summary>
+        <p>{text.disclaimer}</p>
+      </details>
 
       {acceptedOffer ? (
         <p className="notice success spaced-top-sm">

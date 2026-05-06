@@ -13,14 +13,14 @@ export default function LogoMark({ className, title = "NicheRides logo" }: LogoM
       xmlns="http://www.w3.org/2000/svg"
     >
       <text y="31" fontFamily="Manrope, Avenir Next, Segoe UI, sans-serif" letterSpacing="0">
-        <tspan x="4" fill="#2f80c9" fontSize="26" fontStyle="italic" fontWeight="800">
+        <tspan x="4" fill="#00338d" fontSize="26" fontStyle="italic" fontWeight="800">
           Niche
         </tspan>
         <tspan fill="#0f172a" fontSize="30" fontWeight="800">
           Rides
         </tspan>
       </text>
-      <rect x="5" y="36" width="28" height="3" rx="1.5" fill="#2f80c9" />
+      <rect x="5" y="36" width="28" height="3" rx="1.5" fill="#00338d" />
     </svg>
   );
 }

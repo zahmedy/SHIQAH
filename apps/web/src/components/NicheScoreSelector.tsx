@@ -33,11 +33,8 @@ export default function NicheScoreSelector({ listing, locale, initialNicheId }: 
     <div className="panel panel-soft winter-detail-card niche-score-card">
       <div className="niche-score-head">
         <div>
-          <p className="spec-key">Choose niche</p>
-          <h2 className="subheading">See how this car fits different buyers</h2>
-          <p className="body-copy">
-            Scores use fit signals like drivetrain, fuel type, mileage, body style, condition, and seller notes. Price is scored separately.
-          </p>
+          <p className="spec-key">Niche</p>
+          <h2 className="subheading">Buyer fit</h2>
         </div>
         <strong className="niche-score-meter">{selectedScore.details.score}/100</strong>
       </div>
@@ -61,7 +58,7 @@ export default function NicheScoreSelector({ listing, locale, initialNicheId }: 
       <div>
         <p className="spec-key">{selectedNiche.scoreLabel}</p>
         <p className="body-copy niche-score-summary">
-          {selectedScore.fitLabel} for {selectedNiche.name.toLowerCase()} with {selectedScore.details.confidence} signal confidence.
+          {selectedScore.fitLabel}. Confidence: {selectedScore.details.confidence}.
         </p>
       </div>
       <div className="winter-chip-row" aria-label="Niche signals">

@@ -3,27 +3,27 @@
 :root {
   --font-body: "Cairo", "Manrope", "Avenir Next", "Segoe UI", sans-serif;
   --font-title: "Manrope", "Cairo", "Avenir Next", "Segoe UI", sans-serif;
-  --bg: #f4f9ff;
-  --bg-soft: #eaf5ff;
+  --bg: #f3f7ff;
+  --bg-soft: #e8f1ff;
   --panel: #ffffff;
-  --panel-soft: #eef7ff;
-  --line: #d7e7f5;
-  --line-strong: #b8d3ea;
+  --panel-soft: #edf4ff;
+  --line: #d6e3f8;
+  --line-strong: #abc2e8;
   --text: #0f172a;
   --muted: #64748b;
-  --brand: #2f80c9;
-  --brand-deep: #155a96;
-  --brand-light: #d8ecff;
-  --redline: #ef4444;
-  --signal: #38bdf8;
+  --brand: #00338d;
+  --brand-deep: #002868;
+  --brand-light: #dbeafe;
+  --redline: #c60c30;
+  --signal: #1d4ed8;
   --ice: #f7fbff;
-  --ok: #0ea5e9;
+  --ok: #1d4ed8;
   --error: #dc2626;
   --radius-card: 18px;
   --radius-sm: 12px;
   --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
   --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 14px 34px rgba(15, 23, 42, 0.07);
-  --shadow-card-hover: 0 18px 42px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(47, 128, 201, 0.18);
+  --shadow-card-hover: 0 18px 42px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(0, 51, 141, 0.18);
   --shadow-panel: 0 20px 48px rgba(15, 23, 42, 0.08);
   --shadow-topbar: 0 1px 0 rgba(15, 23, 42, 0.08), 0 8px 24px rgba(15, 23, 42, 0.05);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -43,7 +43,7 @@ body {
 body {
   color: var(--text);
   font-family: var(--font-body);
-  background: linear-gradient(180deg, #ffffff 0%, var(--bg) 30%, #e8f2fc 100%);
+  background: linear-gradient(180deg, #ffffff 0%, var(--bg) 30%, #e5eefc 100%);
   min-height: 100vh;
   position: relative;
   overflow-x: clip;
@@ -58,7 +58,7 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(47, 128, 201, 0.055), transparent 32%),
+    linear-gradient(180deg, rgba(0, 51, 141, 0.055), transparent 32%),
     linear-gradient(90deg, rgba(15, 23, 42, 0.025) 1px, transparent 1px),
     linear-gradient(180deg, rgba(15, 23, 42, 0.02) 1px, transparent 1px);
   background-size: auto, 48px 48px, 48px 48px;
@@ -335,7 +335,7 @@ a {
   padding: 0.2rem;
   border: 1px solid var(--brand-deep);
   border-radius: 999px;
-  background: linear-gradient(160deg, #2f80c9 0%, #123b5f 100%);
+  background: linear-gradient(160deg, #00338d 0%, #002047 100%);
   color: #ffffff;
   cursor: pointer;
   overflow: hidden;
@@ -344,13 +344,13 @@ a {
 }
 
 .locale-toggle:hover {
-  border-color: #60a5fa;
+  border-color: #4f8df7;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.09);
   transform: translateY(-1px);
 }
 
 .locale-toggle:focus-visible {
-  outline: 2px solid rgba(47, 128, 201, 0.5);
+  outline: 2px solid rgba(0, 51, 141, 0.5);
   outline-offset: 2px;
 }
 
@@ -359,7 +359,7 @@ a {
   inset: 0.2rem auto 0.2rem 0.2rem;
   width: calc(50% - 0.2rem);
   border-radius: 999px;
-  background: linear-gradient(160deg, #ffffff 0%, #dceeff 100%);
+  background: linear-gradient(160deg, #ffffff 0%, #dbeafe 100%);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   transition: transform 220ms var(--ease-out);
 }
@@ -714,7 +714,7 @@ a {
   padding: 0.28rem 0.62rem;
   width: fit-content;
   background: #eaf5ff;
-  border: 1px solid #bfdbfe;
+  border: 1px solid #b7cdf4;
   border-radius: 999px;
   font-size: 0.7rem;
   font-weight: 800;
@@ -783,7 +783,7 @@ a {
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--ok) 25%, var(--line));
   background: color-mix(in srgb, var(--ok) 8%, #ffffff);
-  color: #155a96;
+  color: #00338d;
   font-size: 0.78rem;
   font-weight: 800;
 }
@@ -1590,7 +1590,7 @@ a {
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--brand) 30%, var(--line));
   background: color-mix(in srgb, var(--ok) 8%, #ffffff);
-  color: #155a96;
+  color: #00338d;
   font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.03em;
@@ -1644,14 +1644,14 @@ a {
   overflow: visible;
   background:
     radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.55), transparent 32%),
-    linear-gradient(135deg, #38bdf8 0%, #2f80c9 52%, #155a96 100%);
+    linear-gradient(135deg, #1d4ed8 0%, #00338d 52%, #002868 100%);
   color: #ffffff;
   font: inherit;
   font-size: 0.95rem;
   font-weight: 900;
   letter-spacing: 0.02em;
   cursor: pointer;
-  box-shadow: 0 18px 34px rgba(47, 128, 201, 0.24), inset 0 -3px 0 rgba(18, 59, 95, 0.34);
+  box-shadow: 0 18px 34px rgba(0, 51, 141, 0.24), inset 0 -3px 0 rgba(0, 32, 71, 0.34);
   transition: transform 140ms ease, box-shadow 180ms ease, filter 180ms ease;
 }
 
@@ -1712,7 +1712,7 @@ a {
 }
 
 .sold-button-burst i:nth-child(2) {
-  background: #60a5fa;
+  background: #4f8df7;
 }
 
 .sold-button-burst i:nth-child(3) {
@@ -1771,7 +1771,7 @@ a {
 
 .sold-confirmation {
   margin: 0;
-  color: #155a96;
+  color: #00338d;
   font-size: 0.88rem;
   font-weight: 800;
 }
@@ -2302,6 +2302,28 @@ a {
   gap: 1rem;
 }
 
+.car-detail-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1.56fr) minmax(320px, 1fr);
+  grid-template-areas:
+    "main actions"
+    "secondary actions";
+  align-items: start;
+  gap: 1rem;
+}
+
+.car-detail-main {
+  grid-area: main;
+}
+
+.car-detail-actions {
+  grid-area: actions;
+}
+
+.car-detail-secondary {
+  grid-area: secondary;
+}
+
 .listing-head {
   display: grid;
   gap: 0.35rem;
@@ -2313,6 +2335,26 @@ a {
   line-height: 1.18;
   font-weight: 800;
   letter-spacing: 0;
+}
+
+.listing-primary-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.15rem;
+}
+
+.listing-primary-facts span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-soft);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 800;
 }
 
 /* ─── Photo Grid ──────────────────────────────────────────────────────── */
@@ -2461,6 +2503,10 @@ a {
   margin-top: 0.7rem;
 }
 
+.compact-contact-actions {
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+}
+
 /* ─── Offer Panel ─────────────────────────────────────────────────────── */
 
 .offer-panel {
@@ -2470,6 +2516,26 @@ a {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 255, 252, 0.98));
   box-shadow: var(--shadow-card);
+}
+
+.offer-disclaimer {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.65rem 0.75rem;
+  background: color-mix(in srgb, var(--bg-soft) 72%, #ffffff);
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.offer-disclaimer summary {
+  cursor: pointer;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.offer-disclaimer p {
+  margin: 0.45rem 0 0;
+  line-height: 1.45;
 }
 
 .offer-summary {
@@ -3250,7 +3316,7 @@ a {
 }
 
 .status-active {
-  color: #155a96;
+  color: #00338d;
   border-color: color-mix(in srgb, var(--ok) 35%, var(--line));
   background: color-mix(in srgb, var(--ok) 10%, #ffffff);
   box-shadow: none;
@@ -3625,12 +3691,20 @@ a {
 @media (max-width: 980px) {
   .search-grid,
   .two-col,
+  .car-detail-page,
   .profile-hero,
   .profile-account-layout,
   .profile-settings-stack,
   .profile-account-compact,
   .profile-user-id-form {
     grid-template-columns: 1fr;
+  }
+
+  .car-detail-page {
+    grid-template-areas:
+      "main"
+      "actions"
+      "secondary";
   }
 
   .city-location-grid,
@@ -3890,9 +3964,141 @@ a {
 
   .stats,
   .profile-listing-grid,
-  .photo-grid,
   .specs {
     grid-template-columns: 1fr;
+  }
+
+  .car-detail-page {
+    gap: 0.55rem;
+  }
+
+  .car-detail-main,
+  .car-detail-actions,
+  .car-detail-secondary {
+    padding: 0.75rem;
+  }
+
+  .listing-head {
+    gap: 0.25rem;
+  }
+
+  .listing-title {
+    font-size: 1.28rem;
+    line-height: 1.16;
+  }
+
+  .listing-price-row {
+    align-items: flex-start;
+    flex-direction: column-reverse;
+    gap: 0.2rem;
+    margin-top: 0.25rem;
+  }
+
+  .car-price {
+    font-size: 1.55rem;
+  }
+
+  .car-price-meta {
+    font-size: 0.78rem;
+  }
+
+  .listing-primary-facts {
+    gap: 0.35rem;
+  }
+
+  .listing-primary-facts span {
+    min-height: 28px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.76rem;
+  }
+
+  .photo-grid {
+    display: flex;
+    grid-template-columns: none;
+    gap: 0.55rem;
+    margin-inline: -0.75rem;
+    padding: 0 0.75rem 0.25rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .photo-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .photo-grid-button {
+    flex: 0 0 min(86vw, 420px);
+    scroll-snap-align: center;
+    border-radius: 16px;
+  }
+
+  .photo-grid img {
+    height: auto;
+    aspect-ratio: 4 / 3;
+    border-radius: 16px;
+  }
+
+  .photo-grid-button:hover,
+  .photo-grid-button:hover img {
+    transform: none;
+  }
+
+  .listing-info-section {
+    margin-top: 0.75rem;
+  }
+
+  .listing-section-summary {
+    min-height: 44px;
+  }
+
+  .spec {
+    padding: 0.58rem 0.65rem;
+    border-radius: 12px;
+  }
+
+  .spec-key {
+    font-size: 0.66rem;
+  }
+
+  .spec-val {
+    font-size: 0.9rem;
+  }
+
+  .offer-panel,
+  .chat-panel {
+    padding: 0.75rem;
+    border-radius: 16px;
+  }
+
+  .offer-summary {
+    padding: 0.75rem;
+    border-radius: 14px;
+  }
+
+  .offer-summary-value {
+    font-size: 1.35rem;
+  }
+
+  .offer-list-item {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .offer-list-side {
+    justify-items: stretch;
+  }
+
+  .offer-list-meta {
+    text-align: left;
+  }
+
+  .contact-actions,
+  .compact-contact-actions {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
   }
 
   .listing-grid {
