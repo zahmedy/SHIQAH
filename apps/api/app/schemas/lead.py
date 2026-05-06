@@ -56,7 +56,10 @@ class OwnerOfferOut(BaseModel):
     visibility: str = "public"
     buyer_user_id: Optional[int] = None
     buyer_user_label: Optional[str] = None
+    buyer_email: Optional[str] = None
     phone_e164: Optional[str] = None
+    buyer_contact_text_enabled: bool = False
+    buyer_contact_whatsapp_enabled: bool = False
     false_bid_report_count: int = 0
 
 

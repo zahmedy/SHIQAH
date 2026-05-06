@@ -159,8 +159,16 @@ def _false_bid_report_counts(session: Session, car_id: int, offer_ids: list[int]
 def _owner_offer_out(offer: Lead, buyers: dict[int, User], false_bid_report_count: int = 0) -> OwnerOfferOut:
     buyer = buyers.get(offer.buyer_user_id or -1)
     buyer_label = None
+    buyer_email = None
+    buyer_phone = offer.phone_e164
+    buyer_text_enabled = False
+    buyer_whatsapp_enabled = False
     if buyer:
         buyer_label = f"@{buyer.user_id}" if buyer.user_id else buyer.name or buyer.email or buyer.phone_e164
+        buyer_email = buyer.email
+        buyer_phone = buyer.phone_e164 or buyer_phone
+        buyer_text_enabled = buyer.contact_text_enabled
+        buyer_whatsapp_enabled = buyer.contact_whatsapp_enabled
     return OwnerOfferOut(
         id=offer.id or 0,
         amount=offer.amount or 0,
@@ -169,7 +177,10 @@ def _owner_offer_out(offer: Lead, buyers: dict[int, User], false_bid_report_coun
         visibility=_offer_visibility(offer),
         buyer_user_id=offer.buyer_user_id,
         buyer_user_label=buyer_label,
-        phone_e164=offer.phone_e164,
+        buyer_email=buyer_email,
+        phone_e164=buyer_phone,
+        buyer_contact_text_enabled=buyer_text_enabled,
+        buyer_contact_whatsapp_enabled=buyer_whatsapp_enabled,
         false_bid_report_count=false_bid_report_count,
     )
 

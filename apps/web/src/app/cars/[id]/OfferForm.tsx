@@ -37,7 +37,10 @@ type OfferSummary = {
 type OwnerOfferEntry = OfferEntry & {
   buyer_user_id: number | null;
   buyer_user_label: string | null;
+  buyer_email: string | null;
   phone_e164: string | null;
+  buyer_contact_text_enabled: boolean;
+  buyer_contact_whatsapp_enabled: boolean;
   false_bid_report_count: number;
 };
 
@@ -60,6 +63,14 @@ function isOwnerOfferEntry(offer: OfferEntry | OwnerOfferEntry): offer is OwnerO
 
 function buildWhatsappUrl(phone: string, message: string) {
   return `https://wa.me/${phone.replace("+", "")}?text=${encodeURIComponent(message)}`;
+}
+
+function buildSmsUrl(phone: string, message: string) {
+  return `sms:${phone}?&body=${encodeURIComponent(message)}`;
+}
+
+function buildEmailUrl(email: string, subject: string, message: string) {
+  return `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
 }
 
 export default function OfferForm({
@@ -141,6 +152,8 @@ export default function OfferForm({
     unacceptedSuccess: "Offer acceptance removed and bidding reopened.",
     acceptedContactTitle: "Contact Accepted Bidder",
     bidderPhone: "Bidder phone",
+    emailBidder: "Email Bidder",
+    textBidder: "Text Bidder",
     callBidder: "Call Bidder",
     whatsappBidder: "WhatsApp Bidder",
     submit: "Place Bid",
@@ -165,12 +178,23 @@ export default function OfferForm({
   const publicBiddingEnabled = currentSummary?.public_bidding_enabled ?? publicBiddingEnabledProp;
   const minimumOffer = (currentSummary?.highest_offer ?? 0) + 1;
   const acceptedOwnerOffer = isOwner && acceptedOffer && isOwnerOfferEntry(acceptedOffer) ? acceptedOffer : null;
-  const acceptedBidderLabel = acceptedOwnerOffer?.buyer_user_label || acceptedOwnerOffer?.phone_e164 || null;
+  const acceptedBidderLabel = acceptedOwnerOffer?.buyer_user_label || acceptedOwnerOffer?.buyer_email || acceptedOwnerOffer?.phone_e164 || null;
   const acceptedBidderPhone = acceptedOwnerOffer?.phone_e164 || null;
-  const acceptedBidderWhatsapp = acceptedBidderPhone
+  const acceptedBidderMessage = `Hello, regarding your accepted offer on listing #${carId}`;
+  const acceptedBidderEmail = acceptedOwnerOffer?.buyer_email
+    ? buildEmailUrl(
+        acceptedOwnerOffer.buyer_email,
+        `Accepted offer on listing #${carId}`,
+        acceptedBidderMessage,
+      )
+    : null;
+  const acceptedBidderSms = acceptedBidderPhone && acceptedOwnerOffer?.buyer_contact_text_enabled
+    ? buildSmsUrl(acceptedBidderPhone, acceptedBidderMessage)
+    : null;
+  const acceptedBidderWhatsapp = acceptedBidderPhone && acceptedOwnerOffer?.buyer_contact_whatsapp_enabled
     ? buildWhatsappUrl(
         acceptedBidderPhone,
-        `Hello, regarding your accepted offer on listing #${carId}`,
+        acceptedBidderMessage,
       )
     : null;
 
@@ -600,6 +624,16 @@ export default function OfferForm({
             <>
               <p className="car-meta">{text.bidderPhone}: {acceptedBidderPhone}</p>
               <div className="contact-actions">
+                {acceptedBidderEmail ? (
+                  <a href={acceptedBidderEmail} className="btn btn-secondary">
+                    {text.emailBidder}
+                  </a>
+                ) : null}
+                {acceptedBidderSms ? (
+                  <a href={acceptedBidderSms} className="btn btn-secondary">
+                    {text.textBidder}
+                  </a>
+                ) : null}
                 <a href={`tel:${acceptedBidderPhone}`} className="btn btn-secondary">
                   {text.callBidder}
                 </a>
@@ -610,6 +644,12 @@ export default function OfferForm({
                 ) : null}
               </div>
             </>
+          ) : acceptedBidderEmail ? (
+            <div className="contact-actions">
+              <a href={acceptedBidderEmail} className="btn btn-secondary">
+                {text.emailBidder}
+              </a>
+            </div>
           ) : null}
           <div className="contact-actions">
             <button
