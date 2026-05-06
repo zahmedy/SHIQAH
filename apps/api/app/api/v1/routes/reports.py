@@ -126,7 +126,7 @@ def report_false_bid(
             Lead.id == offer_id,
             Lead.car_id == car_id,
             Lead.amount.is_not(None),
-            Lead.channel.in_(["offer", "offer_public", "offer_private"]),
+            Lead.channel.in_(["offer", "offer_public", "offer_private", "offer_counter"]),
             Lead.rejected_at.is_(None),
         )
     ).first()

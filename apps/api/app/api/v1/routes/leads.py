@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
@@ -9,6 +9,7 @@ from app.models.car import CarListing, CarStatus
 from app.models.lead import Lead
 from app.models.report import ReportType, UserReport
 from app.schemas.lead import (
+    CounterOfferCreate,
     LeadCreate,
     LeadOut,
     OfferCreate,
@@ -21,8 +22,9 @@ from app.core.deps import get_current_user, get_optional_current_user
 from app.services.notifications import create_notification
 
 router = APIRouter(tags=["leads"])
-PUBLIC_OFFER_CHANNELS = {"offer", "offer_public"}
-ALL_OFFER_CHANNELS = {"offer", "offer_public", "offer_private"}
+OFFER_EXPIRATION_DAYS = 7
+COUNTER_OFFER_CHANNEL = "offer_counter"
+ALL_OFFER_CHANNELS = {"offer", "offer_public", "offer_private", COUNTER_OFFER_CHANNEL}
 
 
 def _load_active_car(session: Session, car_id: int) -> CarListing:
@@ -46,6 +48,16 @@ def _accepted_offer_for_car(session: Session, car_id: int) -> Lead | None:
     ).first()
 
 
+def _offer_expires_at(now: datetime | None = None) -> datetime:
+    return (now or datetime.utcnow()) + timedelta(days=OFFER_EXPIRATION_DAYS)
+
+
+def _offer_is_expired(offer: Lead, now: datetime | None = None) -> bool:
+    if not offer.expires_at:
+        return False
+    return offer.expires_at <= (now or datetime.utcnow())
+
+
 def _offer_sort_key(offer: Lead) -> tuple[int, float, int]:
     return (
         offer.amount or 0,
@@ -54,17 +66,25 @@ def _offer_sort_key(offer: Lead) -> tuple[int, float, int]:
     )
 
 
-def _dedupe_highest_offers(offers: list[Lead]) -> list[Lead]:
-    highest_by_buyer: dict[str, Lead] = {}
+def _latest_offer_sort_key(offer: Lead) -> tuple[float, int]:
+    return (
+        offer.created_at.timestamp() if offer.created_at else 0,
+        offer.id or 0,
+    )
+
+
+def _dedupe_latest_offers(offers: list[Lead]) -> list[Lead]:
+    latest_by_buyer: dict[str, Lead] = {}
     for offer in offers:
         buyer_key = f"user:{offer.buyer_user_id}" if offer.buyer_user_id is not None else f"offer:{offer.id}"
-        current = highest_by_buyer.get(buyer_key)
-        if current is None or _offer_sort_key(offer) > _offer_sort_key(current):
-            highest_by_buyer[buyer_key] = offer
-    return sorted(highest_by_buyer.values(), key=_offer_sort_key, reverse=True)
+        current = latest_by_buyer.get(buyer_key)
+        if current is None or _latest_offer_sort_key(offer) > _latest_offer_sort_key(current):
+            latest_by_buyer[buyer_key] = offer
+    return sorted(latest_by_buyer.values(), key=_latest_offer_sort_key, reverse=True)
 
 
 def _active_offers_for_car(session: Session, car_id: int, channels: set[str]) -> list[Lead]:
+    now = datetime.utcnow()
     return session.exec(
         select(Lead)
         .where(
@@ -72,35 +92,35 @@ def _active_offers_for_car(session: Session, car_id: int, channels: set[str]) ->
             Lead.channel.in_(channels),
             Lead.amount.is_not(None),
             Lead.rejected_at.is_(None),
+            (Lead.expires_at.is_(None)) | (Lead.expires_at > now),
         )
-        .order_by(Lead.amount.desc(), Lead.created_at.desc(), Lead.id.desc())
+        .order_by(Lead.created_at.desc(), Lead.id.desc())
     ).all()
 
 
 def _offer_count_for_car(session: Session, car_id: int) -> int:
-    return len(_dedupe_highest_offers(_active_offers_for_car(session, car_id, PUBLIC_OFFER_CHANNELS)))
-
-
-def _top_offers_for_car(session: Session, car_id: int, limit: int = 5) -> list[Lead]:
-    return _dedupe_highest_offers(_active_offers_for_car(session, car_id, PUBLIC_OFFER_CHANNELS))[:limit]
+    return len(_dedupe_latest_offers(_active_offers_for_car(session, car_id, ALL_OFFER_CHANNELS)))
 
 
 def _viewer_private_offers_for_car(session: Session, car_id: int, viewer_id: int, limit: int = 5) -> list[Lead]:
+    now = datetime.utcnow()
     offers = session.exec(
         select(Lead)
         .where(
             Lead.car_id == car_id,
-            Lead.channel == "offer_private",
+            Lead.channel.in_(ALL_OFFER_CHANNELS),
             Lead.buyer_user_id == viewer_id,
             Lead.amount.is_not(None),
             Lead.rejected_at.is_(None),
+            (Lead.expires_at.is_(None)) | (Lead.expires_at > now),
         )
         .order_by(Lead.created_at.desc(), Lead.id.desc())
     ).all()
-    return _dedupe_highest_offers(offers)[:limit]
+    return _dedupe_latest_offers(offers)[:limit]
 
 
 def _highest_buyer_offer_for_car(session: Session, car_id: int, buyer_id: int) -> Lead | None:
+    now = datetime.utcnow()
     offers = session.exec(
         select(Lead)
         .where(
@@ -109,23 +129,30 @@ def _highest_buyer_offer_for_car(session: Session, car_id: int, buyer_id: int) -
             Lead.buyer_user_id == buyer_id,
             Lead.amount.is_not(None),
             Lead.rejected_at.is_(None),
+            (Lead.expires_at.is_(None)) | (Lead.expires_at > now),
         )
-        .order_by(Lead.amount.desc(), Lead.created_at.desc(), Lead.id.desc())
+        .order_by(Lead.created_at.desc(), Lead.id.desc())
     ).all()
-    return next(iter(_dedupe_highest_offers(offers)), None)
+    return next(iter(_dedupe_latest_offers(offers)), None)
 
 
-def _highest_offer_amount_for_car(session: Session, car_id: int) -> int | None:
-    offer = next(iter(_top_offers_for_car(session, car_id, limit=1)), None)
-    return offer.amount if offer and offer.amount is not None else None
+def _buyer_active_offers_for_car(session: Session, car_id: int, buyer_id: int) -> list[Lead]:
+    now = datetime.utcnow()
+    return session.exec(
+        select(Lead).where(
+            Lead.car_id == car_id,
+            Lead.channel.in_(ALL_OFFER_CHANNELS),
+            Lead.buyer_user_id == buyer_id,
+            Lead.amount.is_not(None),
+            Lead.rejected_at.is_(None),
+            Lead.accepted_at.is_(None),
+            (Lead.expires_at.is_(None)) | (Lead.expires_at > now),
+        )
+    ).all()
 
 
-def _highest_public_offer_for_car(session: Session, car_id: int) -> Lead | None:
-    return next(iter(_top_offers_for_car(session, car_id, limit=1)), None)
-
-
-def _offer_visibility(offer: Lead) -> str:
-    return "private" if offer.channel == "offer_private" else "public"
+def _is_counteroffer(offer: Lead) -> bool:
+    return offer.channel == COUNTER_OFFER_CHANNEL
 
 
 def _offer_out(offer: Lead) -> OfferOut:
@@ -134,7 +161,9 @@ def _offer_out(offer: Lead) -> OfferOut:
         amount=offer.amount or 0,
         created_at=offer.created_at,
         accepted_at=offer.accepted_at,
-        visibility=_offer_visibility(offer),
+        rejected_at=offer.rejected_at,
+        expires_at=offer.expires_at,
+        is_counteroffer=_is_counteroffer(offer),
     )
 
 
@@ -174,7 +203,9 @@ def _owner_offer_out(offer: Lead, buyers: dict[int, User], false_bid_report_coun
         amount=offer.amount or 0,
         created_at=offer.created_at,
         accepted_at=offer.accepted_at,
-        visibility=_offer_visibility(offer),
+        rejected_at=offer.rejected_at,
+        expires_at=offer.expires_at,
+        is_counteroffer=_is_counteroffer(offer),
         buyer_user_id=offer.buyer_user_id,
         buyer_user_label=buyer_label,
         buyer_email=buyer_email,
@@ -224,34 +255,19 @@ def create_offer(
     user: User = Depends(get_current_user),
 ):
     car = _load_active_car(session, car_id)
-    if payload.visibility not in {"public", "private"}:
-        raise HTTPException(status_code=400, detail="Invalid offer type")
-
     if payload.amount <= 0:
         raise HTTPException(status_code=400, detail="Invalid offer amount")
 
     if user.id == car.owner_id:
-        raise HTTPException(status_code=400, detail="You cannot bid on your own listing")
+        raise HTTPException(status_code=400, detail="You cannot make an offer on your own listing")
 
     if _accepted_offer_for_car(session, car_id):
-        raise HTTPException(status_code=400, detail="Bidding is closed for this listing")
+        raise HTTPException(status_code=400, detail="Offers are closed for this listing")
 
-    previous_buyer_offer = _highest_buyer_offer_for_car(session, car_id, user.id or 0)
-    if previous_buyer_offer is not None and payload.amount <= (previous_buyer_offer.amount or 0):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Your offer must be higher than your current offer of {previous_buyer_offer.amount} USD",
-        )
-
-    previous_public_offer = None
-    if payload.visibility == "public":
-        if not car.public_bidding_enabled:
-            raise HTTPException(status_code=400, detail="Public bidding is disabled for this listing")
-        previous_public_offer = _highest_public_offer_for_car(session, car_id)
-        if previous_public_offer is not None and payload.amount <= (previous_public_offer.amount or 0):
-            raise HTTPException(status_code=400, detail=f"Your bid must be higher than the current highest bid of {previous_public_offer.amount} USD")
-
-    offer_channel = "offer_public" if payload.visibility == "public" else "offer_private"
+    now = datetime.utcnow()
+    for active_offer in _buyer_active_offers_for_car(session, car_id, user.id or 0):
+        active_offer.rejected_at = now
+        session.add(active_offer)
 
     lead = Lead(
         car_id=car.id,
@@ -260,7 +276,8 @@ def create_offer(
         phone_e164=user.phone_e164,
         message=None,
         amount=payload.amount,
-        channel=offer_channel,
+        channel="offer",
+        expires_at=_offer_expires_at(now),
     )
     session.add(lead)
     create_notification(
@@ -270,25 +287,9 @@ def create_offer(
         car_id=car.id,
         notification_type="offer_created",
         title="New offer",
-        body=f"New {_offer_visibility(lead)} offer of {payload.amount} USD on {car.year} {car.make} {car.model}.",
-        metadata={"amount": payload.amount, "visibility": payload.visibility},
+        body=f"New offer of {payload.amount} USD on {car.year} {car.make} {car.model}.",
+        metadata={"amount": payload.amount, "expires_at": lead.expires_at.isoformat() if lead.expires_at else None},
     )
-    if (
-        payload.visibility == "public"
-        and previous_public_offer
-        and previous_public_offer.buyer_user_id
-        and previous_public_offer.buyer_user_id != user.id
-    ):
-        create_notification(
-            session,
-            user_id=previous_public_offer.buyer_user_id,
-            actor_user_id=user.id,
-            car_id=car.id,
-            notification_type="offer_outbid",
-            title="You were outbid",
-            body=f"A higher public bid was placed on {car.year} {car.make} {car.model}.",
-            metadata={"amount": payload.amount, "previous_amount": previous_public_offer.amount},
-        )
     session.commit()
     session.refresh(lead)
 
@@ -305,26 +306,19 @@ def get_offers(
 
     offer_count = _offer_count_for_car(session, car_id)
     accepted_offer = _accepted_offer_for_car(session, car_id)
-    highest_offer = _highest_offer_amount_for_car(session, car_id)
-    offers = _top_offers_for_car(session, car_id)
+    offers: list[Lead] = []
     if user:
-        private_offers = _viewer_private_offers_for_car(session, car_id, user.id or 0)
-        offers = _dedupe_highest_offers([*offers, *private_offers])[:10]
-        visible_highest_offer = next(iter(offers), None)
-        highest_offer = visible_highest_offer.amount if visible_highest_offer else highest_offer
+        offers = _viewer_private_offers_for_car(session, car_id, user.id or 0)
     can_view_accepted_offer = (
         accepted_offer is not None
-        and (
-            accepted_offer.channel in PUBLIC_OFFER_CHANNELS
-            or (user is not None and user.id == accepted_offer.buyer_user_id)
-        )
+        and user is not None
+        and user.id == accepted_offer.buyer_user_id
     )
 
     return OfferSummaryOut(
-        highest_offer=highest_offer,
+        list_price=car.price,
         offer_count=offer_count,
-        bidding_open=accepted_offer is None,
-        public_bidding_enabled=car.public_bidding_enabled,
+        offers_open=accepted_offer is None,
         accepted_offer=_offer_out(accepted_offer) if can_view_accepted_offer and accepted_offer else None,
         offers=[_offer_out(offer) for offer in offers],
     )
@@ -340,7 +334,7 @@ def get_manage_offers(
     if user.id != car.owner_id:
         raise HTTPException(status_code=403, detail="Only the listing owner can manage offers")
 
-    offers = _dedupe_highest_offers(_active_offers_for_car(session, car_id, ALL_OFFER_CHANNELS))
+    offers = _dedupe_latest_offers(_active_offers_for_car(session, car_id, ALL_OFFER_CHANNELS))
     buyer_ids = sorted({offer.buyer_user_id for offer in offers if offer.buyer_user_id})
     buyers = {}
     if buyer_ids:
@@ -348,14 +342,12 @@ def get_manage_offers(
         buyers = {buyer.id or 0: buyer for buyer in buyer_rows if buyer.id is not None}
 
     accepted_offer = _accepted_offer_for_car(session, car_id)
-    highest_offer = offers[0].amount if offers else None
     report_counts = _false_bid_report_counts(session, car_id, [offer.id or 0 for offer in offers if offer.id])
 
     return OwnerOfferSummaryOut(
-        highest_offer=highest_offer,
+        list_price=car.price,
         offer_count=len(offers),
-        bidding_open=accepted_offer is None,
-        public_bidding_enabled=car.public_bidding_enabled,
+        offers_open=accepted_offer is None,
         accepted_offer=_owner_offer_out(accepted_offer, buyers, report_counts.get(accepted_offer.id or 0, 0)) if accepted_offer else None,
         offers=[_owner_offer_out(offer, buyers, report_counts.get(offer.id or 0, 0)) for offer in offers],
     )
@@ -383,6 +375,8 @@ def accept_offer(
     ).first()
     if not offer:
         raise HTTPException(status_code=404, detail="Offer not found")
+    if _offer_is_expired(offer):
+        raise HTTPException(status_code=400, detail="Offer has expired")
 
     accepted_offer = _accepted_offer_for_car(session, car_id)
     if accepted_offer and accepted_offer.id != offer.id:
@@ -452,6 +446,75 @@ def unaccept_offer(
 
     report_counts = _false_bid_report_counts(session, car_id, [offer.id or 0] if offer.id else [])
     return _owner_offer_out(offer, buyers, report_counts.get(offer.id or 0, 0))
+
+
+@router.post("/cars/{car_id}/offers/{offer_id}/counter", response_model=OwnerOfferOut)
+def counter_offer(
+    car_id: int,
+    offer_id: int,
+    payload: CounterOfferCreate,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
+    car = _load_active_car(session, car_id)
+    if user.id != car.owner_id:
+        raise HTTPException(status_code=403, detail="Only the listing owner can counter offers")
+    if payload.amount <= 0:
+        raise HTTPException(status_code=400, detail="Invalid counteroffer amount")
+    if _accepted_offer_for_car(session, car_id):
+        raise HTTPException(status_code=400, detail="Offers are closed for this listing")
+
+    offer = session.exec(
+        select(Lead).where(
+            Lead.id == offer_id,
+            Lead.car_id == car_id,
+            Lead.channel.in_(ALL_OFFER_CHANNELS),
+            Lead.amount.is_not(None),
+            Lead.rejected_at.is_(None),
+        )
+    ).first()
+    if not offer:
+        raise HTTPException(status_code=404, detail="Offer not found")
+    if _offer_is_expired(offer):
+        raise HTTPException(status_code=400, detail="Offer has expired")
+    if offer.buyer_user_id is None:
+        raise HTTPException(status_code=400, detail="Offer has no buyer account")
+
+    now = datetime.utcnow()
+    for active_offer in _buyer_active_offers_for_car(session, car_id, offer.buyer_user_id):
+        active_offer.rejected_at = now
+        session.add(active_offer)
+
+    counter = Lead(
+        car_id=car.id,
+        owner_id=car.owner_id,
+        buyer_user_id=offer.buyer_user_id,
+        phone_e164=offer.phone_e164,
+        message=None,
+        amount=payload.amount,
+        channel=COUNTER_OFFER_CHANNEL,
+        expires_at=_offer_expires_at(now),
+    )
+    session.add(counter)
+    create_notification(
+        session,
+        user_id=offer.buyer_user_id,
+        actor_user_id=user.id,
+        car_id=car.id,
+        notification_type="offer_countered",
+        title="Counteroffer received",
+        body=f"The seller sent a counteroffer of {payload.amount} USD for {car.year} {car.make} {car.model}.",
+        metadata={"offer_id": offer.id, "amount": payload.amount, "expires_at": counter.expires_at.isoformat() if counter.expires_at else None},
+    )
+    session.commit()
+    session.refresh(counter)
+
+    buyers = {}
+    buyer = session.exec(select(User).where(User.id == offer.buyer_user_id)).first()
+    if buyer and buyer.id is not None:
+        buyers[buyer.id] = buyer
+
+    return _owner_offer_out(counter, buyers, 0)
 
 
 @router.post("/cars/{car_id}/offers/{offer_id}/reject", response_model=OwnerOfferOut)

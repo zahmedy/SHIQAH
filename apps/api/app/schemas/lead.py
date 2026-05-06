@@ -22,13 +22,17 @@ class LeadOut(BaseModel):
     amount: Optional[int]
     accepted_at: Optional[datetime]
     rejected_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
     channel: str
     created_at: datetime
 
 
 class OfferCreate(BaseModel):
     amount: int
-    visibility: str = "public"
+
+
+class CounterOfferCreate(BaseModel):
+    amount: int
 
 
 class OfferOut(BaseModel):
@@ -36,14 +40,15 @@ class OfferOut(BaseModel):
     amount: int
     created_at: datetime
     accepted_at: Optional[datetime] = None
-    visibility: str = "public"
+    rejected_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    is_counteroffer: bool = False
 
 
 class OfferSummaryOut(BaseModel):
-    highest_offer: Optional[int]
+    list_price: Optional[int]
     offer_count: int
-    bidding_open: bool
-    public_bidding_enabled: bool
+    offers_open: bool
     accepted_offer: Optional[OfferOut]
     offers: list[OfferOut]
 
@@ -53,7 +58,9 @@ class OwnerOfferOut(BaseModel):
     amount: int
     created_at: datetime
     accepted_at: Optional[datetime] = None
-    visibility: str = "public"
+    rejected_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    is_counteroffer: bool = False
     buyer_user_id: Optional[int] = None
     buyer_user_label: Optional[str] = None
     buyer_email: Optional[str] = None
@@ -64,9 +71,8 @@ class OwnerOfferOut(BaseModel):
 
 
 class OwnerOfferSummaryOut(BaseModel):
-    highest_offer: Optional[int]
+    list_price: Optional[int]
     offer_count: int
-    bidding_open: bool
-    public_bidding_enabled: bool
+    offers_open: bool
     accepted_offer: Optional[OwnerOfferOut]
     offers: list[OwnerOfferOut]
