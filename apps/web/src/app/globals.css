@@ -2052,11 +2052,12 @@ a {
 
 .profile-identity-card {
   align-self: start;
+  position: relative;
   display: grid;
   align-content: start;
   gap: 0.65rem;
   min-height: 0;
-  padding: 1.15rem;
+  padding: 1.15rem 7.2rem 1.15rem 1.15rem;
   border: 1px solid var(--line);
   border-radius: 18px;
   background: #ffffff;
@@ -2104,8 +2105,13 @@ a {
 }
 
 .profile-logout-button {
-  justify-self: start;
-  margin-top: 0.35rem;
+  position: absolute;
+  top: 0.95rem;
+  right: 0.95rem;
+  min-height: 38px;
+  margin: 0;
+  padding: 0.48rem 0.72rem;
+  white-space: nowrap;
 }
 
 .profile-stats {
@@ -2135,6 +2141,11 @@ a {
   display: grid;
   gap: 0.9rem;
   padding: 1.15rem;
+}
+
+.profile-card-toggle,
+.profile-card-summary {
+  display: none;
 }
 
 .profile-account-compact .subheading {
@@ -3892,6 +3903,76 @@ a {
   .panel {
     padding: 0.9rem;
     border-radius: 18px;
+  }
+
+  .profile-identity-card {
+    padding: 1rem 6.6rem 1rem 1rem;
+    border-radius: 18px;
+  }
+
+  .profile-logout-button {
+    top: 0.8rem;
+    right: 0.8rem;
+  }
+
+  .profile-collapsible-card {
+    gap: 0;
+    padding: 0.85rem;
+  }
+
+  .profile-collapsible-card .profile-account-heading {
+    display: none;
+  }
+
+  .profile-card-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 46px;
+    color: var(--text);
+    cursor: pointer;
+    font-weight: 800;
+  }
+
+  .profile-card-summary span:first-child {
+    min-width: 0;
+  }
+
+  .profile-card-summary span:last-child {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .profile-card-summary::after {
+    content: "";
+    width: 0.58rem;
+    height: 0.58rem;
+    flex: none;
+    border-right: 2px solid var(--muted);
+    border-bottom: 2px solid var(--muted);
+    transform: rotate(45deg) translateY(-2px);
+    transition: transform 160ms ease;
+  }
+
+  .profile-card-toggle:checked + .profile-card-summary {
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .profile-card-toggle:checked + .profile-card-summary::after {
+    transform: rotate(225deg) translateY(-2px);
+  }
+
+  .profile-card-toggle:not(:checked) ~ .profile-user-id-form,
+  .profile-card-toggle:not(:checked) ~ .profile-contact-preferences {
+    display: none;
   }
 
   .filters {

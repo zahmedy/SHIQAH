@@ -225,6 +225,9 @@ export default function MyCarsPage() {
       }),
     [cars, showArchivedCars, showSoldCars],
   );
+  const contactSummary = contactTextEnabled || contactWhatsappEnabled
+    ? [contactTextEnabled ? "Text" : "", contactWhatsappEnabled ? "WhatsApp" : ""].filter(Boolean).join(" + ")
+    : "Off";
 
   const loadCars = useCallback(async () => {
     setLoading(true);
@@ -652,7 +655,12 @@ export default function MyCarsPage() {
       {!needsLogin && me && (
         <section className="profile-account-layout">
           <div className="profile-settings-stack">
-            <div className="panel profile-account-panel profile-account-compact">
+            <div className="panel profile-account-panel profile-account-compact profile-collapsible-card">
+              <input id="profile-user-id-toggle" className="profile-card-toggle" type="checkbox" />
+              <label className="profile-card-summary" htmlFor="profile-user-id-toggle">
+                <span>{text.userIdTitle}</span>
+                <span>{userId ? `@${userId}` : text.publicUserId}</span>
+              </label>
               <div className="profile-account-heading">
                 <h2 className="subheading">{text.userIdTitle}</h2>
               </div>
@@ -680,7 +688,12 @@ export default function MyCarsPage() {
               </form>
             </div>
 
-            <div className="panel profile-account-panel profile-account-compact">
+            <div className="panel profile-account-panel profile-account-compact profile-collapsible-card">
+              <input id="profile-contact-toggle" className="profile-card-toggle" type="checkbox" />
+              <label className="profile-card-summary" htmlFor="profile-contact-toggle">
+                <span>{text.contactPrefs}</span>
+                <span>{contactSummary}</span>
+              </label>
               <div className="profile-account-heading">
                 <h2 className="subheading">{text.contactPrefs}</h2>
               </div>
