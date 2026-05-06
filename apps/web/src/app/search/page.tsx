@@ -216,11 +216,12 @@ export default async function SearchPage({
 
       <section className="search-grid">
         <aside className="panel search-filter-card">
-          <details className="search-filter-details">
-            <summary className="search-filter-summary">
+          <div className="search-filter-details">
+            <input id="search-filter-toggle" className="search-filter-toggle" type="checkbox" />
+            <label className="search-filter-summary" htmlFor="search-filter-toggle">
               <span>Search filters</span>
               <span>{filterCount > 0 ? `${filterCount} active` : "Refine results"}</span>
-            </summary>
+            </label>
             <form key={formKey} className="filters" method="get">
               <input type="hidden" name="niche" value={selectedNiche.id} />
               <NearbySearch initialRadiusMi={initialRadiusMi} />
@@ -302,7 +303,7 @@ export default async function SearchPage({
 
               <button type="submit" className="btn btn-primary">Show Cars</button>
             </form>
-          </details>
+          </div>
         </aside>
 
         <section>
