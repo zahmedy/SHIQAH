@@ -164,6 +164,7 @@ def _offer_out(offer: Lead) -> OfferOut:
         rejected_at=offer.rejected_at,
         expires_at=offer.expires_at,
         is_counteroffer=_is_counteroffer(offer),
+        visibility="private",
     )
 
 
@@ -206,6 +207,7 @@ def _owner_offer_out(offer: Lead, buyers: dict[int, User], false_bid_report_coun
         rejected_at=offer.rejected_at,
         expires_at=offer.expires_at,
         is_counteroffer=_is_counteroffer(offer),
+        visibility="private",
         buyer_user_id=offer.buyer_user_id,
         buyer_user_label=buyer_label,
         buyer_email=buyer_email,
@@ -317,8 +319,11 @@ def get_offers(
 
     return OfferSummaryOut(
         list_price=car.price,
+        highest_offer=offers[0].amount if offers else None,
         offer_count=offer_count,
         offers_open=accepted_offer is None,
+        bidding_open=accepted_offer is None,
+        public_bidding_enabled=False,
         accepted_offer=_offer_out(accepted_offer) if can_view_accepted_offer and accepted_offer else None,
         offers=[_offer_out(offer) for offer in offers],
     )
@@ -346,8 +351,11 @@ def get_manage_offers(
 
     return OwnerOfferSummaryOut(
         list_price=car.price,
+        highest_offer=offers[0].amount if offers else None,
         offer_count=len(offers),
         offers_open=accepted_offer is None,
+        bidding_open=accepted_offer is None,
+        public_bidding_enabled=False,
         accepted_offer=_owner_offer_out(accepted_offer, buyers, report_counts.get(accepted_offer.id or 0, 0)) if accepted_offer else None,
         offers=[_owner_offer_out(offer, buyers, report_counts.get(offer.id or 0, 0)) for offer in offers],
     )

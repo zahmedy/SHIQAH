@@ -22,14 +22,15 @@ type OfferEntry = {
   amount: number;
   created_at: string;
   accepted_at: string | null;
-  visibility: "public" | "private";
+  rejected_at: string | null;
+  expires_at: string | null;
+  is_counteroffer: boolean;
 };
 
 type OfferSummary = {
-  highest_offer: number | null;
+  list_price: number | null;
   offer_count: number;
-  bidding_open: boolean;
-  public_bidding_enabled: boolean;
+  offers_open: boolean;
   accepted_offer: OfferEntry | null;
   offers: OfferEntry[];
 };
@@ -45,10 +46,9 @@ type OwnerOfferEntry = OfferEntry & {
 };
 
 type OwnerOfferSummary = {
-  highest_offer: number | null;
+  list_price: number | null;
   offer_count: number;
-  bidding_open: boolean;
-  public_bidding_enabled: boolean;
+  offers_open: boolean;
   accepted_offer: OwnerOfferEntry | null;
   offers: OwnerOfferEntry[];
 };
@@ -59,6 +59,11 @@ type MeResponse = {
 
 function isOwnerOfferEntry(offer: OfferEntry | OwnerOfferEntry): offer is OwnerOfferEntry {
   return "phone_e164" in offer;
+}
+
+function parseApiErrorPayload(payload: unknown, fallback: string, locale: ReturnType<typeof useLocale>) {
+  const detail = typeof payload === "string" ? payload : (payload as { detail?: string })?.detail;
+  return translateApiMessage(locale, detail || fallback);
 }
 
 function buildWhatsappUrl(phone: string, message: string) {
@@ -76,26 +81,27 @@ function buildEmailUrl(email: string, subject: string, message: string) {
 export default function OfferForm({
   carId,
   ownerId,
-  publicBiddingEnabled: publicBiddingEnabledProp,
 }: {
   carId: number;
   ownerId: number;
-  publicBiddingEnabled: boolean;
+  publicBiddingEnabled?: boolean;
 }) {
   const locale = useLocale();
   const [amount, setAmount] = useState("");
+  const [counterAmount, setCounterAmount] = useState("");
   const [token, setToken] = useState("");
   const [viewerId, setViewerId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [acceptingId, setAcceptingId] = useState<number | null>(null);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [unacceptingId, setUnacceptingId] = useState<number | null>(null);
+  const [counteringId, setCounteringId] = useState<number | null>(null);
   const [reportingId, setReportingId] = useState<number | null>(null);
+  const [counterOffer, setCounterOffer] = useState<OwnerOfferEntry | null>(null);
   const [reportOffer, setReportOffer] = useState<OwnerOfferEntry | null>(null);
   const [reportReason, setReportReason] = useState("fake_bid");
   const [reportNotes, setReportNotes] = useState("");
   const [confirmAmount, setConfirmAmount] = useState<number | null>(null);
-  const [confirmVisibility, setConfirmVisibility] = useState<"public" | "private" | null>(null);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<OfferSummary | null>(null);
   const [ownerSummary, setOwnerSummary] = useState<OwnerOfferSummary | null>(null);
@@ -104,69 +110,66 @@ export default function OfferForm({
   const isOwner = viewerId === ownerId;
 
   const text = {
-    title: "Offers & Bids",
+    title: "Make Offer",
     ownerTitle: "Offers",
-    highestOffer: "Highest Offer",
-    noOffers: "None",
-    bidCount: (count: number) => `${count} bids`,
-    recentBids: "Recent Offers",
-    amount: "Your bid",
-    signIn: "Sign in to bid or send an offer",
-    signInHint: "Your signed-in account will be used automatically.",
-    minOffer: (amount: number) => `Your next offer must be higher than ${formatPrice(amount, locale)}.`,
-    publicHint: "Public bids are visible to everyone and raise the current highest bid.",
-    privateHint: "Private offers are shared only with the listing owner.",
-    privateOnlyHint: "This seller accepts private offers only. Public bidding is off for this listing.",
-    publicBid: "Public Bid",
-    privateOffer: "Private Offer",
-    publicBadge: "Public",
-    privateBadge: "Private",
-    warningTitle: "Important warning before bidding",
-    warningBody: "If the listing owner reports this as a false bid and the purchase is not completed, your account will be blocked from bidding for one month. If it happens again, the account will be banned.",
-    confirmBid: "Accept and Place Bid",
-    cancelBid: "Cancel",
-    confirmAmount: "Bid amount",
-    confirmType: "Offer type",
-    closedHint: "Bidding is closed for this listing after an offer was accepted.",
-    ownerHint: "Public bids and private offers both appear here.",
-    ownerNoOffers: "No offers to manage yet.",
-    bidder: "Bidder",
+    listPrice: "List Price",
+    noPrice: "Ask seller",
+    offerCount: (count: number) => `${count} active offer${count === 1 ? "" : "s"}`,
+    recentOffers: "Your Offer",
+    amount: "Offer amount",
+    signIn: "Sign in to make an offer",
+    offerHelp: "Offers are private and expire after 7 days.",
+    disclaimer: "NicheRides is not the seller, dealer, broker, or escrow provider. Buyers and sellers are responsible for inspection, payment, title transfer, taxes, registration, and any escrow or shipping arrangements.",
+    warningTitle: "Before making an offer",
+    warningBody: "This offer is between you and the seller. NicheRides does not hold funds, verify payment, broker the sale, or provide escrow.",
+    confirmOffer: "Make Offer",
+    cancel: "Cancel",
+    confirmAmount: "Offer amount",
+    closedHint: "Offers are closed after an offer is accepted.",
+    ownerHint: "Offers are private. Active offers and counteroffers expire after 7 days.",
+    ownerNoOffers: "No active offers to manage yet.",
+    bidder: "Buyer",
     accept: "Accept Offer",
     accepting: "Accepting...",
-    reject: "Reject Offer",
+    reject: "Reject",
     rejecting: "Rejecting...",
+    counter: "Counteroffer",
+    countering: "Sending...",
+    counterTitle: "Send Counteroffer",
+    counterAmount: "Counteroffer amount",
+    counterSuccess: "Counteroffer sent.",
+    counterFailed: "Failed to send counteroffer.",
+    counterBadge: "Counteroffer",
+    expires: (value: string) => `Expires ${value}`,
     reportFalseBid: "Flag false bid",
     reportingFalseBid: "Flagging...",
     reportFalseBidTitle: "Flag false bid",
-    reportFalseBidHelp: "Only accepted bids can be flagged. Reports go to admins for review before any buyer action is taken.",
+    reportFalseBidHelp: "Only accepted offers can be flagged. Reports go to admins for review before any buyer action is taken.",
     flaggedFalseBid: "Flagged for admin review",
     reportReason: "Reason",
     reportNotes: "Notes optional",
     reportSubmitted: "False bid report submitted for admin review.",
     reportFailed: "Failed to submit report.",
-    reportAcceptedOnly: "Only an accepted bid can be flagged.",
+    reportAcceptedOnly: "Only an accepted offer can be flagged.",
     accepted: "Accepted",
     acceptedSummary: "An offer has been accepted for this listing.",
-    unaccept: "Unaccept Offer",
+    unaccept: "Reopen Offers",
     unaccepting: "Reopening...",
-    unacceptedSuccess: "Offer acceptance removed and bidding reopened.",
-    acceptedContactTitle: "Contact Accepted Bidder",
-    bidderPhone: "Bidder phone",
-    emailBidder: "Email Bidder",
-    textBidder: "Text Bidder",
-    callBidder: "Call Bidder",
-    whatsappBidder: "WhatsApp Bidder",
-    submit: "Place Bid",
+    unacceptedSuccess: "Offer acceptance removed and offers reopened.",
+    acceptedContactTitle: "Contact Accepted Buyer",
+    buyerPhone: "Buyer phone",
+    emailBuyer: "Email Buyer",
+    textBuyer: "Text Buyer",
+    callBuyer: "Call Buyer",
+    whatsappBuyer: "WhatsApp Buyer",
     submitting: "Sending...",
     loading: "Loading offers...",
     missingApi: "NEXT_PUBLIC_API_BASE is missing.",
     invalidAmount: "Enter a valid offer amount.",
-    lowerThanHighest: (amount: number) => `Your offer must be higher than ${formatPrice(amount, locale)}.`,
-    success: "Bid placed.",
-    privateSuccess: "Private offer sent.",
-    acceptedSuccess: "Offer accepted and bidding closed.",
+    success: "Offer sent.",
+    acceptedSuccess: "Offer accepted and offers closed.",
     rejectedSuccess: "Offer rejected.",
-    loginRequired: "You must sign in before placing a bid.",
+    loginRequired: "You must sign in before making an offer.",
     failed: "Failed to send offer.",
     acceptFailed: "Failed to accept offer.",
     rejectFailed: "Failed to reject offer.",
@@ -174,35 +177,64 @@ export default function OfferForm({
 
   const currentSummary = isOwner && ownerSummary ? ownerSummary : summary;
   const acceptedOffer = currentSummary?.accepted_offer ?? null;
-  const biddingOpen = currentSummary?.bidding_open ?? true;
-  const publicBiddingEnabled = currentSummary?.public_bidding_enabled ?? publicBiddingEnabledProp;
-  const minimumOffer = (currentSummary?.highest_offer ?? 0) + 1;
+  const offersOpen = currentSummary?.offers_open ?? true;
   const acceptedOwnerOffer = isOwner && acceptedOffer && isOwnerOfferEntry(acceptedOffer) ? acceptedOffer : null;
-  const acceptedBidderLabel = acceptedOwnerOffer?.buyer_user_label || acceptedOwnerOffer?.buyer_email || acceptedOwnerOffer?.phone_e164 || null;
-  const acceptedBidderPhone = acceptedOwnerOffer?.phone_e164 || null;
-  const acceptedBidderMessage = `Hello, regarding your accepted offer on listing #${carId}`;
-  const acceptedBidderEmail = acceptedOwnerOffer?.buyer_email
-    ? buildEmailUrl(
-        acceptedOwnerOffer.buyer_email,
-        `Accepted offer on listing #${carId}`,
-        acceptedBidderMessage,
-      )
+  const acceptedBuyerLabel = acceptedOwnerOffer?.buyer_user_label || acceptedOwnerOffer?.buyer_email || acceptedOwnerOffer?.phone_e164 || null;
+  const acceptedBuyerPhone = acceptedOwnerOffer?.phone_e164 || null;
+  const acceptedBuyerMessage = `Hello, regarding your accepted offer on listing #${carId}`;
+  const acceptedBuyerEmail = acceptedOwnerOffer?.buyer_email
+    ? buildEmailUrl(acceptedOwnerOffer.buyer_email, `Accepted offer on listing #${carId}`, acceptedBuyerMessage)
     : null;
-  const acceptedBidderSms = acceptedBidderPhone && acceptedOwnerOffer?.buyer_contact_text_enabled
-    ? buildSmsUrl(acceptedBidderPhone, acceptedBidderMessage)
+  const acceptedBuyerSms = acceptedBuyerPhone && acceptedOwnerOffer?.buyer_contact_text_enabled
+    ? buildSmsUrl(acceptedBuyerPhone, acceptedBuyerMessage)
     : null;
-  const acceptedBidderWhatsapp = acceptedBidderPhone && acceptedOwnerOffer?.buyer_contact_whatsapp_enabled
-    ? buildWhatsappUrl(
-        acceptedBidderPhone,
-        acceptedBidderMessage,
-      )
+  const acceptedBuyerWhatsapp = acceptedBuyerPhone && acceptedOwnerOffer?.buyer_contact_whatsapp_enabled
+    ? buildWhatsappUrl(acceptedBuyerPhone, acceptedBuyerMessage)
     : null;
+
+  async function parseApiError(res: Response, fallback: string) {
+    const contentType = res.headers.get("content-type") || "";
+    const payload = contentType.includes("application/json") ? await res.json() : await res.text();
+    return parseApiErrorPayload(payload, fallback, locale);
+  }
+
+  async function reloadOwnerOffers() {
+    if (!API_BASE || !token || !isOwner) return;
+    const manageRes = await fetch(`${API_BASE}/v1/cars/${carId}/offers/manage`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (manageRes.ok) {
+      setOwnerSummary((await manageRes.json()) as OwnerOfferSummary);
+    }
+  }
+
+  async function loadOffers() {
+    if (!API_BASE) {
+      setError(text.missingApi);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    try {
+      const headers: HeadersInit = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(`${API_BASE}/v1/cars/${carId}/offers`, { headers, cache: "no-store" });
+      if (!res.ok) throw new Error(await parseApiError(res, text.failed));
+      setSummary((await res.json()) as OfferSummary);
+    } catch (err) {
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.failed);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     async function syncAuth() {
       const nextToken = window.localStorage.getItem(TOKEN_KEY) || "";
       setToken(nextToken);
-
       if (!API_BASE || !nextToken) {
         setViewerId(null);
         return;
@@ -233,41 +265,6 @@ export default function OfferForm({
     };
   }, []);
 
-  async function loadOffers() {
-    if (!API_BASE) {
-      setError(text.missingApi);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    try {
-      const headers: HeadersInit = {};
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
-      const res = await fetch(`${API_BASE}/v1/cars/${carId}/offers`, {
-        headers,
-        cache: "no-store",
-      });
-
-      if (!res.ok) {
-        const contentType = res.headers.get("content-type") || "";
-        const payload = contentType.includes("application/json") ? await res.json() : await res.text();
-        const detail = typeof payload === "string" ? payload : payload?.detail;
-        throw new Error(translateApiMessage(locale, detail || text.failed));
-      }
-
-      const data = (await res.json()) as OfferSummary;
-      setSummary(data);
-    } catch (err) {
-      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.failed);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
     void loadOffers();
   // carId/API_BASE are stable for this page lifecycle.
@@ -276,7 +273,6 @@ export default function OfferForm({
   useEffect(() => {
     if (acceptedOffer) {
       setConfirmAmount(null);
-      setConfirmVisibility(null);
     }
   }, [acceptedOffer]);
 
@@ -289,21 +285,11 @@ export default function OfferForm({
 
       try {
         const res = await fetch(`${API_BASE}/v1/cars/${carId}/offers/manage`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
         });
-
-        if (!res.ok) {
-          const contentType = res.headers.get("content-type") || "";
-          const payload = contentType.includes("application/json") ? await res.json() : await res.text();
-          const detail = typeof payload === "string" ? payload : payload?.detail;
-          throw new Error(translateApiMessage(locale, detail || text.failed));
-        }
-
-        const data = (await res.json()) as OwnerOfferSummary;
-        setOwnerSummary(data);
+        if (!res.ok) throw new Error(await parseApiError(res, text.failed));
+        setOwnerSummary((await res.json()) as OwnerOfferSummary);
       } catch (err) {
         setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.failed);
       }
@@ -312,7 +298,7 @@ export default function OfferForm({
     void loadOwnerOffers();
   }, [carId, isOwner, text.failed, token]);
 
-  async function submitBid(nextAmount: number, nextVisibility: "public" | "private") {
+  async function submitOffer(nextAmount: number) {
     setError("");
     setSuccess("");
 
@@ -320,12 +306,10 @@ export default function OfferForm({
       setError(text.missingApi);
       return;
     }
-
     if (!Number.isFinite(nextAmount) || nextAmount <= 0) {
       setError(text.invalidAmount);
       return;
     }
-
     if (!token) {
       setError(text.loginRequired);
       return;
@@ -339,27 +323,16 @@ export default function OfferForm({
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          amount: Math.trunc(nextAmount),
-          visibility: nextVisibility,
-        }),
+        body: JSON.stringify({ amount: Math.trunc(nextAmount) }),
       });
 
-      if (!res.ok) {
-        const contentType = res.headers.get("content-type") || "";
-        const payload = contentType.includes("application/json") ? await res.json() : await res.text();
-        const detail = typeof payload === "string" ? payload : payload?.detail;
-        throw new Error(translateApiMessage(locale, detail || text.failed));
-      }
+      if (!res.ok) throw new Error(await parseApiError(res, text.failed));
 
       setAmount("");
       setConfirmAmount(null);
-      setConfirmVisibility(null);
-      setSuccess(nextVisibility === "private" ? text.privateSuccess : text.success);
+      setSuccess(text.success);
       void loadOffers();
-      if (isOwner) {
-        setOwnerSummary(null);
-      }
+      if (isOwner) setOwnerSummary(null);
     } catch (err) {
       setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.failed);
     } finally {
@@ -367,7 +340,7 @@ export default function OfferForm({
     }
   }
 
-  function startOffer(nextVisibility: "public" | "private") {
+  function startOffer() {
     setError("");
     setSuccess("");
 
@@ -376,28 +349,17 @@ export default function OfferForm({
       setError(text.invalidAmount);
       return;
     }
-
-    if (parsedAmount < minimumOffer) {
-      setError(text.lowerThanHighest(minimumOffer - 1));
-      return;
-    }
-    if (nextVisibility === "public" && !publicBiddingEnabled) {
-      setError(text.privateOnlyHint);
-      return;
-    }
-
     if (!token) {
       setError(text.loginRequired);
       return;
     }
 
     setConfirmAmount(Math.trunc(parsedAmount));
-    setConfirmVisibility(nextVisibility);
   }
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    startOffer("public");
+    startOffer();
   }
 
   async function handleAccept(offerId: number) {
@@ -412,31 +374,12 @@ export default function OfferForm({
     try {
       const res = await fetch(`${API_BASE}/v1/cars/${carId}/offers/${offerId}/accept`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (!res.ok) {
-        const contentType = res.headers.get("content-type") || "";
-        const payload = contentType.includes("application/json") ? await res.json() : await res.text();
-        const detail = typeof payload === "string" ? payload : payload?.detail;
-        throw new Error(translateApiMessage(locale, detail || text.acceptFailed));
-      }
+      if (!res.ok) throw new Error(await parseApiError(res, text.acceptFailed));
 
       setSuccess(text.acceptedSuccess);
-      await Promise.all([loadOffers(), (async () => {
-        const manageRes = await fetch(`${API_BASE}/v1/cars/${carId}/offers/manage`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          cache: "no-store",
-        });
-        if (manageRes.ok) {
-          const data = (await manageRes.json()) as OwnerOfferSummary;
-          setOwnerSummary(data);
-        }
-      })()]);
+      await Promise.all([loadOffers(), reloadOwnerOffers()]);
     } catch (err) {
       setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.acceptFailed);
     } finally {
@@ -456,31 +399,12 @@ export default function OfferForm({
     try {
       const res = await fetch(`${API_BASE}/v1/cars/${carId}/offers/${offerId}/unaccept`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (!res.ok) {
-        const contentType = res.headers.get("content-type") || "";
-        const payload = contentType.includes("application/json") ? await res.json() : await res.text();
-        const detail = typeof payload === "string" ? payload : payload?.detail;
-        throw new Error(translateApiMessage(locale, detail || text.acceptFailed));
-      }
+      if (!res.ok) throw new Error(await parseApiError(res, text.acceptFailed));
 
       setSuccess(text.unacceptedSuccess);
-      await Promise.all([loadOffers(), (async () => {
-        const manageRes = await fetch(`${API_BASE}/v1/cars/${carId}/offers/manage`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          cache: "no-store",
-        });
-        if (manageRes.ok) {
-          const data = (await manageRes.json()) as OwnerOfferSummary;
-          setOwnerSummary(data);
-        }
-      })()]);
+      await Promise.all([loadOffers(), reloadOwnerOffers()]);
     } catch (err) {
       setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.acceptFailed);
     } finally {
@@ -500,31 +424,12 @@ export default function OfferForm({
     try {
       const res = await fetch(`${API_BASE}/v1/cars/${carId}/offers/${offerId}/reject`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (!res.ok) {
-        const contentType = res.headers.get("content-type") || "";
-        const payload = contentType.includes("application/json") ? await res.json() : await res.text();
-        const detail = typeof payload === "string" ? payload : payload?.detail;
-        throw new Error(translateApiMessage(locale, detail || text.rejectFailed));
-      }
+      if (!res.ok) throw new Error(await parseApiError(res, text.rejectFailed));
 
       setSuccess(text.rejectedSuccess);
-      await Promise.all([loadOffers(), (async () => {
-        const manageRes = await fetch(`${API_BASE}/v1/cars/${carId}/offers/manage`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          cache: "no-store",
-        });
-        if (manageRes.ok) {
-          const data = (await manageRes.json()) as OwnerOfferSummary;
-          setOwnerSummary(data);
-        }
-      })()]);
+      await Promise.all([loadOffers(), reloadOwnerOffers()]);
     } catch (err) {
       setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.rejectFailed);
     } finally {
@@ -532,11 +437,48 @@ export default function OfferForm({
     }
   }
 
-  async function handleFalseBidReport(event: FormEvent) {
+  async function handleCounterOffer(event: FormEvent) {
     event.preventDefault();
-    if (!reportOffer) {
+    if (!counterOffer) return;
+    if (!API_BASE || !token) {
+      setError(text.loginRequired);
       return;
     }
+
+    const parsedAmount = Number(counterAmount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setError(text.invalidAmount);
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+    setCounteringId(counterOffer.id);
+    try {
+      const res = await fetch(`${API_BASE}/v1/cars/${carId}/offers/${counterOffer.id}/counter`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ amount: Math.trunc(parsedAmount) }),
+      });
+      if (!res.ok) throw new Error(await parseApiError(res, text.counterFailed));
+
+      setSuccess(text.counterSuccess);
+      setCounterOffer(null);
+      setCounterAmount("");
+      await Promise.all([loadOffers(), reloadOwnerOffers()]);
+    } catch (err) {
+      setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.counterFailed);
+    } finally {
+      setCounteringId(null);
+    }
+  }
+
+  async function handleFalseBidReport(event: FormEvent) {
+    event.preventDefault();
+    if (!reportOffer) return;
     if (!reportOffer.accepted_at) {
       setError(text.reportAcceptedOnly);
       setReportOffer(null);
@@ -562,13 +504,7 @@ export default function OfferForm({
           notes: reportNotes.trim() || undefined,
         }),
       });
-
-      if (!res.ok) {
-        const contentType = res.headers.get("content-type") || "";
-        const payload = contentType.includes("application/json") ? await res.json() : await res.text();
-        const detail = typeof payload === "string" ? payload : payload?.detail;
-        throw new Error(translateApiMessage(locale, detail || text.reportFailed));
-      }
+      if (!res.ok) throw new Error(await parseApiError(res, text.reportFailed));
 
       setSuccess(text.reportSubmitted);
       setOwnerSummary((current) => {
@@ -597,15 +533,15 @@ export default function OfferForm({
   return (
     <section className="offer-panel">
       <h3 className="subheading">{isOwner ? text.ownerTitle : text.title}</h3>
-      {publicBiddingEnabled && currentSummary?.offer_count ? (
-        <div className="offer-summary spaced-top-sm">
-          <p className="offer-summary-label">{text.highestOffer}</p>
-          <p className="offer-summary-value">
-            {currentSummary?.highest_offer ? formatPrice(currentSummary.highest_offer, locale) : text.noOffers}
-          </p>
-          <p className="offer-summary-count">{text.bidCount(currentSummary?.offer_count ?? 0)}</p>
-        </div>
-      ) : null}
+      <div className="offer-summary spaced-top-sm">
+        <p className="offer-summary-label">{text.listPrice}</p>
+        <p className="offer-summary-value">
+          {currentSummary?.list_price ? formatPrice(currentSummary.list_price, locale) : text.noPrice}
+        </p>
+        <p className="offer-summary-count">{text.offerCount(currentSummary?.offer_count ?? 0)}</p>
+      </div>
+      <p className="helper-text spaced-top-sm">{text.offerHelp}</p>
+      <p className="notice spaced-top-sm">{text.disclaimer}</p>
 
       {acceptedOffer ? (
         <p className="notice success spaced-top-sm">
@@ -616,39 +552,27 @@ export default function OfferForm({
       {acceptedOwnerOffer ? (
         <div className="offer-contact-card spaced-top-sm">
           <p className="offer-list-title">{text.acceptedContactTitle}</p>
-          {acceptedBidderLabel ? <p className="car-meta">{acceptedBidderLabel}</p> : null}
+          {acceptedBuyerLabel ? <p className="car-meta">{acceptedBuyerLabel}</p> : null}
           {acceptedOwnerOffer.false_bid_report_count > 0 ? (
             <p className="offer-list-badge">{text.flaggedFalseBid}</p>
           ) : null}
-          {acceptedBidderPhone ? (
+          {acceptedBuyerPhone ? (
             <>
-              <p className="car-meta">{text.bidderPhone}: {acceptedBidderPhone}</p>
+              <p className="car-meta">{text.buyerPhone}: {acceptedBuyerPhone}</p>
               <div className="contact-actions">
-                {acceptedBidderEmail ? (
-                  <a href={acceptedBidderEmail} className="btn btn-secondary">
-                    {text.emailBidder}
-                  </a>
-                ) : null}
-                {acceptedBidderSms ? (
-                  <a href={acceptedBidderSms} className="btn btn-secondary">
-                    {text.textBidder}
-                  </a>
-                ) : null}
-                <a href={`tel:${acceptedBidderPhone}`} className="btn btn-secondary">
-                  {text.callBidder}
-                </a>
-                {acceptedBidderWhatsapp ? (
-                  <a href={acceptedBidderWhatsapp} target="_blank" rel="noreferrer" className="btn btn-secondary">
-                    {text.whatsappBidder}
+                {acceptedBuyerEmail ? <a href={acceptedBuyerEmail} className="btn btn-secondary">{text.emailBuyer}</a> : null}
+                {acceptedBuyerSms ? <a href={acceptedBuyerSms} className="btn btn-secondary">{text.textBuyer}</a> : null}
+                <a href={`tel:${acceptedBuyerPhone}`} className="btn btn-secondary">{text.callBuyer}</a>
+                {acceptedBuyerWhatsapp ? (
+                  <a href={acceptedBuyerWhatsapp} target="_blank" rel="noreferrer" className="btn btn-secondary">
+                    {text.whatsappBuyer}
                   </a>
                 ) : null}
               </div>
             </>
-          ) : acceptedBidderEmail ? (
+          ) : acceptedBuyerEmail ? (
             <div className="contact-actions">
-              <a href={acceptedBidderEmail} className="btn btn-secondary">
-                {text.emailBidder}
-              </a>
+              <a href={acceptedBuyerEmail} className="btn btn-secondary">{text.emailBuyer}</a>
             </div>
           ) : null}
           <div className="contact-actions">
@@ -680,12 +604,13 @@ export default function OfferForm({
         <p className="helper-text spaced-top-sm">{text.loading}</p>
       ) : currentSummary?.offers.length ? (
         <div className="offer-list spaced-top-sm">
-          <p className="offer-list-title">{isOwner ? text.ownerHint : text.recentBids}</p>
+          <p className="offer-list-title">{isOwner ? text.ownerHint : text.recentOffers}</p>
           {currentSummary.offers.map((offer) => (
             <div key={offer.id} className="offer-list-item">
               <div className="offer-list-body">
                 <strong>{formatPrice(offer.amount, locale)}</strong>
-                {offer.visibility === "private" ? <span>{text.privateBadge}</span> : null}
+                {offer.is_counteroffer ? <span>{text.counterBadge}</span> : null}
+                {offer.expires_at ? <span>{text.expires(formatDateTime(offer.expires_at, locale))}</span> : null}
                 {isOwnerOfferEntry(offer) && offer.false_bid_report_count > 0 ? <span>{text.flaggedFalseBid}</span> : null}
                 {isOwner && isOwnerOfferEntry(offer) ? (
                   <span>{text.bidder}: {offer.buyer_user_label || offer.phone_e164 || `#${offer.buyer_user_id ?? offer.id}`}</span>
@@ -693,23 +618,36 @@ export default function OfferForm({
               </div>
               <div className="offer-list-side">
                 <span className="offer-list-meta">{formatDateTime(offer.created_at, locale)}</span>
-                {isOwner ? (
+                {isOwner && isOwnerOfferEntry(offer) ? (
                   offer.accepted_at ? (
                     <span className="offer-list-badge">{text.accepted}</span>
-                  ) : biddingOpen ? (
+                  ) : offersOpen ? (
                     <>
                       <button
                         type="button"
                         className="btn btn-secondary offer-list-action"
-                        disabled={acceptingId === offer.id || rejectingId === offer.id}
+                        disabled={acceptingId === offer.id || rejectingId === offer.id || counteringId === offer.id}
                         onClick={() => void handleAccept(offer.id)}
                       >
                         {acceptingId === offer.id ? text.accepting : text.accept}
                       </button>
                       <button
                         type="button"
+                        className="btn btn-secondary offer-list-action"
+                        disabled={acceptingId === offer.id || rejectingId === offer.id || counteringId === offer.id}
+                        onClick={() => {
+                          setCounterOffer(offer);
+                          setCounterAmount("");
+                          setError("");
+                          setSuccess("");
+                        }}
+                      >
+                        {counteringId === offer.id ? text.countering : text.counter}
+                      </button>
+                      <button
+                        type="button"
                         className="btn btn-danger offer-list-action"
-                        disabled={acceptingId === offer.id || rejectingId === offer.id}
+                        disabled={acceptingId === offer.id || rejectingId === offer.id || counteringId === offer.id}
                         onClick={() => void handleReject(offer.id)}
                       >
                         {rejectingId === offer.id ? text.rejecting : text.reject}
@@ -725,7 +663,7 @@ export default function OfferForm({
         <p className="helper-text spaced-top-sm">{text.ownerNoOffers}</p>
       ) : null}
 
-      {isOwner ? null : !biddingOpen ? (
+      {isOwner ? null : !offersOpen ? (
         <p className="helper-text spaced-top-sm">{text.closedHint}</p>
       ) : token ? (
         <form className="filters spaced-top-sm" onSubmit={handleSubmit}>
@@ -735,36 +673,23 @@ export default function OfferForm({
               id={`offer-amount-${carId}`}
               className="input"
               type="number"
-              min={minimumOffer}
+              min={1}
               inputMode="numeric"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
             />
           </div>
-
-          <p className="helper-text">
-            {currentSummary?.highest_offer ? text.minOffer(minimumOffer - 1) : publicBiddingEnabled ? text.publicHint : text.privateOnlyHint}
-          </p>
-
           <div className="contact-actions">
-            <button type="button" className="btn btn-secondary" disabled={submitting} onClick={() => startOffer("private")}>
-              {submitting && confirmVisibility === "private" ? text.submitting : text.privateOffer}
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
+              {submitting ? text.submitting : text.confirmOffer}
             </button>
-            {publicBiddingEnabled ? (
-              <button type="submit" className="btn btn-primary" disabled={submitting}>
-                {submitting && confirmVisibility === "public" ? text.submitting : text.publicBid}
-              </button>
-            ) : null}
           </div>
-
           {error ? <p className="notice error">{error}</p> : null}
           {success ? <p className="notice success">{success}</p> : null}
         </form>
       ) : (
         <div className="filters spaced-top-sm">
-          <Link href="/login" className="btn btn-primary">
-            {text.signIn}
-          </Link>
+          <Link href="/login" className="btn btn-primary">{text.signIn}</Link>
           {error ? <p className="notice error">{error}</p> : null}
         </div>
       )}
@@ -775,44 +700,61 @@ export default function OfferForm({
             type="button"
             className="photo-viewer-backdrop"
             onClick={() => {
-              if (!submitting) {
-                setConfirmAmount(null);
-              }
+              if (!submitting) setConfirmAmount(null);
             }}
-            aria-label={text.cancelBid}
+            aria-label={text.cancel}
           />
           <div className="photo-viewer-card offer-confirm-card">
             <h4 className="offer-confirm-title">{text.warningTitle}</h4>
-            <p className="offer-confirm-amount">
-              {text.confirmAmount}: {formatPrice(confirmAmount, locale)}
-            </p>
-            <p className="offer-confirm-copy">
-              {text.confirmType}: {confirmVisibility === "private" ? text.privateOffer : text.publicBid}
-            </p>
+            <p className="offer-confirm-amount">{text.confirmAmount}: {formatPrice(confirmAmount, locale)}</p>
             <p className="offer-confirm-copy">{text.warningBody}</p>
             <div className="offer-confirm-actions">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                disabled={submitting}
-                onClick={() => setConfirmAmount(null)}
-              >
-                {text.cancelBid}
+              <button type="button" className="btn btn-secondary" disabled={submitting} onClick={() => setConfirmAmount(null)}>
+                {text.cancel}
               </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={submitting}
-                onClick={() => {
-                  if (confirmVisibility) {
-                    void submitBid(confirmAmount, confirmVisibility);
-                  }
-                }}
-              >
-                {submitting ? text.submitting : text.confirmBid}
+              <button type="button" className="btn btn-primary" disabled={submitting} onClick={() => void submitOffer(confirmAmount)}>
+                {submitting ? text.submitting : text.confirmOffer}
               </button>
             </div>
           </div>
+        </div>
+      ) : null}
+
+      {counterOffer ? (
+        <div className="photo-viewer" role="dialog" aria-modal="true" aria-label={text.counterTitle}>
+          <button
+            type="button"
+            className="photo-viewer-backdrop"
+            aria-label={text.cancel}
+            onClick={() => {
+              if (counteringId === null) setCounterOffer(null);
+            }}
+          />
+          <form className="photo-viewer-card offer-confirm-card" onSubmit={handleCounterOffer}>
+            <h4 className="offer-confirm-title">{text.counterTitle}</h4>
+            <p className="offer-confirm-copy">
+              Current offer: {formatPrice(counterOffer.amount, locale)} · {counterOffer.buyer_user_label || counterOffer.phone_e164 || `#${counterOffer.buyer_user_id ?? counterOffer.id}`}
+            </p>
+            <label className="label" htmlFor={`counter-offer-${counterOffer.id}`}>{text.counterAmount}</label>
+            <input
+              id={`counter-offer-${counterOffer.id}`}
+              className="input"
+              type="number"
+              min={1}
+              inputMode="numeric"
+              value={counterAmount}
+              onChange={(event) => setCounterAmount(event.target.value)}
+              disabled={counteringId !== null}
+            />
+            <div className="offer-confirm-actions">
+              <button type="button" className="btn btn-secondary" disabled={counteringId !== null} onClick={() => setCounterOffer(null)}>
+                {text.cancel}
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={counteringId !== null}>
+                {counteringId !== null ? text.countering : text.counter}
+              </button>
+            </div>
+          </form>
         </div>
       ) : null}
 
@@ -821,11 +763,9 @@ export default function OfferForm({
           <button
             type="button"
             className="photo-viewer-backdrop"
-            aria-label={text.cancelBid}
+            aria-label={text.cancel}
             onClick={() => {
-              if (reportingId === null) {
-                setReportOffer(null);
-              }
+              if (reportingId === null) setReportOffer(null);
             }}
           />
           <form className="photo-viewer-card offer-confirm-card" onSubmit={handleFalseBidReport}>
@@ -858,7 +798,7 @@ export default function OfferForm({
             />
             <div className="offer-confirm-actions">
               <button type="button" className="btn btn-secondary" disabled={reportingId !== null} onClick={() => setReportOffer(null)}>
-                {text.cancelBid}
+                {text.cancel}
               </button>
               <button type="submit" className="btn btn-primary" disabled={reportingId !== null}>
                 {reportingId !== null ? text.reportingFalseBid : text.reportFalseBid}

@@ -359,7 +359,7 @@ class PreDeploymentListingLifecycleTests(unittest.TestCase):
         self.assertIn("mailto:seller@example.com", result["contact"]["email_url"])
         self.assertIn("Question%20about%202024%20Mazda%20CX-90", result["contact"]["email_url"])
 
-    def test_offer_lists_show_only_each_buyers_highest_visible_offer(self) -> None:
+    def test_offer_lists_show_only_each_buyers_latest_private_offer(self) -> None:
         with Session(self.engine) as session:
             owner = User(role=UserRole.seller, name="Owner", email="owner@example.com", verified_at=datetime.utcnow())
             buyer = User(role=UserRole.buyer, name="Buyer", email="buyer@example.com", verified_at=datetime.utcnow())
@@ -374,8 +374,8 @@ class PreDeploymentListingLifecycleTests(unittest.TestCase):
             session.commit()
             session.refresh(listing)
 
-            public_offer = create_offer(listing.id, OfferCreate(amount=10_000, visibility="public"), session=session, user=buyer)
-            private_offer = create_offer(listing.id, OfferCreate(amount=12_000, visibility="private"), session=session, user=buyer)
+            first_offer = create_offer(listing.id, OfferCreate(amount=10_000), session=session, user=buyer)
+            latest_offer = create_offer(listing.id, OfferCreate(amount=12_000), session=session, user=buyer)
 
             owner_summary = get_manage_offers(listing.id, session=session, user=owner)
             buyer_summary = get_offers(listing.id, session=session, user=buyer)
@@ -384,20 +384,19 @@ class PreDeploymentListingLifecycleTests(unittest.TestCase):
                 select(Notification).where(Notification.user_id == owner.id, Notification.type == "offer_created")
             ).all()
 
-        self.assertEqual(public_offer.amount, 10_000)
-        self.assertEqual(private_offer.amount, 12_000)
+        self.assertEqual(first_offer.amount, 10_000)
+        self.assertEqual(latest_offer.amount, 12_000)
         self.assertEqual(owner_summary.offer_count, 1)
         self.assertEqual(len(owner_summary.offers), 1)
         self.assertEqual(owner_summary.offers[0].amount, 12_000)
         self.assertEqual(owner_summary.offers[0].visibility, "private")
-        self.assertEqual(buyer_summary.highest_offer, 12_000)
+        self.assertEqual(buyer_summary.list_price, listing.price)
         self.assertEqual(len(buyer_summary.offers), 1)
         self.assertEqual(buyer_summary.offers[0].amount, 12_000)
-        self.assertEqual(len(public_summary.offers), 1)
-        self.assertEqual(public_summary.offers[0].amount, 10_000)
+        self.assertEqual(public_summary.offers, [])
         self.assertEqual(len(owner_notifications), 2)
 
-    def test_repeat_private_offer_must_be_higher_than_buyers_current_offer(self) -> None:
+    def test_repeat_offer_replaces_buyers_current_offer(self) -> None:
         with Session(self.engine) as session:
             owner = User(role=UserRole.seller, name="Owner", email="owner-repeat@example.com", verified_at=datetime.utcnow())
             buyer = User(role=UserRole.buyer, name="Buyer", email="buyer-repeat@example.com", verified_at=datetime.utcnow())
@@ -412,22 +411,20 @@ class PreDeploymentListingLifecycleTests(unittest.TestCase):
             session.commit()
             session.refresh(listing)
 
-            first_offer = create_offer(listing.id, OfferCreate(amount=12_000, visibility="private"), session=session, user=buyer)
-            with self.assertRaises(HTTPException) as raised:
-                create_offer(listing.id, OfferCreate(amount=11_000, visibility="private"), session=session, user=buyer)
-            higher_offer = create_offer(listing.id, OfferCreate(amount=13_000, visibility="private"), session=session, user=buyer)
+            first_offer = create_offer(listing.id, OfferCreate(amount=12_000), session=session, user=buyer)
+            lower_offer = create_offer(listing.id, OfferCreate(amount=11_000), session=session, user=buyer)
+            higher_offer = create_offer(listing.id, OfferCreate(amount=13_000), session=session, user=buyer)
 
             owner_summary = get_manage_offers(listing.id, session=session, user=owner)
             buyer_summary = get_offers(listing.id, session=session, user=buyer)
             public_summary = get_offers(listing.id, session=session, user=None)
 
         self.assertEqual(first_offer.amount, 12_000)
-        self.assertEqual(raised.exception.status_code, 400)
-        self.assertIn("higher than your current offer", raised.exception.detail)
+        self.assertEqual(lower_offer.amount, 11_000)
         self.assertEqual(higher_offer.amount, 13_000)
         self.assertEqual(owner_summary.offer_count, 1)
         self.assertEqual(owner_summary.offers[0].amount, 13_000)
-        self.assertEqual(buyer_summary.highest_offer, 13_000)
+        self.assertEqual(buyer_summary.list_price, listing.price)
         self.assertEqual(buyer_summary.offers[0].amount, 13_000)
         self.assertEqual(public_summary.highest_offer, None)
         self.assertEqual(public_summary.offers, [])

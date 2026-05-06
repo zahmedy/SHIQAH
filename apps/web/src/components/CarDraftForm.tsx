@@ -537,7 +537,7 @@ function buildPayload(form: FormState): BuildPayloadResult {
     color: form.color.trim() || undefined,
     title: title || `${make} ${model} ${year} for sale`,
     description: description,
-    public_bidding_enabled: form.public_bidding_enabled,
+    public_bidding_enabled: false,
   };
 
   return { ok: true, payload };
@@ -713,8 +713,6 @@ export default function CarDraftForm({
     selectCondition: "Select condition",
     color: "Color",
     selectColor: "Select color",
-    publicBidding: "Public bidding",
-    publicBiddingEnabled: "Enable public bidding",
     titleLabel: "Title",
     descriptionLabel: "Listing description *",
     descriptionAiFill: "Draft description",
@@ -2586,18 +2584,6 @@ export default function CarDraftForm({
                 {descriptionFillStatus ? <p className="helper-text">{descriptionFillStatus}</p> : null}
               </div>
 
-              <div className="field-card">
-                <p className="label">{text.publicBidding}</p>
-                <label className="field-toggle" htmlFor="public-bidding-enabled">
-                  <input
-                    id="public-bidding-enabled"
-                    type="checkbox"
-                    checked={form.public_bidding_enabled}
-                    onChange={(e) => setForm((prev) => ({ ...prev, public_bidding_enabled: e.target.checked }))}
-                  />
-                  <span>{text.publicBiddingEnabled}</span>
-                </label>
-              </div>
             </section>
 
             {activeViewerItem ? (

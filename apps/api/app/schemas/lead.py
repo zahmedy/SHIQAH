@@ -43,12 +43,16 @@ class OfferOut(BaseModel):
     rejected_at: Optional[datetime] = None
     expires_at: Optional[datetime] = None
     is_counteroffer: bool = False
+    visibility: str = "private"
 
 
 class OfferSummaryOut(BaseModel):
     list_price: Optional[int]
+    highest_offer: Optional[int] = None
     offer_count: int
     offers_open: bool
+    bidding_open: bool = True
+    public_bidding_enabled: bool = False
     accepted_offer: Optional[OfferOut]
     offers: list[OfferOut]
 
@@ -61,6 +65,7 @@ class OwnerOfferOut(BaseModel):
     rejected_at: Optional[datetime] = None
     expires_at: Optional[datetime] = None
     is_counteroffer: bool = False
+    visibility: str = "private"
     buyer_user_id: Optional[int] = None
     buyer_user_label: Optional[str] = None
     buyer_email: Optional[str] = None
@@ -72,7 +77,10 @@ class OwnerOfferOut(BaseModel):
 
 class OwnerOfferSummaryOut(BaseModel):
     list_price: Optional[int]
+    highest_offer: Optional[int] = None
     offer_count: int
     offers_open: bool
+    bidding_open: bool = True
+    public_bidding_enabled: bool = False
     accepted_offer: Optional[OwnerOfferOut]
     offers: list[OwnerOfferOut]
