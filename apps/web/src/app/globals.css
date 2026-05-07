@@ -1628,6 +1628,14 @@ a {
   margin-top: 0.45rem;
 }
 
+.listing-price-fit {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
 .owner-actions {
   display: flex;
   align-items: center;
@@ -2441,6 +2449,15 @@ a {
   margin-top: 0.6rem;
 }
 
+.specs-compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
 .spec {
   padding: 0.7rem 0.8rem;
   border: 1px solid var(--line);
@@ -2449,6 +2466,37 @@ a {
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.82), transparent 36%),
     var(--bg-soft);
   transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.specs-compact .spec {
+  min-width: 0;
+  padding: 0.55rem 0.65rem;
+  border-width: 0 1px 1px 0;
+  border-radius: 0;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.specs-compact .spec:nth-child(4n) {
+  border-right: 0;
+}
+
+.specs-compact .spec:nth-last-child(-n + 4) {
+  border-bottom: 0;
+}
+
+.specs-compact .spec:hover {
+  box-shadow: none;
+}
+
+.specs-compact .spec-key {
+  font-size: 0.64rem;
+  letter-spacing: 0.04em;
+}
+
+.specs-compact .spec-val {
+  margin-top: 0.15rem;
+  font-size: 0.86rem;
 }
 
 .spec:hover {
@@ -4039,6 +4087,26 @@ a {
     grid-template-columns: 1fr;
   }
 
+  .specs-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .specs-compact .spec:nth-child(4n) {
+    border-right: 1px solid var(--line);
+  }
+
+  .specs-compact .spec:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .specs-compact .spec:nth-last-child(-n + 4) {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .specs-compact .spec:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+
   .car-media-link {
     display: none;
   }
@@ -4095,6 +4163,10 @@ a {
     flex-direction: column-reverse;
     gap: 0.2rem;
     margin-top: 0.25rem;
+  }
+
+  .listing-price-fit {
+    justify-content: flex-start;
   }
 
   .car-price {

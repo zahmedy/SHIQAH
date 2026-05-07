@@ -5,7 +5,7 @@ import ListingPhotoGallery from "@/components/ListingPhotoGallery";
 import NicheScoreSelector from "@/components/NicheScoreSelector";
 import { formatDateTime, formatDistance, formatListingPrice, translateValue, type Locale } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
-import { getNiche, type NicheScoreResult } from "@/shared/niches";
+import { getNiche, nicheScoreLabel, type NicheScoreResult } from "@/shared/niches";
 import ChatPanel from "./ChatPanel";
 import ListingReportButton from "./ListingReportButton";
 import OfferForm from "./OfferForm";
@@ -91,17 +91,20 @@ function SpecSection({
   items,
   collapsible = false,
   defaultOpen = true,
+  compact = false,
 }: {
   title: string;
   items: { label: string; value: string | number }[];
   collapsible?: boolean;
   defaultOpen?: boolean;
+  compact?: boolean;
 }) {
+  const listClassName = compact ? "specs specs-compact" : "specs";
   if (collapsible) {
     return (
       <details className="listing-info-section listing-info-disclosure" open={defaultOpen}>
         <summary className="listing-section-title listing-section-summary">{title}</summary>
-        <div className="specs">
+        <div className={listClassName}>
           {items.map((item) => (
             <article className="spec" key={item.label}>
               <p className="spec-key">{item.label}</p>
@@ -116,7 +119,7 @@ function SpecSection({
   return (
     <section className="listing-info-section">
       <h2 className="listing-section-title">{title}</h2>
-      <div className="specs">
+      <div className={listClassName}>
         {items.map((item) => (
           <article className="spec" key={item.label}>
             <p className="spec-key">{item.label}</p>
@@ -180,6 +183,7 @@ export default async function CarDetailPage({
     { label: "Body Type", value: translateValue(locale, car.body_type) },
   ];
   const sellerName = sellerLabel(data.seller.user_id, data.seller.name);
+  const selectedNicheLabel = nicheScoreLabel(car, selectedNiche.id);
 
   return (
     <main className="page shell car-detail-page">
@@ -191,7 +195,10 @@ export default async function CarDetailPage({
           <h1 className="listing-title">{car.title}</h1>
           <div className="listing-price-row">
             <p className="car-price-meta">{sellerAndTime(locale, data.seller.user_id, data.seller.name, car.published_at)}</p>
-            <p className="car-price">{formatListingPrice(car.price, locale)}</p>
+            <div className="listing-price-fit">
+              <p className="car-price">{formatListingPrice(car.price, locale)}</p>
+              <p className="winter-score-pill">{selectedNicheLabel}</p>
+            </div>
           </div>
           <OwnerActions ownerId={car.owner_id} carId={car.id} initialStatus={car.status} />
         </header>
@@ -202,7 +209,7 @@ export default async function CarDetailPage({
           <div className="notice spaced-top-sm">No photos yet.</div>
         )}
 
-        <SpecSection title="Details" items={vehicleDetails} />
+        <SpecSection title="Details" items={vehicleDetails} compact />
       </section>
 
       <aside className="panel car-detail-actions">
