@@ -125,8 +125,8 @@ export default async function HomePage({
       <section className="home-hero">
         <div className="home-hero-copy">
           <h1 className="home-hero-title">
-            <span>Easy Listing.</span>
-            <span className="home-hero-title-accent">Easy finding.</span>
+            <span>List smarter.</span>
+            <span className="home-hero-title-accent">Find better rides.</span>
           </h1>
           <p className="home-hero-sub">
             Search by real needs, create clean listings, and show buyers where each car fits.

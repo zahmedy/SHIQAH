@@ -96,12 +96,12 @@ a {
 /* ─── Layout ──────────────────────────────────────────────────────────── */
 
 .shell {
-  width: min(1160px, calc(100vw - 2rem));
+  width: min(1440px, calc(100vw - clamp(1rem, 3vw, 3rem)));
   margin-inline: auto;
 }
 
 .topbar-shell {
-  width: min(1440px, calc(100vw - 2rem));
+  width: min(1560px, calc(100vw - clamp(1rem, 3vw, 3rem)));
 }
 
 /* ─── Topbar ──────────────────────────────────────────────────────────── */
