@@ -195,6 +195,9 @@ export default async function CarDetailPage({
   return (
     <main className="page shell car-detail-page">
       <section className="panel car-detail-main">
+        <div className="listing-report-top">
+          <ListingReportButton carId={car.id} ownerId={car.owner_id} compact />
+        </div>
         <header className="listing-head">
           <h1 className="listing-title">{car.title}</h1>
           <div className="listing-price-row">
@@ -214,6 +217,8 @@ export default async function CarDetailPage({
         ) : (
           <div className="notice spaced-top-sm">No photos yet.</div>
         )}
+
+        <SpecSection title="Details" items={vehicleDetails} />
       </section>
 
       <aside className="panel car-detail-actions">
@@ -238,19 +243,13 @@ export default async function CarDetailPage({
           ) : null}
         </section>
 
-        <details className="listing-info-section listing-info-disclosure car-secondary-disclosure">
-          <summary className="listing-section-title listing-section-summary">More</summary>
-          <ListingReportButton carId={car.id} ownerId={car.owner_id} />
-        </details>
+        <hr className="separator" />
 
-        <details className="listing-info-section listing-info-disclosure car-secondary-disclosure">
-          <summary className="listing-section-title listing-section-summary">Comments</summary>
-          <ChatPanel carId={car.id} />
-        </details>
+        <h3 className="subheading">Comments</h3>
+        <ChatPanel carId={car.id} />
       </aside>
 
       <section className="panel car-detail-secondary">
-        <SpecSection title="Details" items={vehicleDetails} collapsible defaultOpen={false} />
         <SpecSection title="Specs" items={technicalSpecs} collapsible defaultOpen={false} />
 
         <details className="listing-info-section listing-info-disclosure car-secondary-disclosure">

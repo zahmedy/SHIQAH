@@ -102,6 +102,7 @@ export default function OfferForm({
   const [reportReason, setReportReason] = useState("fake_bid");
   const [reportNotes, setReportNotes] = useState("");
   const [confirmAmount, setConfirmAmount] = useState<number | null>(null);
+  const [offerTermsAccepted, setOfferTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<OfferSummary | null>(null);
   const [ownerSummary, setOwnerSummary] = useState<OwnerOfferSummary | null>(null);
@@ -122,6 +123,7 @@ export default function OfferForm({
     disclaimer: "NicheRides is not the seller, dealer, broker, or escrow provider. Buyers and sellers handle inspection, payment, title, taxes, registration, escrow, and shipping.",
     warningTitle: "Confirm Offer",
     warningBody: "You deal directly with the seller. NicheRides does not hold funds or escrow.",
+    agreeTerms: "I understand NicheRides is not the seller, broker, or escrow provider.",
     confirmOffer: "Make Offer",
     cancel: "Cancel",
     confirmAmount: "Offer amount",
@@ -332,6 +334,7 @@ export default function OfferForm({
 
       setAmount("");
       setConfirmAmount(null);
+      setOfferTermsAccepted(false);
       setSuccess(text.success);
       void loadOffers();
       if (isOwner) setOwnerSummary(null);
@@ -346,22 +349,28 @@ export default function OfferForm({
     setError("");
     setSuccess("");
 
-    const parsedAmount = Number(amount);
-    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      setError(text.invalidAmount);
-      return;
-    }
     if (!token) {
       setError(text.loginRequired);
       return;
     }
 
-    setConfirmAmount(Math.trunc(parsedAmount));
+    setOfferTermsAccepted(false);
+    setConfirmAmount(0);
   }
 
-  function handleSubmit(event: FormEvent) {
+  function handleConfirmOffer(event: FormEvent) {
     event.preventDefault();
-    startOffer();
+    const parsedAmount = Number(amount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setError(text.invalidAmount);
+      return;
+    }
+    if (!offerTermsAccepted) {
+      setError(text.agreeTerms);
+      return;
+    }
+
+    void submitOffer(Math.trunc(parsedAmount));
   }
 
   async function handleAccept(offerId: number, isCounteroffer = false) {
@@ -535,15 +544,6 @@ export default function OfferForm({
   return (
     <section className="offer-panel">
       <h3 className="subheading">{isOwner ? text.ownerTitle : text.title}</h3>
-      <div className="offer-summary spaced-top-sm">
-        <p className="offer-summary-label">{text.listPrice}</p>
-        <p className="offer-summary-value">
-          {currentSummary?.list_price ? formatPrice(currentSummary.list_price, locale) : text.noPrice}
-        </p>
-        {(currentSummary?.offer_count ?? 0) > 0 ? (
-          <p className="offer-summary-count">{text.offerCount(currentSummary?.offer_count ?? 0)}</p>
-        ) : null}
-      </div>
       <p className="helper-text spaced-top-sm">{text.offerHelp}</p>
       <details className="offer-disclaimer spaced-top-sm">
         <summary>Notice</summary>
@@ -686,27 +686,13 @@ export default function OfferForm({
       {isOwner ? null : !offersOpen ? (
         <p className="helper-text spaced-top-sm">{text.closedHint}</p>
       ) : token ? (
-        <form className="filters spaced-top-sm" onSubmit={handleSubmit}>
-          <div>
-            <label className="label" htmlFor={`offer-amount-${carId}`}>{text.amount}</label>
-            <input
-              id={`offer-amount-${carId}`}
-              className="input"
-              type="number"
-              min={1}
-              inputMode="numeric"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-          </div>
-          <div className="contact-actions">
-            <button type="submit" className="btn btn-primary" disabled={submitting}>
-              {submitting ? text.submitting : text.confirmOffer}
-            </button>
-          </div>
+        <div className="spaced-top-sm">
+          <button type="button" className="btn btn-primary" disabled={submitting} onClick={startOffer}>
+            {submitting ? text.submitting : text.confirmOffer}
+          </button>
           {error ? <p className="notice error">{error}</p> : null}
           {success ? <p className="notice success">{success}</p> : null}
-        </form>
+        </div>
       ) : (
         <div className="filters spaced-top-sm">
           <Link href="/login" className="btn btn-primary">{text.signIn}</Link>
@@ -724,19 +710,38 @@ export default function OfferForm({
             }}
             aria-label={text.cancel}
           />
-          <div className="photo-viewer-card offer-confirm-card">
+          <form className="photo-viewer-card offer-confirm-card" onSubmit={handleConfirmOffer}>
             <h4 className="offer-confirm-title">{text.warningTitle}</h4>
-            <p className="offer-confirm-amount">{text.confirmAmount}: {formatPrice(confirmAmount, locale)}</p>
+            <label className="label spaced-top-sm" htmlFor={`offer-amount-${carId}`}>{text.amount}</label>
+            <input
+              id={`offer-amount-${carId}`}
+              className="input"
+              type="number"
+              min={1}
+              inputMode="numeric"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              autoFocus
+            />
             <p className="offer-confirm-copy">{text.warningBody}</p>
+            <label className="offer-confirm-check">
+              <input
+                type="checkbox"
+                checked={offerTermsAccepted}
+                onChange={(event) => setOfferTermsAccepted(event.target.checked)}
+              />
+              <span>{text.agreeTerms}</span>
+            </label>
+            {error ? <p className="notice error">{error}</p> : null}
             <div className="offer-confirm-actions">
               <button type="button" className="btn btn-secondary" disabled={submitting} onClick={() => setConfirmAmount(null)}>
                 {text.cancel}
               </button>
-              <button type="button" className="btn btn-primary" disabled={submitting} onClick={() => void submitOffer(confirmAmount)}>
+              <button type="submit" className="btn btn-primary" disabled={submitting || !offerTermsAccepted}>
                 {submitting ? text.submitting : text.confirmOffer}
               </button>
             </div>
-          </div>
+          </form>
         </div>
       ) : null}
 

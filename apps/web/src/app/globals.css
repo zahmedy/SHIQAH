@@ -2317,6 +2317,7 @@ a {
 }
 
 .car-detail-main {
+  position: relative;
   grid-area: main;
 }
 
@@ -2331,6 +2332,7 @@ a {
 .listing-head {
   display: grid;
   gap: 0.35rem;
+  padding-right: 4.7rem;
 }
 
 .listing-title {
@@ -2508,7 +2510,38 @@ a {
 }
 
 .compact-contact-actions {
-  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.45rem;
+}
+
+.compact-contact-actions .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0.48rem 0.55rem;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.listing-report-top {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 3;
+}
+
+.listing-report-compact-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.listing-report-compact-button {
+  min-height: 32px;
+  padding: 0.34rem 0.58rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  box-shadow: var(--shadow-xs);
 }
 
 /* ─── Offer Panel ─────────────────────────────────────────────────────── */
@@ -2803,6 +2836,22 @@ a {
   margin-top: 0.75rem;
   color: var(--muted);
   line-height: 1.65;
+}
+
+.offer-confirm-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.offer-confirm-check input {
+  margin-top: 0.15rem;
+  accent-color: var(--brand);
 }
 
 .offer-confirm-actions {
@@ -3745,8 +3794,8 @@ a {
   .car-detail-page {
     grid-template-areas:
       "main"
-      "actions"
-      "secondary";
+      "secondary"
+      "actions";
   }
 
   .city-location-grid,
@@ -4169,10 +4218,20 @@ a {
     text-align: left;
   }
 
-  .contact-actions,
-  .compact-contact-actions {
+  .contact-actions {
     grid-template-columns: 1fr;
     gap: 0.45rem;
+  }
+
+  .compact-contact-actions {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .compact-contact-actions .btn {
+    min-height: 36px;
+    padding-inline: 0.42rem;
+    font-size: 0.78rem;
   }
 
   .listing-grid {

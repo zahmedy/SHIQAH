@@ -28,7 +28,15 @@ type MeResponse = {
   id: number;
 };
 
-export default function ListingReportButton({ carId, ownerId }: { carId: number; ownerId: number }) {
+export default function ListingReportButton({
+  carId,
+  ownerId,
+  compact = false,
+}: {
+  carId: number;
+  ownerId: number;
+  compact?: boolean;
+}) {
   const [canReport, setCanReport] = useState(true);
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("misleading_details");
@@ -105,9 +113,13 @@ export default function ListingReportButton({ carId, ownerId }: { carId: number;
   }
 
   return (
-    <div className="spaced-top-sm">
-      <button type="button" className="btn btn-secondary" onClick={() => setOpen(true)}>
-        Report listing
+    <div className={compact ? "listing-report-compact-wrap" : "spaced-top-sm"}>
+      <button
+        type="button"
+        className={compact ? "btn btn-secondary listing-report-compact-button" : "btn btn-secondary"}
+        onClick={() => setOpen(true)}
+      >
+        {compact ? "Report" : "Report listing"}
       </button>
       {status ? <p className="helper-text">{status}</p> : null}
       {error && !open ? <p className="notice error">{error}</p> : null}
