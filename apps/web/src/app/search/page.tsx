@@ -14,7 +14,6 @@ import {
 } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
 import {
-  DEFAULT_NICHE_ID,
   getNiche,
   nicheBadges,
   nicheScoreLabel,
@@ -120,14 +119,13 @@ function locationUserAndTime(locale: Locale, city?: string, district?: string, s
 }
 
 function hasActiveFilters(params: Query): boolean {
-  if (params.niche && params.niche !== DEFAULT_NICHE_ID) return true;
   if (COUNTED_FILTER_KEYS.some((key) => Boolean(params[key]))) return true;
   if (params.sort && params.sort !== "newest") return true;
   return Boolean(params.lat || params.lon || params.radius_mi || params.radius_km);
 }
 
 function activeFilterCount(params: Query): number {
-  let count = params.niche && params.niche !== DEFAULT_NICHE_ID ? 1 : 0;
+  let count = 0;
   for (const key of COUNTED_FILTER_KEYS) {
     if (params[key]) {
       count += 1;
@@ -152,6 +150,10 @@ function filterFormKey(params: Query): string {
     }
   }
   return query.toString() || "empty";
+}
+
+function clearFiltersHref(selectedNicheId: string): string {
+  return selectedNicheId ? `/search?niche=${encodeURIComponent(selectedNicheId)}` : "/search";
 }
 
 export default async function SearchPage({
@@ -207,6 +209,7 @@ export default async function SearchPage({
   const showClearFilters = hasActiveFilters(params) && resultCount > 0 && resultCount <= LOW_RESULT_THRESHOLD;
   const filterCount = activeFilterCount(params);
   const formKey = filterFormKey(params);
+  const clearHref = clearFiltersHref(selectedNiche.id);
 
   return (
     <main className="page shell">
@@ -313,7 +316,7 @@ export default async function SearchPage({
               <p>Sorted and filtered for a faster browse.</p>
             </div>
             {showClearFilters ? (
-              <Link href="/search" className="btn btn-secondary">Clear filters</Link>
+              <Link href={clearHref} className="btn btn-secondary">Clear filters</Link>
             ) : null}
           </div>
 
@@ -324,7 +327,7 @@ export default async function SearchPage({
               <h3>No cars match those filters</h3>
               <p>Try widening price, mileage, location, or body style.</p>
               <div className="hero-actions">
-                <Link href="/search" className="btn btn-secondary">Clear filters</Link>
+                <Link href={clearHref} className="btn btn-secondary">Clear filters</Link>
               </div>
             </div>
           ) : (
