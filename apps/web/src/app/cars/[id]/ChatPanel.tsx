@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 
 import { useLocale } from "@/components/LocaleProvider";
@@ -31,6 +31,8 @@ async function parseApiError(res: Response): Promise<string> {
 
 export default function ChatPanel({ carId }: { carId: number }) {
   const locale = useLocale();
+  const messagesRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [hasSession, setHasSession] = useState(false);
@@ -51,10 +53,18 @@ export default function ChatPanel({ carId }: { carId: number }) {
     user: "User",
   };
 
+  function scrollToLatest(behavior: ScrollBehavior = "smooth") {
+    requestAnimationFrame(() => {
+      const messagesEl = messagesRef.current;
+      if (!messagesEl) return;
+      messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior });
+    });
+  }
+
   useEffect(() => {
     const token = localStorage.getItem(TOKEN_KEY);
     setHasSession(Boolean(token));
-    if (!token || !API_BASE) {
+    if (!API_BASE) {
       setLoading(false);
       return;
     }
@@ -63,27 +73,28 @@ export default function ChatPanel({ carId }: { carId: number }) {
       setLoading(true);
       setError("");
       try {
-        const [meRes, commentsRes] = await Promise.all([
-          fetch(`${API_BASE}/v1/me`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch(`${API_BASE}/v1/cars/${carId}/comments`, {
-            headers: { Authorization: `Bearer ${token}` },
-            cache: "no-store",
-          }),
-        ]);
-
-        if (!meRes.ok) {
-          throw new Error(await parseApiError(meRes));
-        }
+        const commentsRes = await fetch(`${API_BASE}/v1/cars/${carId}/comments`, { cache: "no-store" });
         if (!commentsRes.ok) {
           throw new Error(await parseApiError(commentsRes));
         }
 
-        const me = (await meRes.json()) as MeResponse;
         const comments = (await commentsRes.json()) as Message[];
-        setMeId(me.id);
+        if (token) {
+          const meRes = await fetch(`${API_BASE}/v1/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (meRes.ok) {
+            const me = (await meRes.json()) as MeResponse;
+            setMeId(me.id);
+          } else {
+            setHasSession(false);
+            setMeId(null);
+          }
+        } else {
+          setMeId(null);
+        }
         setMessages(comments);
+        scrollToLatest("auto");
       } catch (err) {
         setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.loadChatFailed);
       } finally {
@@ -95,6 +106,12 @@ export default function ChatPanel({ carId }: { carId: number }) {
   }, [carId, text.loadChatFailed]);
 
   const canSend = useMemo(() => hasSession && draft.trim().length > 0 && !sending, [hasSession, draft, sending]);
+
+  useEffect(() => {
+    if (!loading && messages.length) {
+      scrollToLatest();
+    }
+  }, [loading, messages.length]);
 
   async function sendMessage() {
     if (!canSend || !API_BASE) return;
@@ -124,11 +141,18 @@ export default function ChatPanel({ carId }: { carId: number }) {
       const created = (await res.json()) as Message;
       setMessages((prev) => [...prev, created]);
       setDraft("");
+      inputRef.current?.focus();
     } catch (err) {
       setError(err instanceof Error ? translateApiMessage(locale, err.message) : text.sendMessageFailed);
     } finally {
       setSending(false);
     }
+  }
+
+  function handleInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    void sendMessage();
   }
 
   return (
@@ -145,7 +169,7 @@ export default function ChatPanel({ carId }: { carId: number }) {
       {loading && <p className="notice">{text.loadingChat}</p>}
 
       {!loading && (
-        <div className="chat-messages">
+        <div className="chat-messages" ref={messagesRef}>
           {messages.length === 0 ? (
             <p className="car-meta">{text.noMessages}</p>
           ) : (
@@ -166,10 +190,12 @@ export default function ChatPanel({ carId }: { carId: number }) {
 
       <div className="chat-input-row">
         <input
+          ref={inputRef}
           className="input chat-input"
           placeholder={hasSession ? text.typeMessage : text.loginToStart}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={handleInputKeyDown}
           disabled={!hasSession}
         />
         <button

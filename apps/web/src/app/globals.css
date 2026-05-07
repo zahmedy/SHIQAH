@@ -2343,26 +2343,6 @@ a {
   letter-spacing: 0;
 }
 
-.listing-primary-facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-  margin-top: 0.15rem;
-}
-
-.listing-primary-facts span {
-  display: inline-flex;
-  align-items: center;
-  min-height: 30px;
-  padding: 0.3rem 0.6rem;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--bg-soft);
-  color: var(--text);
-  font-size: 0.8rem;
-  font-weight: 800;
-}
-
 /* ─── Photo Grid ──────────────────────────────────────────────────────── */
 
 .photo-grid {
@@ -4123,16 +4103,6 @@ a {
 
   .car-price-meta {
     font-size: 0.78rem;
-  }
-
-  .listing-primary-facts {
-    gap: 0.35rem;
-  }
-
-  .listing-primary-facts span {
-    min-height: 28px;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.76rem;
   }
 
   .photo-grid {

@@ -16,7 +16,6 @@ router = APIRouter(tags=["comments"])
 def list_comments(
     car_id: int,
     session: Session = Depends(get_session),
-    user: User = Depends(get_current_user),
 ):
     car = session.exec(select(CarListing).where(CarListing.id == car_id)).first()
     if not car:

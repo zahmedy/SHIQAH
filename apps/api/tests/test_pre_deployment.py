@@ -19,7 +19,7 @@ from app.api.v1.routes.auth import (
     start_google_login,
     verify_email_code,
 )
-from app.api.v1.routes.comments import create_comment
+from app.api.v1.routes.comments import create_comment, list_comments
 from app.api.v1.routes.me import MeUpdate, update_me
 from app.api.v1.routes.cars import archive_owner_car, restore_archived_owner_car
 from app.api.v1.routes.leads import (
@@ -540,6 +540,28 @@ class PreDeploymentListingLifecycleTests(unittest.TestCase):
 
         self.assertIsNotNone(notification)
         self.assertEqual(notification.car_id, listing_id)
+
+    def test_comments_are_publicly_readable(self) -> None:
+        with Session(self.engine) as session:
+            owner = User(role=UserRole.seller, name="Owner", email="public-comment-owner@example.com", verified_at=datetime.utcnow())
+            commenter = User(role=UserRole.buyer, name="Commenter", user_id="public-commenter", email="public-commenter@example.com", verified_at=datetime.utcnow())
+            session.add(owner)
+            session.add(commenter)
+            session.commit()
+            session.refresh(owner)
+            session.refresh(commenter)
+
+            listing = make_listing(owner.id)
+            session.add(listing)
+            session.commit()
+            session.refresh(listing)
+
+            create_comment(listing.id, ChatMessageCreate(message="Can I see it today?"), session=session, user=commenter)
+            comments = list_comments(listing.id, session=session)
+
+        self.assertEqual(len(comments), 1)
+        self.assertEqual(comments[0].message, "Can I see it today?")
+        self.assertEqual(comments[0].sender_public_user_id, "public-commenter")
 
     def test_keyword_search_falls_back_to_database_when_opensearch_is_down(self) -> None:
         with Session(self.engine) as session:

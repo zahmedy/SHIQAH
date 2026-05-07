@@ -128,11 +128,6 @@ function SpecSection({
   );
 }
 
-function compactFact(value?: string | number | null) {
-  if (value === null || value === undefined || value === "" || value === "—") return null;
-  return value;
-}
-
 export default async function CarDetailPage({
   params,
   searchParams,
@@ -184,12 +179,6 @@ export default async function CarDetailPage({
     { label: "Engine Volume", value: car.engine_volume ? `${car.engine_volume} L` : "—" },
     { label: "Body Type", value: translateValue(locale, car.body_type) },
   ];
-  const primaryFacts = [
-    compactFact(car.year),
-    car.mileage ? formatDistance(car.mileage, locale) : null,
-    compactFact(translateValue(locale, car.transmission)),
-    compactFact(car.city),
-  ].filter(Boolean);
   const sellerName = sellerLabel(data.seller.user_id, data.seller.name);
 
   return (
@@ -204,11 +193,6 @@ export default async function CarDetailPage({
             <p className="car-price-meta">{sellerAndTime(locale, data.seller.user_id, data.seller.name, car.published_at)}</p>
             <p className="car-price">{formatListingPrice(car.price, locale)}</p>
           </div>
-          {primaryFacts.length ? (
-            <div className="listing-primary-facts" aria-label="Listing highlights">
-              {primaryFacts.map((fact) => <span key={String(fact)}>{fact}</span>)}
-            </div>
-          ) : null}
           <OwnerActions ownerId={car.owner_id} carId={car.id} initialStatus={car.status} />
         </header>
 
