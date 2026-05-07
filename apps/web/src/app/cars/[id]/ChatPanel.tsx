@@ -104,7 +104,7 @@ export default function ChatPanel({ carId }: { carId: number }) {
     void load();
   }, [carId, text.loadChatFailed]);
 
-  const canSend = useMemo(() => draft.trim().length > 0 && !sending, [draft, sending]);
+  const canSend = useMemo(() => !sending && (!hasSession || draft.trim().length > 0), [draft, hasSession, sending]);
 
   useEffect(() => {
     if (!loading && messages.length) {
@@ -155,12 +155,6 @@ export default function ChatPanel({ carId }: { carId: number }) {
     void sendMessage();
   }
 
-  function handleInputFocus() {
-    if (!hasSession) {
-      router.push("/login");
-    }
-  }
-
   return (
     <section className="chat-panel">
       {error && <p className="notice error">{error}</p>}
@@ -193,7 +187,6 @@ export default function ChatPanel({ carId }: { carId: number }) {
           placeholder={text.typeMessage}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          onFocus={handleInputFocus}
           onKeyDown={handleInputKeyDown}
         />
         <button
