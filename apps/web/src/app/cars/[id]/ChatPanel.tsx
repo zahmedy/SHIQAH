@@ -1,7 +1,7 @@
 "use client";
 
 import { KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { useLocale } from "@/components/LocaleProvider";
 import { formatClockTime, translateApiMessage } from "@/lib/locale";
@@ -31,6 +31,7 @@ async function parseApiError(res: Response): Promise<string> {
 
 export default function ChatPanel({ carId }: { carId: number }) {
   const locale = useLocale();
+  const router = useRouter();
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -43,11 +44,9 @@ export default function ChatPanel({ carId }: { carId: number }) {
   const text = {
     loadChatFailed: "Failed to load comments.",
     sendMessageFailed: "Failed to post.",
-    loginToChat: "Login",
     loadingChat: "Loading...",
     noMessages: "No comments.",
     typeMessage: "Comment...",
-    loginToStart: "Login to comment",
     sending: "Sending...",
     send: "Post",
     user: "User",
@@ -105,7 +104,7 @@ export default function ChatPanel({ carId }: { carId: number }) {
     void load();
   }, [carId, text.loadChatFailed]);
 
-  const canSend = useMemo(() => hasSession && draft.trim().length > 0 && !sending, [hasSession, draft, sending]);
+  const canSend = useMemo(() => draft.trim().length > 0 && !sending, [draft, sending]);
 
   useEffect(() => {
     if (!loading && messages.length) {
@@ -119,6 +118,7 @@ export default function ChatPanel({ carId }: { carId: number }) {
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
       setHasSession(false);
+      router.push("/login");
       return;
     }
 
@@ -155,16 +155,14 @@ export default function ChatPanel({ carId }: { carId: number }) {
     void sendMessage();
   }
 
+  function handleInputFocus() {
+    if (!hasSession) {
+      router.push("/login");
+    }
+  }
+
   return (
     <section className="chat-panel">
-      {!hasSession && (
-        <div className="chat-header">
-          <Link href="/login" className="btn btn-secondary chat-login">
-            {text.loginToChat}
-          </Link>
-        </div>
-      )}
-
       {error && <p className="notice error">{error}</p>}
       {loading && <p className="notice">{text.loadingChat}</p>}
 
@@ -192,11 +190,11 @@ export default function ChatPanel({ carId }: { carId: number }) {
         <input
           ref={inputRef}
           className="input chat-input"
-          placeholder={hasSession ? text.typeMessage : text.loginToStart}
+          placeholder={text.typeMessage}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
+          onFocus={handleInputFocus}
           onKeyDown={handleInputKeyDown}
-          disabled={!hasSession}
         />
         <button
           type="button"
