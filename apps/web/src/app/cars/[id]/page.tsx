@@ -5,7 +5,8 @@ import ListingPhotoGallery from "@/components/ListingPhotoGallery";
 import NicheScoreSelector from "@/components/NicheScoreSelector";
 import { formatDateTime, formatDistance, formatListingPrice, translateValue, type Locale } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
-import { getNiche, nicheScoreLabel, type NicheScoreResult } from "@/shared/niches";
+import { getServerNiche } from "@/lib/server-niche";
+import { nicheScoreLabel, type NicheScoreResult } from "@/shared/niches";
 import ChatPanel from "./ChatPanel";
 import ListingReportButton from "./ListingReportButton";
 import OfferForm from "./OfferForm";
@@ -141,7 +142,7 @@ export default async function CarDetailPage({
   const { id } = await params;
   const query = await searchParams;
   const locale = await getServerLocale();
-  const selectedNiche = getNiche(query.niche);
+  const selectedNiche = await getServerNiche(query.niche);
 
   let data: PublicCarResponse | null = null;
   let fetchError = "";

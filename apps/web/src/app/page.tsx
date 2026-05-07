@@ -3,7 +3,8 @@ import HomeListingCard from "@/components/HomeListingCard";
 import SellCarLink from "@/components/SellCarLink";
 import { formatListingPrice, formatMileage, formatRelativeHours, type Locale } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
-import { getNiche, nicheBadges, nicheScoreLabel, type NicheScoreResult } from "@/shared/niches";
+import { getServerNiche } from "@/lib/server-niche";
+import { nicheBadges, nicheScoreLabel, type NicheScoreResult } from "@/shared/niches";
 
 type HomeListing = {
   id: number | string;
@@ -107,7 +108,7 @@ export default async function HomePage({
 }) {
   const params = await searchParams;
   const locale = await getServerLocale();
-  const selectedNiche = getNiche(params.niche);
+  const selectedNiche = await getServerNiche(params.niche);
   let listings: HomeListing[] = [];
   let fetchError = "";
   const isFiltered = hasHomeFilters(params);

@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { NICHES, getNiche } from "@/shared/niches";
+import { saveNichePreference } from "@/shared/niche-preference";
 
 type HomeFilterParams = {
   niche?: string;
@@ -59,6 +60,7 @@ export default function HomeFilterControls({ params }: HomeFilterControlsProps) 
               key={niche.id}
               scroll={false}
               href={nicheHref(params, niche.id)}
+              onClick={() => saveNichePreference(niche.id)}
               className={selectedNiche.id === niche.id ? "home-niche-filter-active" : ""}
               aria-current={selectedNiche.id === niche.id ? "true" : undefined}
             >

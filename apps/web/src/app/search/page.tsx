@@ -13,8 +13,8 @@ import {
   type Locale,
 } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
+import { getServerNiche } from "@/lib/server-niche";
 import {
-  getNiche,
   nicheBadges,
   nicheScoreLabel,
   type NicheScoreResult,
@@ -163,7 +163,7 @@ export default async function SearchPage({
 }) {
   const params = await searchParams;
   const locale = await getServerLocale();
-  const selectedNiche = getNiche(params.niche);
+  const selectedNiche = await getServerNiche(params.niche);
   const radiusMi = Number(params.radius_mi);
   const oldRadiusKm = Number(params.radius_km);
   const initialRadiusMi = Number.isFinite(radiusMi) && radiusMi >= 1 && radiusMi <= 500

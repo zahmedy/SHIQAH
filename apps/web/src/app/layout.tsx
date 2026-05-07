@@ -10,6 +10,7 @@ import TopbarNotifications from "@/components/TopbarNotifications";
 import TopbarUser from "@/components/TopbarUser";
 import { getDirection } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
+import { getServerNiche } from "@/lib/server-niche";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -23,6 +24,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const locale = await getServerLocale();
+  const selectedNiche = await getServerNiche();
 
   return (
     <html lang={locale} dir={getDirection(locale)}>
@@ -43,7 +45,7 @@ export default async function RootLayout({
                   </label>
                 }
               >
-                <GlobalNicheSelect />
+                <GlobalNicheSelect initialNicheId={selectedNiche.id} />
               </Suspense>
               <form action="/search" method="get" className="topbar-search" role="search">
                 <input

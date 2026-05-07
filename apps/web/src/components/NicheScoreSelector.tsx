@@ -11,6 +11,7 @@ import {
   nicheScoreLabel,
   type NicheListingSignal,
 } from "@/shared/niches";
+import { saveNichePreference } from "@/shared/niche-preference";
 
 type NicheScoreSelectorProps = {
   listing: NicheListingSignal;
@@ -29,6 +30,11 @@ export default function NicheScoreSelector({ listing, locale, initialNicheId }: 
   const selectedScore = nicheScores.find((niche) => niche.id === selectedNiche.id) ?? nicheScores[0];
   const badges = nicheBadges(listing, locale, selectedNiche.id);
 
+  function selectNiche(nicheId: string) {
+    setSelectedNicheId(nicheId);
+    saveNichePreference(nicheId);
+  }
+
   return (
     <div className="panel panel-soft winter-detail-card niche-score-card">
       <div className="niche-score-head">
@@ -46,7 +52,7 @@ export default function NicheScoreSelector({ listing, locale, initialNicheId }: 
             type="button"
             className={`niche-score-option${selectedNiche.id === niche.id ? " niche-score-option-active" : ""}`}
             aria-pressed={selectedNiche.id === niche.id}
-            onClick={() => setSelectedNicheId(niche.id)}
+            onClick={() => selectNiche(niche.id)}
           >
             <span>{niche.shortName}</span>
             <strong>{niche.details.score}/100</strong>
