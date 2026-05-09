@@ -2647,7 +2647,12 @@ a {
   position: relative;
 }
 
-.listing-save-button {
+.listing-share-wrap {
+  position: relative;
+}
+
+.listing-save-button,
+.listing-share-button {
   min-height: 32px;
   padding: 0.34rem 0.65rem;
   border-radius: 999px;
@@ -2667,6 +2672,23 @@ a {
   border-radius: 10px;
   background: #fff7f7;
   color: var(--error);
+  font-size: 0.74rem;
+  font-weight: 800;
+  box-shadow: var(--shadow-xs);
+}
+
+.listing-share-status {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  width: max-content;
+  max-width: 10rem;
+  margin: 0;
+  padding: 0.42rem 0.58rem;
+  border: 1px solid color-mix(in srgb, var(--brand) 24%, transparent);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--brand);
   font-size: 0.74rem;
   font-weight: 800;
   box-shadow: var(--shadow-xs);
