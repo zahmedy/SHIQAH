@@ -22,7 +22,15 @@ from app.api.v1.routes.auth import (
 from app.api.v1.routes.activity import create_activity_event
 from app.api.v1.routes.comments import create_comment, list_comments
 from app.api.v1.routes.me import MeUpdate, update_me
-from app.api.v1.routes.cars import archive_owner_car, my_saved_cars, restore_archived_owner_car, save_car, saved_car_status, unsave_car
+from app.api.v1.routes.cars import (
+    _normalize_typed_vin_or_raise,
+    archive_owner_car,
+    my_saved_cars,
+    restore_archived_owner_car,
+    save_car,
+    saved_car_status,
+    unsave_car,
+)
 from app.api.v1.routes.leads import (
     accept_offer,
     counter_offer,
@@ -105,6 +113,19 @@ class PreDeploymentNicheScoringTests(unittest.TestCase):
         self.assertGreater(efficient["score"], thirsty["score"])
         self.assertLessEqual(thirsty["score"], 55)
         self.assertIn("8-cylinder fuel cost", thirsty["warnings"])
+
+
+class PreDeploymentVinTests(unittest.TestCase):
+    def test_typed_vin_rejects_bad_check_digit_with_actionable_message(self) -> None:
+        with self.assertRaises(HTTPException) as raised:
+            _normalize_typed_vin_or_raise("2C4RC1BG6DR669714")
+
+        self.assertEqual(raised.exception.status_code, 400)
+        self.assertIn("9th character", raised.exception.detail)
+        self.assertIn("2C4RC1BG3DR669714", raised.exception.detail)
+
+    def test_typed_vin_accepts_same_vin_with_correct_check_digit(self) -> None:
+        self.assertEqual(_normalize_typed_vin_or_raise("2C4RC1BG3DR669714"), "2C4RC1BG3DR669714")
 
 
 class PreDeploymentAuthTests(unittest.TestCase):

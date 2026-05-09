@@ -14,6 +14,7 @@ from app.core.config import settings
 
 logger = logging.getLogger("uvicorn.error")
 VIN_RE = re.compile(r"\b[A-HJ-NPR-Z0-9]{17}\b")
+VIN_TEXT_RE = re.compile(r"^[A-HJ-NPR-Z0-9]{17}$")
 VIN_TRANSLITERATION = {
     **{str(number): number for number in range(10)},
     "A": 1,
@@ -82,6 +83,10 @@ def normalize_vin(raw_text: str) -> str | None:
     return next(iter_vin_candidates(raw_text), None)
 
 
+def normalize_typed_vin(raw_text: str) -> str:
+    return re.sub(r"[^A-Z0-9]", "", raw_text.upper())
+
+
 def iter_vin_candidates(raw_text: str) -> Iterable[str]:
     candidate_text = re.sub(r"[^A-Z0-9]", "", raw_text.upper().translate(VIN_OCR_TRANSLATION))
     seen: set[str] = set()
@@ -125,13 +130,16 @@ def is_valid_vin(vin: str) -> bool:
     if not VIN_RE.fullmatch(vin):
         return False
 
+    return vin[8] == expected_vin_check_digit(vin)
+
+
+def expected_vin_check_digit(vin: str) -> str:
     total = 0
     for character, weight in zip(vin, VIN_WEIGHTS, strict=True):
         total += VIN_TRANSLITERATION[character] * weight
 
     remainder = total % 11
-    expected_check_digit = "X" if remainder == 10 else str(remainder)
-    return vin[8] == expected_check_digit
+    return "X" if remainder == 10 else str(remainder)
 
 
 def _load_ocr_modules():

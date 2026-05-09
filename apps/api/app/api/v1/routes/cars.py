@@ -34,7 +34,14 @@ from app.services.niche_scoring import score_listing_for_all_niches
 from app.services.pricing import generate_price_prediction
 from app.services.activity import log_activity_event
 from app.services.vin import decode_vin_with_raw
-from app.services.vision import detect_vin_from_image, normalize_vin
+from app.services.vision import (
+    VIN_TEXT_RE,
+    detect_vin_from_image,
+    expected_vin_check_digit,
+    is_valid_vin,
+    normalize_typed_vin,
+    normalize_vin,
+)
 
 router = APIRouter(tags=["cars"])
 logger = logging.getLogger("uvicorn.error")
@@ -82,6 +89,25 @@ def _validate_engine_fields(engine_cylinders: int | None, engine_volume: float |
         raise HTTPException(status_code=400, detail="Engine cylinders must be a positive integer")
     if engine_volume is not None and engine_volume <= 0:
         raise HTTPException(status_code=400, detail="Engine volume must be a positive number")
+
+
+def _normalize_typed_vin_or_raise(raw_vin: str) -> str:
+    vin = normalize_typed_vin(raw_vin)
+    if len(vin) != 17:
+        raise HTTPException(status_code=400, detail="Enter a valid 17-character VIN.")
+    if not VIN_TEXT_RE.fullmatch(vin):
+        raise HTTPException(status_code=400, detail="VINs cannot include I, O, or Q.")
+    if not is_valid_vin(vin):
+        expected_check_digit = expected_vin_check_digit(vin)
+        corrected_vin = f"{vin[:8]}{expected_check_digit}{vin[9:]}"
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "VIN check digit does not match. Check the 9th character; "
+                f"if the rest is correct, try {corrected_vin}."
+            ),
+        )
+    return vin
 
 
 def _load_photos_map(session: Session, car_ids: list[int]) -> dict[int, list[CarPhoto]]:
@@ -184,9 +210,7 @@ def decode_typed_vin(
     payload: VinDecodeRequest,
     user: User = Depends(get_current_user),
 ):
-    vin = normalize_vin(payload.vin)
-    if not vin:
-        raise HTTPException(status_code=400, detail="Enter a valid 17-character VIN.")
+    vin = _normalize_typed_vin_or_raise(payload.vin)
 
     try:
         decoded, raw_decoded = decode_vin_with_raw(vin)
