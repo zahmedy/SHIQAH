@@ -251,11 +251,12 @@ export default async function CarDetailPage({
           ) : null}
         </section>
 
-        <hr className="separator" />
+      </aside>
 
+      <section className="panel car-detail-comments">
         <h3 className="subheading">Comments</h3>
         <ChatPanel carId={car.id} />
-      </aside>
+      </section>
     </main>
   );
 }

@@ -2371,7 +2371,9 @@ a {
 .car-detail-page {
   display: grid;
   grid-template-columns: minmax(0, 1.56fr) minmax(320px, 1fr);
-  grid-template-areas: "main actions";
+  grid-template-areas:
+    "main comments"
+    "main actions";
   align-items: start;
   gap: 1rem;
 }
@@ -2383,6 +2385,11 @@ a {
 
 .car-detail-actions {
   grid-area: actions;
+}
+
+.car-detail-comments {
+  grid-area: comments;
+  align-self: start;
 }
 
 .car-detail-secondary {
@@ -2790,13 +2797,17 @@ a {
 /* ─── Chat Panel ──────────────────────────────────────────────────────── */
 
 .chat-panel {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-card);
-  padding: 1rem;
+  display: grid;
+  grid-template-rows: minmax(320px, 1fr) auto;
+  gap: 0.75rem;
+  min-height: 430px;
+  margin-top: 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--brand) 18%, var(--line));
+  border-radius: 28px;
+  padding: 0.85rem;
   background:
-    radial-gradient(circle at top right, rgba(217, 251, 244, 0.75), transparent 42%),
-    #ffffff;
-  box-shadow: var(--shadow-card);
+    linear-gradient(180deg, #ffffff 0%, color-mix(in srgb, var(--brand-light) 28%, #ffffff) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), var(--shadow-card);
 }
 
 .chat-header {
@@ -2825,22 +2836,24 @@ a {
 .chat-messages {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  max-height: 260px;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  max-height: 420px;
   overflow-y: auto;
-  padding-right: 0.3rem;
-  min-height: 120px;
+  padding: 0.15rem 0.25rem 0.35rem;
+  min-height: 0;
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;
 }
 
 .chat-bubble {
   width: fit-content;
-  max-width: min(80%, 32rem);
-  padding: 0.65rem 0.8rem;
-  border-radius: 14px;
-  border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--bg-soft) 86%, #ffffff);
+  max-width: min(78%, 28rem);
+  padding: 0.62rem 0.78rem;
+  border: 0;
+  border-radius: 20px;
+  background: #e9eef7;
+  color: var(--text);
   font-size: 0.92rem;
   box-shadow: var(--shadow-xs);
 }
@@ -2852,30 +2865,70 @@ a {
 
 .chat-bubble span {
   display: block;
-  margin-top: 0.3rem;
+  margin-top: 0.24rem;
   font-size: 0.72rem;
   color: var(--muted);
 }
 
 .chat-buyer {
   margin-left: auto;
-  border-color: color-mix(in srgb, var(--brand) 35%, var(--line));
-  background: color-mix(in srgb, var(--brand-light) 70%, #ffffff);
+  border-bottom-right-radius: 6px;
+  background: var(--brand);
+  color: #ffffff;
+}
+
+.chat-buyer span {
+  color: color-mix(in srgb, #ffffff 72%, transparent);
 }
 
 .chat-seller {
   margin-right: auto;
+  border-bottom-left-radius: 6px;
+}
+
+.chat-messages-empty {
+  justify-content: center;
+  align-items: center;
+}
+
+.chat-empty-state {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 700;
 }
 
 .chat-input-row {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 0.6rem;
-  margin-top: 0.85rem;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: var(--shadow-xs);
 }
 
 .chat-input {
-  min-height: 42px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+  padding-inline: 0.7rem;
+}
+
+.chat-input:focus {
+  box-shadow: none;
+}
+
+.chat-input-row .btn {
+  min-width: 4.7rem;
+  min-height: 44px;
+  border-radius: 999px;
+  padding-inline: 1rem;
 }
 
 /* ─── Separator ───────────────────────────────────────────────────────── */
@@ -3915,6 +3968,7 @@ a {
   .car-detail-page {
     grid-template-areas:
       "main"
+      "comments"
       "actions";
   }
 
@@ -4237,6 +4291,7 @@ a {
 
   .car-detail-main,
   .car-detail-actions,
+  .car-detail-comments,
   .car-detail-secondary {
     padding: 0.75rem;
   }

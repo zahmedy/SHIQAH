@@ -45,7 +45,7 @@ export default function ChatPanel({ carId }: { carId: number }) {
     loadChatFailed: "Failed to load comments.",
     sendMessageFailed: "Failed to post.",
     loadingChat: "Loading...",
-    noMessages: "No comments.",
+    noMessages: "No comments yet.",
     typeMessage: "Comment...",
     sending: "Sending...",
     send: "Post",
@@ -161,9 +161,9 @@ export default function ChatPanel({ carId }: { carId: number }) {
       {loading && <p className="notice">{text.loadingChat}</p>}
 
       {!loading && (
-        <div className="chat-messages" ref={messagesRef}>
+        <div className={`chat-messages${messages.length === 0 ? " chat-messages-empty" : ""}`} ref={messagesRef}>
           {messages.length === 0 ? (
-            <p className="car-meta">{text.noMessages}</p>
+            <p className="chat-empty-state">{text.noMessages}</p>
           ) : (
             messages.map((msg) => (
               <div
