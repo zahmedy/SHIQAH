@@ -1,30 +1,8 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-
-import { translateApiMessage } from "@/lib/locale";
+import { useEffect, useState } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
-const NAME_KEY = "nicherides_user_name";
-
-type VerifyResponse = {
-  access_token: string;
-  token_type: string;
-};
-
-type CodeRequestResponse = {
-  ok: boolean;
-  needs_name: boolean;
-  dev_code?: string | null;
-};
-
-function normalizeEmail(rawEmail: string): string | null {
-  const email = rawEmail.trim().toLowerCase();
-  if (!email || !email.includes("@") || email.startsWith("@") || email.endsWith("@")) {
-    return null;
-  }
-  return email;
-}
 
 function getSafeNextUrl() {
   const next = new URLSearchParams(window.location.search).get("next");
@@ -40,35 +18,21 @@ function getGoogleCallbackUrl() {
   return `${url.origin}${url.pathname}${url.search}`;
 }
 
+function getInitialAuthError() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const authError = hash.get("auth_error");
+  return authError ? `Google sign-in failed: ${authError.replaceAll("_", " ")}` : "";
+}
+
 export default function LoginPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [step, setStep] = useState<"request" | "verify">("request");
-  const [needsName, setNeedsName] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const normalizedEmail = normalizeEmail(email);
+  const [error, setError] = useState(getInitialAuthError);
   const text = {
     title: "Sign in to NicheRides",
-    note: "Use email to manage listings, save cars, make offers, and contact sellers.",
+    note: "Use Google to manage listings, save cars, make offers, and contact sellers.",
     missingApiBase: "NEXT_PUBLIC_API_BASE is missing.",
-    invalidEmail: "Enter a valid email address.",
-    requestCodeFailed: "Failed to request login code.",
-    codeRequested: "Check your email for the 6-digit code.",
-    enterName: "Enter your name.",
-    enterCode: "Enter verification code.",
-    verifyCodeFailed: "Failed to verify code.",
-    emailLabel: "Email",
-    nameLabel: "Name",
-    yourName: "Your name",
-    codeLabel: "Verification code",
-    requesting: "Requesting...",
-    requestCode: "Continue with Email",
-    verifying: "Verifying...",
-    verifyAndLogin: "Verify & Login",
-    back: "Back",
     google: "Continue with Google",
   };
 
@@ -87,7 +51,6 @@ export default function LoginPage() {
     }
 
     if (authError) {
-      setError(`Google sign-in failed: ${authError.replaceAll("_", " ")}`);
       const url = new URL(window.location.href);
       url.hash = "";
       window.history.replaceState(null, "", `${url.pathname}${url.search}`);
@@ -96,7 +59,6 @@ export default function LoginPage() {
 
   function startGoogleLogin() {
     setError("");
-    setSuccess("");
 
     if (!API_BASE) {
       setError(text.missingApiBase);
@@ -104,100 +66,6 @@ export default function LoginPage() {
     }
 
     window.location.href = `${API_BASE}/v1/auth/google/start?callback_url=${encodeURIComponent(getGoogleCallbackUrl())}`;
-  }
-
-  async function requestCode(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
-
-    if (!API_BASE) {
-      setError(text.missingApiBase);
-      return;
-    }
-    if (!normalizedEmail) {
-      setError(text.invalidEmail);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/v1/auth/request-email-code`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail }),
-      });
-
-      if (!res.ok) {
-        const detail = await res.text();
-        throw new Error(translateApiMessage("en", detail || `Failed with status ${res.status}`));
-      }
-
-      const data = (await res.json()) as CodeRequestResponse;
-      setNeedsName(Boolean(data.needs_name));
-      setStep("verify");
-      setCode(data.dev_code || "");
-      setSuccess(data.dev_code ? `Dev code: ${data.dev_code}` : text.codeRequested);
-    } catch (err) {
-      setError(err instanceof Error ? translateApiMessage("en", err.message) : text.requestCodeFailed);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function verifyCode(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
-
-    if (!API_BASE) {
-      setError(text.missingApiBase);
-      return;
-    }
-    if (!normalizedEmail) {
-      setError(text.invalidEmail);
-      return;
-    }
-    if (needsName && !name.trim()) {
-      setError(text.enterName);
-      return;
-    }
-    if (!code.trim()) {
-      setError(text.enterCode);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/v1/auth/verify-email-code`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: normalizedEmail,
-          code: code.trim(),
-          name: name.trim() || undefined,
-        }),
-      });
-
-      if (!res.ok) {
-        const contentType = res.headers.get("content-type") ?? "";
-        const payload = contentType.includes("application/json") ? await res.json() : await res.text();
-        const detail = typeof payload === "string" ? payload : payload?.detail;
-        throw new Error(translateApiMessage("en", detail || `Failed with status ${res.status}`));
-      }
-
-      const data = (await res.json()) as VerifyResponse;
-      localStorage.setItem("nicherides_access_token", data.access_token);
-      if (name.trim()) {
-        localStorage.setItem(NAME_KEY, name.trim());
-      }
-      window.dispatchEvent(new Event("nicherides-auth-changed"));
-      window.location.replace(getSafeNextUrl());
-    } catch (err) {
-      setError(err instanceof Error ? translateApiMessage("en", err.message) : text.verifyCodeFailed);
-    } finally {
-      setLoading(false);
-    }
   }
 
   return (
@@ -217,84 +85,8 @@ export default function LoginPage() {
             </svg>
             {text.google}
           </button>
-        </div>
-
-        <form onSubmit={step === "request" ? requestCode : verifyCode} className="filters">
-          <div>
-            <label className="label" htmlFor="email">{text.emailLabel}</label>
-            <input
-              id="email"
-              className="input"
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            {normalizedEmail ? <p className="helper-text">Using {normalizedEmail}</p> : null}
-          </div>
-
-          {needsName && (
-            <div>
-              <label className="label" htmlFor="name">{text.nameLabel}</label>
-              <input
-                id="name"
-                className="input"
-                placeholder={text.yourName}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-          )}
-
-          {step !== "request" && (
-            <div>
-              <label className="label" htmlFor="login-code">{text.codeLabel}</label>
-              <input
-                id="login-code"
-                className="input"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                placeholder="123456"
-                maxLength={6}
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-              />
-            </div>
-          )}
-
-          <div className="auth-actions">
-            {step === "request" ? (
-              <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? text.requesting : text.requestCode}
-              </button>
-            ) : (
-              <>
-                <button type="submit" className="btn btn-primary" disabled={loading}>
-                  {loading ? text.verifying : text.verifyAndLogin}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  disabled={loading}
-                  onClick={() => {
-                    setStep("request");
-                    setNeedsName(false);
-                    setCode("");
-                    setSuccess("");
-                    setError("");
-                  }}
-                >
-                  {text.back}
-                </button>
-              </>
-            )}
-          </div>
-
           {error && <p className="notice error">{error}</p>}
-          {success && <p className="notice success">{success}</p>}
-        </form>
+        </div>
       </section>
     </main>
   );
