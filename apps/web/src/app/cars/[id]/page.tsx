@@ -10,11 +10,10 @@ import { nicheScoreLabel, type NicheScoreResult } from "@/shared/niches";
 import ChatPanel from "./ChatPanel";
 import ContactActions from "./ContactActions";
 import ListingActivityTracker from "./ListingActivityTracker";
-import ListingReportButton from "./ListingReportButton";
+import ListingMoreActions from "./ListingMoreActions";
 import OfferForm from "./OfferForm";
 import OwnerActions from "./OwnerActions";
 import SaveCarButton from "./SaveCarButton";
-import ShareListingButton from "./ShareListingButton";
 
 type Photo = {
   id: number;
@@ -196,8 +195,7 @@ export default async function CarDetailPage({
       <section className="panel car-detail-main">
         <div className="listing-report-top">
           <SaveCarButton carId={car.id} ownerId={car.owner_id} />
-          <ShareListingButton title={car.title} />
-          <ListingReportButton carId={car.id} ownerId={car.owner_id} compact />
+          <ListingMoreActions carId={car.id} ownerId={car.owner_id} title={car.title} />
         </div>
         <header className="listing-head">
           <h1 className="listing-title">{car.title}</h1>

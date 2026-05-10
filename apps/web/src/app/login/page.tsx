@@ -26,6 +26,20 @@ function normalizeEmail(rawEmail: string): string | null {
   return email;
 }
 
+function getSafeNextUrl() {
+  const next = new URLSearchParams(window.location.search).get("next");
+  if (next && next.startsWith("/") && !next.startsWith("//")) {
+    return next;
+  }
+  return "/";
+}
+
+function getGoogleCallbackUrl() {
+  const url = new URL(window.location.href);
+  url.hash = "";
+  return `${url.origin}${url.pathname}${url.search}`;
+}
+
 export default function LoginPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -64,16 +78,19 @@ export default function LoginPage() {
     const authError = hash.get("auth_error");
 
     if (accessToken) {
+      const nextUrl = getSafeNextUrl();
       localStorage.setItem("nicherides_access_token", accessToken);
       window.dispatchEvent(new Event("nicherides-auth-changed"));
-      window.history.replaceState(null, "", "/");
-      window.location.replace("/");
+      window.history.replaceState(null, "", nextUrl);
+      window.location.replace(nextUrl);
       return;
     }
 
     if (authError) {
       setError(`Google sign-in failed: ${authError.replaceAll("_", " ")}`);
-      window.history.replaceState(null, "", "/login");
+      const url = new URL(window.location.href);
+      url.hash = "";
+      window.history.replaceState(null, "", `${url.pathname}${url.search}`);
     }
   }, []);
 
@@ -86,7 +103,7 @@ export default function LoginPage() {
       return;
     }
 
-    window.location.href = `${API_BASE}/v1/auth/google/start`;
+    window.location.href = `${API_BASE}/v1/auth/google/start?callback_url=${encodeURIComponent(getGoogleCallbackUrl())}`;
   }
 
   async function requestCode(e: FormEvent) {
@@ -175,7 +192,7 @@ export default function LoginPage() {
         localStorage.setItem(NAME_KEY, name.trim());
       }
       window.dispatchEvent(new Event("nicherides-auth-changed"));
-      window.location.replace("/");
+      window.location.replace(getSafeNextUrl());
     } catch (err) {
       setError(err instanceof Error ? translateApiMessage("en", err.message) : text.verifyCodeFailed);
     } finally {

@@ -154,10 +154,33 @@ def _configured_google_success_urls(request: Request) -> set[str]:
     return configured_urls
 
 
+def _is_safe_local_next(value: str | None) -> bool:
+    if not value or not value.startswith("/") or value.startswith("//"):
+        return False
+    parsed = urlparse(value)
+    return not parsed.scheme and not parsed.netloc
+
+
+def _is_login_success_url_with_safe_next(request: Request, success_url: str) -> bool:
+    parsed = urlparse(success_url)
+    login_url = urlparse(_login_success_url(request))
+    if (parsed.scheme, parsed.netloc, parsed.path) != (login_url.scheme, login_url.netloc, login_url.path):
+        return False
+
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    if not query:
+        return True
+    if set(query) != {"next"}:
+        return False
+    return _is_safe_local_next(query.get("next"))
+
+
 def _validate_google_success_url(request: Request, success_url: str | None) -> str:
     if not success_url:
         return _login_success_url(request)
     if success_url in _configured_google_success_urls(request):
+        return success_url
+    if _is_login_success_url_with_safe_next(request, success_url):
         return success_url
     raise HTTPException(status_code=400, detail="Invalid Google auth callback URL")
 

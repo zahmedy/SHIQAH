@@ -72,7 +72,8 @@ export default function SaveCarButton({ carId, ownerId }: { carId: number; owner
 
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
-      window.location.href = "/login";
+      const next = `${window.location.pathname}${window.location.search}`;
+      window.location.href = `/login?next=${encodeURIComponent(next)}`;
       return;
     }
 
@@ -106,9 +107,10 @@ export default function SaveCarButton({ carId, ownerId }: { carId: number; owner
         className={`btn ${saved ? "btn-primary" : "btn-secondary"} listing-save-button`}
         disabled={loading}
         aria-pressed={saved}
+        aria-label={saved ? "Remove saved car" : "Save car"}
         onClick={() => void toggleSaved()}
       >
-        {loading ? "..." : saved ? "Saved" : "Save"}
+        {loading ? "..." : saved ? "♥" : "♡"}
       </button>
       {error ? <p className="listing-save-error">{error}</p> : null}
     </div>

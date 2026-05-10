@@ -4,6 +4,7 @@ import { useState } from "react";
 
 type ShareListingButtonProps = {
   title: string;
+  menuItem?: boolean;
 };
 
 function getListingUrl() {
@@ -12,7 +13,7 @@ function getListingUrl() {
   return url.toString();
 }
 
-export default function ShareListingButton({ title }: ShareListingButtonProps) {
+export default function ShareListingButton({ title, menuItem = false }: ShareListingButtonProps) {
   const [status, setStatus] = useState("");
 
   async function shareListing() {
@@ -42,7 +43,7 @@ export default function ShareListingButton({ title }: ShareListingButtonProps) {
     <div className="listing-share-wrap">
       <button
         type="button"
-        className="btn btn-secondary listing-share-button"
+        className={menuItem ? "listing-actions-menu-item" : "btn btn-secondary listing-share-button"}
         onClick={() => void shareListing()}
         aria-label="Share listing"
       >

@@ -32,10 +32,12 @@ export default function ListingReportButton({
   carId,
   ownerId,
   compact = false,
+  menuItem = false,
 }: {
   carId: number;
   ownerId: number;
   compact?: boolean;
+  menuItem?: boolean;
 }) {
   const [canReport, setCanReport] = useState(true);
   const [open, setOpen] = useState(false);
@@ -113,10 +115,10 @@ export default function ListingReportButton({
   }
 
   return (
-    <div className={compact ? "listing-report-compact-wrap" : "spaced-top-sm"}>
+    <div className={menuItem ? "listing-report-menu-wrap" : compact ? "listing-report-compact-wrap" : "spaced-top-sm"}>
       <button
         type="button"
-        className={compact ? "btn btn-secondary listing-report-compact-button" : "btn btn-secondary"}
+        className={menuItem ? "listing-actions-menu-item" : compact ? "btn btn-secondary listing-report-compact-button" : "btn btn-secondary"}
         onClick={() => setOpen(true)}
       >
         {compact ? "Report" : "Report listing"}

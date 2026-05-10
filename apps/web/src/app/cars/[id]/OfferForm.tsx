@@ -103,6 +103,7 @@ export default function OfferForm({
   const [reportNotes, setReportNotes] = useState("");
   const [confirmAmount, setConfirmAmount] = useState<number | null>(null);
   const [offerTermsAccepted, setOfferTermsAccepted] = useState(false);
+  const [loginHref, setLoginHref] = useState("/login");
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<OfferSummary | null>(null);
   const [ownerSummary, setOwnerSummary] = useState<OwnerOfferSummary | null>(null);
@@ -236,6 +237,9 @@ export default function OfferForm({
   }
 
   useEffect(() => {
+    const next = `${window.location.pathname}${window.location.search}`;
+    setLoginHref(`/login?next=${encodeURIComponent(next)}`);
+
     async function syncAuth() {
       const nextToken = window.localStorage.getItem(TOKEN_KEY) || "";
       setToken(nextToken);
@@ -695,7 +699,7 @@ export default function OfferForm({
         </div>
       ) : (
         <div className="filters spaced-top-sm">
-          <Link href="/login" className="btn btn-primary">{text.signIn}</Link>
+          <Link href={loginHref} className="btn btn-primary">{text.signIn}</Link>
           {error ? <p className="notice error">{error}</p> : null}
         </div>
       )}
