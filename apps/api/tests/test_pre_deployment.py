@@ -4,7 +4,7 @@ import unittest
 from datetime import datetime, timedelta
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urlparse
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 from fastapi import HTTPException
 from opensearchpy.exceptions import ConnectionError as OpenSearchConnectionError
@@ -305,6 +305,31 @@ class PreDeploymentAuthTests(unittest.TestCase):
 
         self.assertEqual(raised.exception.status_code, 400)
         self.assertEqual(raised.exception.detail, "Invalid Apple auth callback URL")
+
+    def test_apple_callback_passes_apple_access_token_to_id_token_decoder(self) -> None:
+        request = SimpleNamespace(
+            headers={"host": "localhost:8000"},
+            url=SimpleNamespace(scheme="http", netloc="localhost:8000"),
+        )
+        with patch("app.api.v1.routes.auth.settings.APPLE_LOGIN_SUCCESS_URL", None):
+            state = _create_apple_state(request)
+
+        with Session(self.engine) as session:
+            with (
+                patch("app.api.v1.routes.auth.settings.APPLE_LOGIN_SUCCESS_URL", None),
+                patch(
+                    "app.api.v1.routes.auth._exchange_apple_code",
+                    return_value={"id_token": "apple-id-token", "access_token": "apple-access-token"},
+                ),
+                patch(
+                    "app.api.v1.routes.auth._decode_apple_id_token",
+                    return_value={"email": "hash-check@example.com", "email_verified": "true"},
+                ) as decode_id_token,
+            ):
+                response = _handle_apple_callback(request, session, code="code", state=state)
+
+        self.assertEqual(response.status_code, 302)
+        decode_id_token.assert_called_once_with("apple-id-token", ANY, "apple-access-token")
 
     def test_google_urls_ignore_localhost_config_on_public_origin(self) -> None:
         request = SimpleNamespace(
