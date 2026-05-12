@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import CityField from "@/components/CityField";
 import MakeModelField from "@/components/MakeModelField";
 import { useLocale } from "@/components/LocaleProvider";
-import { translateApiMessage, translateReviewReason, translateStatus, translateValue } from "@/lib/locale";
+import { translateApiMessage, translateReviewReason, translateStatus, translateValue, type Locale } from "@/lib/locale";
 import { findNearestCity } from "@/shared/cities";
 import { canonicalizeMakeModel } from "@/shared/carMakes";
 
@@ -448,17 +448,17 @@ function normalizeDecodedVehicleFields(data: VinScanResponse) {
   });
 }
 
-function buildVinConfirmationRows(data: VinScanResponse): Array<[string, string]> {
+function buildVinConfirmationRows(data: VinScanResponse, locale: Locale): Array<[string, string]> {
   const decodedFields = normalizeDecodedVehicleFields(data);
   return [
     ["VIN", data.vin],
     ["Make", decodedFields.make],
     ["Model", decodedFields.model],
     ["Year", data.year ? String(data.year) : ""],
-    ["Body", data.body_type || ""],
-    ["Transmission", data.transmission || ""],
-    ["Fuel", data.fuel_type || ""],
-    ["Drivetrain", data.drivetrain || ""],
+    ["Body", data.body_type ? translateValue(locale, data.body_type) : ""],
+    ["Transmission", data.transmission ? translateValue(locale, data.transmission) : ""],
+    ["Fuel", data.fuel_type ? translateValue(locale, data.fuel_type) : ""],
+    ["Drivetrain", data.drivetrain ? translateValue(locale, data.drivetrain) : ""],
     ["Cylinders", data.engine_cylinders ? String(data.engine_cylinders) : ""],
     ["Engine", data.engine_volume ? `${data.engine_volume}L` : ""],
   ].filter((row): row is [string, string] => Boolean(row[1]));
@@ -739,7 +739,7 @@ export default function CarDraftForm({
     selectColor: "Select color",
     titleLabel: "Title",
     descriptionLabel: "Listing description (optional)",
-    descriptionAiFill: "Suggest description",
+    descriptionAiFill: "Generate description",
     descriptionAiFilling: "Writing...",
     descriptionAiFillNeedsBasics: "Fill make, model, and year first.",
     descriptionAiFillApplied: "Description suggested. Edit it so it sounds like you before publishing.",
@@ -2019,7 +2019,7 @@ export default function CarDraftForm({
   }
 
   const title = mode === "create" ? text.createDraftTitle : text.editListingTitle;
-  const pendingVinRows = pendingVinData ? buildVinConfirmationRows(pendingVinData) : [];
+  const pendingVinRows = pendingVinData ? buildVinConfirmationRows(pendingVinData, locale) : [];
 
   return (
     <main className="page shell auth-wrap">
