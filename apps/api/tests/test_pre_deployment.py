@@ -28,6 +28,7 @@ from app.api.v1.routes.me import MeUpdate, update_me
 from app.api.v1.routes.cars import (
     _normalize_typed_vin_or_raise,
     archive_owner_car,
+    create_car,
     my_saved_cars,
     restore_archived_owner_car,
     save_car,
@@ -48,9 +49,11 @@ from app.models.car import CarListing, CarStatus
 from app.models.notification import Notification
 from app.models.user import User, UserRole
 from app.schemas.auth import EmailCodeRequest, EmailCodeVerify
+from app.schemas.car import CarCreate, DescriptionFillRequest
 from app.schemas.activity import ActivityEventCreate
 from app.schemas.chat import ChatMessageCreate
 from app.schemas.lead import CounterOfferCreate, OfferCreate
+from app.services.description import generate_listing_description
 from app.services.niche_scoring import BUDGET_DAILY_NICHE_ID, score_listing_for_niche
 from app.services.search_intent import parse_search_intent
 
@@ -129,6 +132,44 @@ class PreDeploymentVinTests(unittest.TestCase):
 
     def test_typed_vin_accepts_same_vin_with_correct_check_digit(self) -> None:
         self.assertEqual(_normalize_typed_vin_or_raise("2C4RC1BG3DR669714"), "2C4RC1BG3DR669714")
+
+
+class PreDeploymentDescriptionTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.engine = create_engine("sqlite:///:memory:")
+        SQLModel.metadata.create_all(self.engine)
+
+    def test_description_generator_keeps_seller_confirmed_highlights(self) -> None:
+        description = generate_listing_description(
+            DescriptionFillRequest(
+                make="Toyota",
+                model="RAV4",
+                year=2019,
+                city="Buffalo",
+                mileage=85000,
+                seller_highlights=["clean title", "winter tires"],
+            )
+        )
+
+        self.assertIn("Seller-confirmed highlights: clean title, winter tires.", description)
+        self.assertNotIn("Make:", description)
+        self.assertNotIn("Model:", description)
+
+    def test_create_car_allows_missing_description(self) -> None:
+        with Session(self.engine) as session:
+            seller = User(role=UserRole.seller, name="Seller", email="optional-description@example.com")
+            session.add(seller)
+            session.commit()
+            session.refresh(seller)
+
+            car = create_car(
+                CarCreate(city="Buffalo", make="Toyota", model="RAV4", year=2019),
+                session=session,
+                user=seller,
+            )
+
+        self.assertEqual(car.description, "")
+        self.assertEqual(car.title, "Toyota RAV4 2019 for sale")
 
 
 class PreDeploymentAuthTests(unittest.TestCase):

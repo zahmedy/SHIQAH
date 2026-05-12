@@ -3612,27 +3612,22 @@ a {
   grid-column: 1 / -1;
 }
 
-.vin-photo-tip {
-  max-width: 58ch;
-  margin: 0.55rem 0 0;
-  padding: 0.65rem 0.75rem;
-  border: 1px solid color-mix(in srgb, var(--brand) 14%, var(--line));
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--brand) 5%, #ffffff);
-  color: var(--text);
-  font-size: 0.86rem;
-  font-weight: 700;
-  line-height: 1.45;
-}
-
 .vin-scan-controls {
   display: grid;
   gap: 0.65rem;
 }
 
-.vin-camera-button {
+.vin-secondary-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.vin-camera-button,
+.vin-paste-button {
   width: 100%;
   min-height: 2.8rem;
+  padding-inline: 0.65rem;
 }
 
 .vin-manual-entry {
@@ -4857,6 +4852,7 @@ a {
   .vin-manual-row .field-action-button,
   .upload-camera-button,
   .vin-camera-button,
+  .vin-paste-button,
   .vin-confirmation-actions .btn,
   .vin-confirmation-actions .field-action-button {
     width: 100%;

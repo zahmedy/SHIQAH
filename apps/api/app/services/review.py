@@ -141,23 +141,7 @@ def auto_review_listing(session: Session, car: CarListing) -> CarListing:
     if not car.title.strip():
         car.title = f"{car.make} {car.model} {car.year} for sale"
 
-    content = f"{car.title}\n{car.description}".lower()
-
-    if not car.description.strip():
-        return reject_listing(
-            session,
-            car,
-            review_source=AUTO_REVIEW_SOURCE,
-            review_reason="Missing description.",
-        )
-
-    if len(car.description.strip()) < 20:
-        return reject_listing(
-            session,
-            car,
-            review_source=AUTO_REVIEW_SOURCE,
-            review_reason="Description is too short for auto-approval.",
-        )
+    content = f"{car.title}\n{car.description or ''}".lower()
 
     if _photo_count(session, car.id) < 4:
         return reject_listing(

@@ -151,7 +151,7 @@ export default async function HomePage({
             <span className="home-hero-title-accent">Find your fit nearby.</span>
           </h1>
           <p className="home-hero-sub">
-            Search local listings by real needs, then use fit scores to spot the rides that match your life.
+            Search nearby listings and see which rides fit you best.
           </p>
         </div>
       </section>

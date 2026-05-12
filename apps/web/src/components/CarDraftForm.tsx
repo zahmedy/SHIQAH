@@ -43,7 +43,7 @@ type CarPayload = {
   condition?: string;
   color?: string;
   title: string;
-  description: string;
+  description?: string;
   public_bidding_enabled: boolean;
 };
 
@@ -433,6 +433,11 @@ function normalizeVinEntry(value: string): string {
   return value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 17);
 }
 
+function extractVinFromClipboard(value: string): string {
+  const normalized = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return normalized.match(/[A-HJ-NPR-Z0-9]{17}/)?.[0] || normalizeVinEntry(value);
+}
+
 function normalizeDecodedVehicleFields(data: VinScanResponse) {
   return canonicalizeMakeModel({
     make: data.make,
@@ -467,14 +472,29 @@ function kmToMiles(value: number): number {
   return Math.round(value / KM_PER_MILE);
 }
 
-function buildPayload(form: FormState): BuildPayloadResult {
+function appendSellerHighlights(description: string, highlights: string[]): string {
+  const cleanHighlights = Array.from(new Set(highlights.map((value) => value.trim()).filter(Boolean)));
+  const baseDescription = description
+    .replace(/(?:^|\n)Seller-confirmed highlights:.*$/im, "")
+    .replace(/(?:^|\n)Seller notes:.*$/im, "")
+    .trim();
+
+  if (cleanHighlights.length === 0) {
+    return baseDescription;
+  }
+
+  const highlightsLine = `Seller-confirmed highlights: ${cleanHighlights.join(", ")}.`;
+  return [baseDescription, highlightsLine].filter(Boolean).join("\n\n");
+}
+
+function buildPayload(form: FormState, highlights: string[]): BuildPayloadResult {
   const city = form.city.trim();
   const make = form.make.trim();
   const model = form.model.trim();
   const title = form.title.trim();
-  const description = form.description.trim();
+  const description = appendSellerHighlights(form.description.trim(), highlights);
 
-  if (!city || !make || !model || !description) {
+  if (!city || !make || !model) {
     return { ok: false, error: "Please fill all required fields." };
   }
 
@@ -536,7 +556,7 @@ function buildPayload(form: FormState): BuildPayloadResult {
     condition: form.condition.trim() || undefined,
     color: form.color.trim() || undefined,
     title: title || `${make} ${model} ${year} for sale`,
-    description: description,
+    description: description || undefined,
     public_bidding_enabled: false,
   };
 
@@ -654,12 +674,15 @@ export default function CarDraftForm({
     currentStatus: "Current status",
     vinTitle: "NicheRides VIN",
     vinHelp: "Take a close, clear VIN photo or type it manually.",
-    vinPhotoTip: "For best results, keep the VIN sharp and well lit. Crop to the VIN area before uploading if your phone allows it.",
     vinManualLabel: "VIN",
     vinManualPlaceholder: "17-character VIN",
     vinDecode: "Decode VIN",
     vinDecoding: "Decoding...",
-    vinUploadPhoto: "Take clear VIN photo",
+    vinUploadPhoto: "VIN Photo",
+    vinPaste: "Paste VIN",
+    vinPasteApplied: "VIN pasted. Review it before decoding.",
+    vinPasteEmpty: "Clipboard does not contain a VIN.",
+    vinPasteUnavailable: "Clipboard paste is not available in this browser.",
     vinScanning: "Reading VIN...",
     vinReadyForReview: (vin: string) => `VIN ${vin} detected. Confirm the details before applying.`,
     vinApplied: (vin: string) => `VIN ${vin} confirmed. Details applied.`,
@@ -668,13 +691,13 @@ export default function CarDraftForm({
     vinConfirmHelp: "Check the VIN and vehicle details.",
     vinApplyDetails: "Apply details",
     vinClearDetection: "Clear",
-    vinScanFailed: "Failed to read VIN photo.",
+    vinScanFailed: "Failed to read the VIN photo. Try a clearer, closer photo cropped to the VIN area, or paste/type the VIN.",
     vinManualInvalid: "Enter a valid 17-character VIN.",
-    vinPhotoUnusable: "That VIN photo is too small to scan. Try a closer photo or type the VIN.",
-    vinPhotoTooSmall: "That VIN photo is small, so it may fail. Trying scan anyway.",
-    vinPhotoTooDark: "That VIN photo may be too dark or washed out. Trying scan anyway.",
-    vinPhotoLowContrast: "That VIN photo may have low contrast. Trying scan anyway.",
-    vinPhotoTooBlurry: "That VIN photo may be blurry. Trying scan anyway.",
+    vinPhotoUnusable: "That VIN photo is too small to scan. Try a closer photo cropped to the VIN area, or paste/type the VIN.",
+    vinPhotoTooSmall: "That VIN photo is small, so it may fail. If it does, crop closer to the VIN area and try again.",
+    vinPhotoTooDark: "That VIN photo may be too dark or washed out. If it fails, retake it in better light and crop to the VIN area.",
+    vinPhotoLowContrast: "That VIN photo may have low contrast. If it fails, crop to the VIN area and try again.",
+    vinPhotoTooBlurry: "That VIN photo may be blurry. If it fails, retake a sharper close-up cropped to the VIN area.",
     rejected: "Rejected",
     loginRequiredForDrafts: "Login required to manage drafts.",
     loadingDraft: "Loading draft...",
@@ -715,13 +738,13 @@ export default function CarDraftForm({
     color: "Color",
     selectColor: "Select color",
     titleLabel: "Title",
-    descriptionLabel: "Listing description *",
-    descriptionAiFill: "Draft description",
+    descriptionLabel: "Listing description (optional)",
+    descriptionAiFill: "Suggest description",
     descriptionAiFilling: "Writing...",
     descriptionAiFillNeedsBasics: "Fill make, model, and year first.",
-    descriptionAiFillApplied: "Description drafted. Review before publishing.",
-    descriptionAiFillFailed: "Could not draft description.",
-    descriptionScoringHint: "More verified details improve niche scoring.",
+    descriptionAiFillApplied: "Description suggested. Edit it so it sounds like you before publishing.",
+    descriptionAiFillFailed: "Could not suggest a description.",
+    descriptionScoringHint: "Optional, but a clear note about condition, maintenance, or extras can help your car sell faster.",
     descriptionHighlights: "Seller-confirmed highlights",
     photos: "Photos",
     photosHelp: "Use your camera or upload from your device.",
@@ -747,7 +770,6 @@ export default function CarDraftForm({
     deleteListing: "Delete",
     backToMyCars: "Back",
     editCreatedDraft: "Edit Created Draft",
-    descriptionTooShort: "Description is too short for approval. Add more detail.",
     disallowedContactInfo: "Remove external contact info from the listing text.",
   };
 
@@ -1043,6 +1065,36 @@ export default function CarDraftForm({
     }
   }
 
+  async function handlePasteVin() {
+    setError("");
+    setSuccess("");
+    setVinStatus("");
+    setVinStatusTone("");
+    setPendingVinData(null);
+
+    if (!navigator.clipboard?.readText) {
+      setVinStatusTone("error");
+      setVinStatus(text.vinPasteUnavailable);
+      return;
+    }
+
+    try {
+      const pastedVin = extractVinFromClipboard(await navigator.clipboard.readText());
+      if (!pastedVin) {
+        setVinStatusTone("error");
+        setVinStatus(text.vinPasteEmpty);
+        return;
+      }
+
+      setManualVin(pastedVin.slice(0, 17));
+      setVinStatusTone(pastedVin.length === 17 ? "success" : "error");
+      setVinStatus(pastedVin.length === 17 ? text.vinPasteApplied : text.vinManualInvalid);
+    } catch {
+      setVinStatusTone("error");
+      setVinStatus(text.vinPasteUnavailable);
+    }
+  }
+
   async function handleDescriptionAiFill() {
     setError("");
     setSuccess("");
@@ -1297,10 +1349,6 @@ export default function CarDraftForm({
 
   function validateSubmissionBeforeCreateOrSubmit(): string | null {
     const description = form.description.trim();
-    if (description.length < 20) {
-      return text.descriptionTooShort;
-    }
-
     if (totalPhotoCount < 4) {
       return translateApiMessage(locale, "At least 4 photos required");
     }
@@ -1314,7 +1362,7 @@ export default function CarDraftForm({
   }
 
   async function persistDraft(token: string): Promise<CarOut> {
-    const result = buildPayload(form);
+    const result = buildPayload(form, descriptionHighlights);
     if (result.ok === false) {
       throw new Error(result.error);
     }
@@ -2134,7 +2182,6 @@ export default function CarDraftForm({
                 <div>
                   <p className="location-card-title">{text.vinTitle}</p>
                   <p className="helper-text">{text.vinHelp}</p>
-                  <p className="vin-photo-tip">{text.vinPhotoTip}</p>
                 </div>
                 <input
                   ref={vinInputRef}
@@ -2175,14 +2222,24 @@ export default function CarDraftForm({
                       </button>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    className="btn btn-secondary vin-camera-button"
-                    onClick={() => vinInputRef.current?.click()}
-                    disabled={vinScanning || vinDecoding}
-                  >
-                    {vinScanning ? text.vinScanning : text.vinUploadPhoto}
-                  </button>
+                  <div className="vin-secondary-actions">
+                    <button
+                      type="button"
+                      className="btn btn-secondary vin-paste-button"
+                      onClick={() => void handlePasteVin()}
+                      disabled={vinScanning || vinDecoding}
+                    >
+                      {text.vinPaste}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary vin-camera-button"
+                      onClick={() => vinInputRef.current?.click()}
+                      disabled={vinScanning || vinDecoding}
+                    >
+                      {vinScanning ? text.vinScanning : text.vinUploadPhoto}
+                    </button>
+                  </div>
                 </div>
                 {vinStatus ? (
                   <p className={`vin-status${vinStatusTone ? ` vin-status-${vinStatusTone}` : ""}`}>

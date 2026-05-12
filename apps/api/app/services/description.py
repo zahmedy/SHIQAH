@@ -40,35 +40,41 @@ def _looks_generated_description(value: str) -> bool:
 
 
 def generate_listing_description(payload: DescriptionFillRequest) -> str:
-    details = [
-        ("Year", str(payload.year)),
-        ("Make", _clean_text(payload.make)),
-        ("Model", _clean_text(payload.model)),
-        ("Body type", _clean_text(payload.body_type)),
-        ("Color", _clean_text(payload.color)),
-        ("Transmission", _clean_text(payload.transmission)),
-        ("Fuel type", _clean_text(payload.fuel_type)),
-        ("Drivetrain", _clean_text(payload.drivetrain)),
-        ("Condition", _clean_text(payload.condition)),
-        ("Engine cylinders", str(payload.engine_cylinders) if payload.engine_cylinders else ""),
-        ("Engine volume", _format_engine_volume(payload.engine_volume)),
-        ("Mileage", _format_mileage(payload.mileage)),
-        ("Price", _format_money(payload.price)),
-        ("City", _clean_text(payload.city)),
-        ("District", _clean_text(payload.district)),
-    ]
-    sentences = [f"{label}: {value}." for label, value in details if value]
-
-    title = _clean_text(payload.title)
-    if title:
-        sentences.append(f"Title: {title}.")
-
+    year_make_model = " ".join(
+        value
+        for value in [str(payload.year), _clean_text(payload.make), _clean_text(payload.model)]
+        if value
+    )
+    location = ", ".join(
+        value
+        for value in [_clean_text(payload.district), _clean_text(payload.city)]
+        if value
+    )
     highlights = _dedupe([_clean_text(value) for value in payload.seller_highlights if _clean_text(value)])
+    useful_facts = _dedupe(
+        [
+            _clean_text(payload.condition),
+            _format_mileage(payload.mileage),
+            _clean_text(payload.drivetrain),
+            _clean_text(payload.fuel_type),
+        ]
+    )
+
+    sentences = []
+    opener = f"{year_make_model} available"
+    if location:
+        opener += f" in {location}"
+    sentences.append(f"{opener}.")
+
     if highlights:
-        sentences.append(f"Seller-confirmed highlights: {', '.join(highlights)}.")
+        sentences.append(f"Seller-confirmed highlights: {', '.join(highlights[:4])}.")
+    if useful_facts:
+        sentences.append(f"Key details: {', '.join(useful_facts[:4])}.")
 
     existing_description = _clean_text(payload.description)
     if existing_description and not _looks_generated_description(existing_description):
-        sentences.append(f"Seller note: {existing_description}")
+        sentences.append(existing_description)
+
+    sentences.append("Message the seller for condition details, maintenance history, and a test drive.")
 
     return " ".join(sentences)

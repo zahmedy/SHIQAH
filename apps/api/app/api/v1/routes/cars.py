@@ -289,10 +289,13 @@ def create_car(
     if payload.longitude is not None and not (-180 <= payload.longitude <= 180):
         raise HTTPException(status_code=400, detail="Invalid longitude")
 
+    data = payload.model_dump(exclude={"title"})
+    data["description"] = (payload.description or "").strip()
+
     car = CarListing(
         owner_id=user.id,
         status=CarStatus.draft,
-        **payload.model_dump(exclude={"title"}),
+        **data,
         title=title,
     )
     session.add(car)
@@ -358,6 +361,8 @@ def update_car(
     next_year = data.get("year", car.year)
     if "title" in data:
         data["title"] = (data["title"] or "").strip() or default_listing_title(next_make, next_model, next_year)
+    if "description" in data:
+        data["description"] = (data["description"] or "").strip()
 
     for k, v in data.items():
         setattr(car, k, v)
@@ -493,8 +498,6 @@ def submit_car(
     # MVP publish gates (tighten later)
     if not car.title or not car.title.strip():
         car.title = default_listing_title(car.make, car.model, car.year)
-    if not car.description:
-        raise HTTPException(status_code=400, detail="Missing description")
     # sqlmodel may return a scalar int or a row-like object depending on backend/version.
     photo_count_result = session.exec(
         select(func.count()).select_from(CarMedia).where(CarMedia.car_id == car.id)

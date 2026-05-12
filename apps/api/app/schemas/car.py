@@ -31,7 +31,7 @@ class CarCreate(BaseModel):
     color: Optional[str] = None
 
     title: Optional[str] = None
-    description: str
+    description: Optional[str] = None
     public_bidding_enabled: bool = False
 
 
