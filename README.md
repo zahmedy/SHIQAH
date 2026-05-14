@@ -21,7 +21,11 @@ Price prediction is served by the separate `nicherides-ml-platform` service. Poi
 PRICE_PREDICTION_API_URL=http://127.0.0.1:8080/predict
 ```
 
-If the API runs inside Docker, make sure loopback reaches the ML service by using host networking or a Docker host gateway.
+Docker Compose points the API container at the host gateway by default:
+
+```bash
+PRICE_PREDICTION_API_URL=http://host.docker.internal:8080/predict
+```
 
 ## VIN Photo OCR
 

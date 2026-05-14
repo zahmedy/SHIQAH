@@ -68,7 +68,7 @@ services:
       - OPENSEARCH_INDEX=autointel_cars
       - OPENAI_API_KEY
       - OPENAI_TEXT_MODEL=gpt-4o-mini
-      - PRICE_PREDICTION_API_URL
+      - PRICE_PREDICTION_API_URL=${PRICE_PREDICTION_API_URL:-http://host.docker.internal:8080/predict}
       - PRICE_PREDICTION_API_TIMEOUT_SECONDS=15
       - VIN_SCAN_DEBUG=false
       - VIN_OCR_PROVIDER=auto
@@ -82,6 +82,8 @@ services:
       - S3_PUBLIC_BASE_URL
     ports:
       - "8000:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy
