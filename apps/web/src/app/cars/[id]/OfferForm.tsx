@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
 import { useLocale } from "@/components/LocaleProvider";
@@ -119,7 +118,6 @@ export default function OfferForm({
     offerCount: (count: number) => `${count} active offer${count === 1 ? "" : "s"}`,
     recentOffers: "Your Offer",
     amount: "Offer amount",
-    signIn: "Sign in to make an offer",
     offerHelp: "Private. Expires in 7 days.",
     disclaimer: "NicheRides is not the seller, dealer, broker, or escrow provider. Buyers and sellers handle inspection, payment, title, taxes, registration, escrow, and shipping.",
     warningTitle: "Confirm Offer",
@@ -319,7 +317,7 @@ export default function OfferForm({
       return;
     }
     if (!token) {
-      setError(text.loginRequired);
+      window.location.href = loginHref;
       return;
     }
 
@@ -689,18 +687,13 @@ export default function OfferForm({
 
       {isOwner ? null : !offersOpen ? (
         <p className="helper-text spaced-top-sm">{text.closedHint}</p>
-      ) : token ? (
+      ) : (
         <div className="spaced-top-sm">
           <button type="button" className="btn btn-primary" disabled={submitting} onClick={startOffer}>
             {submitting ? text.submitting : text.confirmOffer}
           </button>
           {error ? <p className="notice error">{error}</p> : null}
           {success ? <p className="notice success">{success}</p> : null}
-        </div>
-      ) : (
-        <div className="filters spaced-top-sm">
-          <Link href={loginHref} className="btn btn-primary">{text.signIn}</Link>
-          {error ? <p className="notice error">{error}</p> : null}
         </div>
       )}
 
