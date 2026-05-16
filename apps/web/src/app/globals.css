@@ -3788,7 +3788,7 @@ a {
 }
 
 .city-location-grid {
-  grid-template-columns: minmax(0, 2fr) minmax(260px, 0.95fr);
+  grid-template-columns: 1fr;
 }
 
 .field-grid-3 {
@@ -3816,6 +3816,23 @@ a {
   font-family: var(--font-title);
   font-size: 1.15rem;
   letter-spacing: 0.03em;
+}
+
+.location-fields-card {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.location-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.location-inline-actions .helper-text {
+  flex-basis: 100%;
+  margin-top: 0;
 }
 
 .field-note-title {
@@ -3952,7 +3969,8 @@ a {
   margin-top: 0.75rem;
 }
 
-.upload-camera-button {
+.upload-camera-button,
+.upload-library-button {
   min-height: 2.9rem;
 }
 
@@ -4910,6 +4928,7 @@ a {
 
   .vin-manual-row .field-action-button,
   .upload-camera-button,
+  .upload-library-button,
   .vin-camera-button,
   .vin-paste-button,
   .vin-confirmation-actions .btn,

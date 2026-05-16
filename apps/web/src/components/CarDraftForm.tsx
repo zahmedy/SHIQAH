@@ -617,7 +617,8 @@ export default function CarDraftForm({
   const [descriptionHighlights, setDescriptionHighlights] = useState<string[]>([]);
   const [pricePredicting, setPricePredicting] = useState(false);
   const [pricePredictStatus, setPricePredictStatus] = useState("");
-  const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const photoCameraInputRef = useRef<HTMLInputElement | null>(null);
+  const photoLibraryInputRef = useRef<HTMLInputElement | null>(null);
   const vinInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeCarId = useMemo(
@@ -739,7 +740,7 @@ export default function CarDraftForm({
     selectColor: "Select color",
     titleLabel: "Title",
     descriptionLabel: "Listing description (optional)",
-    descriptionAiFill: "Generate description",
+    descriptionAiFill: "Generate",
     descriptionAiFilling: "Writing...",
     descriptionAiFillNeedsBasics: "Fill make, model, and year first.",
     descriptionAiFillApplied: "Description suggested. Edit it so it sounds like you before publishing.",
@@ -747,10 +748,10 @@ export default function CarDraftForm({
     descriptionScoringHint: "Optional, but a clear note about condition, maintenance, or extras can help your car sell faster.",
     descriptionHighlights: "Seller-confirmed highlights",
     photos: "Photos",
-    photosHelp: "Use your camera or upload from your device.",
+    photosHelp: "Take photos with your camera or choose several from your library.",
     addingPhotos: "Adding...",
-    addMorePhotos: "Use camera or upload",
-    addPhotos: "Use camera or upload",
+    takePhoto: "Take photo",
+    choosePhotos: "Choose photos",
     photosMinimumWarning: "Use at least 4 photos before publishing.",
     photosUploadingNow: "Uploading photos.",
     mainPhoto: "Main photo",
@@ -2057,7 +2058,19 @@ export default function CarDraftForm({
               </div>
 
               <input
-                ref={photoInputRef}
+                ref={photoCameraInputRef}
+                className="upload-file-input"
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={(e) => {
+                  handlePhotoSelection(e.target.files);
+                  e.currentTarget.value = "";
+                }}
+                disabled={photoActionInProgress}
+              />
+              <input
+                ref={photoLibraryInputRef}
                 className="upload-file-input"
                 type="file"
                 accept="image/*"
@@ -2073,10 +2086,18 @@ export default function CarDraftForm({
                 <button
                   type="button"
                   className="btn btn-primary upload-camera-button"
-                  onClick={() => photoInputRef.current?.click()}
+                  onClick={() => photoCameraInputRef.current?.click()}
                   disabled={photoActionInProgress}
                 >
-                  {uploading ? text.addingPhotos : totalPhotoCount > 0 ? text.addMorePhotos : text.addPhotos}
+                  {uploading ? text.addingPhotos : text.takePhoto}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary upload-library-button"
+                  onClick={() => photoLibraryInputRef.current?.click()}
+                  disabled={photoActionInProgress}
+                >
+                  {text.choosePhotos}
                 </button>
                 {uploading ? <span className="helper-text">{text.photosUploadingNow}</span> : null}
               </div>
@@ -2285,7 +2306,7 @@ export default function CarDraftForm({
               </div>
 
               <div className="city-location-grid">
-                <div className="field-card field-card-main">
+                <div className="field-card field-card-main location-fields-card">
                   <div className="form-grid">
                     <CityField
                       id="city"
@@ -2304,10 +2325,7 @@ export default function CarDraftForm({
                       />
                     </div>
                   </div>
-                </div>
-                <div className="field-card location-card">
-                  <p className="location-card-title">Location</p>
-                  <div className="compact-actions">
+                  <div className="location-inline-actions">
                     <button
                       type="button"
                       className="btn btn-secondary"
@@ -2330,10 +2348,10 @@ export default function CarDraftForm({
                         {text.clearCurrentLocation}
                       </button>
                     ) : null}
+                    {locationStatus || hasPreciseLocation ? (
+                      <p className="helper-text">{locationStatus || text.locationSaved}</p>
+                    ) : null}
                   </div>
-                  {locationStatus || hasPreciseLocation ? (
-                    <p className="helper-text">{locationStatus || text.locationSaved}</p>
-                  ) : null}
                 </div>
               </div>
 
