@@ -47,7 +47,7 @@ from app.services.vision import (
 router = APIRouter(tags=["cars"])
 logger = logging.getLogger("uvicorn.error")
 
-MAX_VIN_IMAGE_BYTES = 8 * 1024 * 1024
+MAX_VIN_IMAGE_BYTES = 12 * 1024 * 1024
 ARCHIVE_RESTORE_WINDOW_DAYS = 30
 
 
