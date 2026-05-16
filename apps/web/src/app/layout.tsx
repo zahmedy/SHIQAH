@@ -7,6 +7,7 @@ import LocaleProvider from "@/components/LocaleProvider";
 import LogoMark from "@/components/LogoMark";
 import TopbarCreate from "@/components/TopbarCreate";
 import TopbarNotifications from "@/components/TopbarNotifications";
+import TopbarScrollMode from "@/components/TopbarScrollMode";
 import TopbarUser from "@/components/TopbarUser";
 import { getDirection } from "@/lib/locale";
 import { getServerLocale } from "@/lib/server-locale";
@@ -34,6 +35,7 @@ export default async function RootLayout({
     <html lang={locale} dir={getDirection(locale)}>
       <body>
         <LocaleProvider locale={locale}>
+          <TopbarScrollMode />
           <header className="topbar">
             <div className="shell topbar-shell topbar-inner">
               <Link href="/" className="brand" aria-label="NicheRides home">

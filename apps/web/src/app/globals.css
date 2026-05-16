@@ -124,6 +124,14 @@ a {
   content: none;
 }
 
+.topbar-scrolls-with-page {
+  padding-top: 0;
+}
+
+.topbar-scrolls-with-page .topbar {
+  position: relative;
+}
+
 .topbar-inner {
   display: flex;
   align-items: center;
@@ -4253,6 +4261,10 @@ a {
     padding-top: 122px;
   }
 
+  .topbar-scrolls-with-page {
+    padding-top: 0;
+  }
+
   .shell {
     width: min(100% - 1rem, 1160px);
   }
@@ -4904,6 +4916,10 @@ a {
 @media (max-width: 520px) {
   body {
     padding-top: 116px;
+  }
+
+  .topbar-scrolls-with-page {
+    padding-top: 0;
   }
 
   .topbar-inner {
