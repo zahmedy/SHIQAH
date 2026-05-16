@@ -68,10 +68,10 @@ services:
       - OPENSEARCH_INDEX=autointel_cars
       - OPENAI_API_KEY
       - OPENAI_TEXT_MODEL=gpt-4o-mini
-      - PRICE_PREDICTION_API_URL=${PRICE_PREDICTION_API_URL:-http://host.docker.internal:8001/v1/price/predict}
+      - PRICE_PREDICTION_API_URL=${PRICE_PREDICTION_API_URL:-http://host.docker.internal:8080/v1/price/predict}
       - PRICE_PREDICTION_API_TIMEOUT_SECONDS=15
       - VIN_SCAN_DEBUG=false
-      - VIN_SCAN_API_URL=${VIN_SCAN_API_URL:-http://host.docker.internal:8001/v1/vin/photo}
+      - VIN_SCAN_API_URL=${VIN_SCAN_API_URL:-http://host.docker.internal:8080/v1/vin/photo}
       - VIN_SCAN_API_TIMEOUT_SECONDS=30
       - VIN_OCR_PROVIDER=auto
       - VIN_OCR_AWS_REGION=us-east-1
