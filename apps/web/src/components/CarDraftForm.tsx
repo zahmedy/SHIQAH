@@ -14,6 +14,8 @@ import { canonicalizeMakeModel } from "@/shared/carMakes";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const TOKEN_KEY = "nicherides_access_token";
 const FLASH_KEY = "nicherides_flash";
+const VIN_RESIZE_LONG_EDGE = 2000;
+const VIN_RESIZE_JPEG_QUALITY = 0.9;
 
 type DraftFormMode = "create" | "edit";
 
@@ -397,6 +399,60 @@ function readFileAsBase64(file: File): Promise<string> {
       resolve(commaIndex >= 0 ? result.slice(commaIndex + 1) : result);
     };
     reader.readAsDataURL(file);
+  });
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, contentType: string, quality?: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error("Failed to resize image."));
+          return;
+        }
+        resolve(blob);
+      },
+      contentType,
+      quality,
+    );
+  });
+}
+
+async function resizeVinImageForUpload(file: File): Promise<File> {
+  const sourceType = inferImageContentType(file);
+  if (sourceType === "image/gif" || sourceType === "image/heic" || sourceType === "image/heif") {
+    return file;
+  }
+
+  const image = await loadImageFile(file);
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  const longEdge = Math.max(sourceWidth, sourceHeight);
+  if (longEdge <= VIN_RESIZE_LONG_EDGE) {
+    return file;
+  }
+
+  const scale = VIN_RESIZE_LONG_EDGE / longEdge;
+  const width = Math.max(1, Math.round(sourceWidth * scale));
+  const height = Math.max(1, Math.round(sourceHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return file;
+  }
+
+  context.drawImage(image, 0, 0, width, height);
+  const blob = await canvasToBlob(canvas, "image/jpeg", VIN_RESIZE_JPEG_QUALITY);
+  if (blob.size >= file.size) {
+    return file;
+  }
+
+  const baseName = file.name.replace(/\.[^.]+$/, "") || "vin-photo";
+  return new File([blob], `${baseName}.jpg`, {
+    type: "image/jpeg",
+    lastModified: file.lastModified,
   });
 }
 
@@ -1126,7 +1182,14 @@ export default function CarDraftForm({
         }
       }
 
-      const imageBase64 = await readFileAsBase64(file);
+      let uploadFile = file;
+      try {
+        uploadFile = await resizeVinImageForUpload(file);
+      } catch {
+        uploadFile = file;
+      }
+
+      const imageBase64 = await readFileAsBase64(uploadFile);
       const res = await fetch(`${API_BASE}/v1/cars/vin/scan`, {
         method: "POST",
         headers: {
@@ -1135,7 +1198,7 @@ export default function CarDraftForm({
         },
         body: JSON.stringify({
           image_base64: imageBase64,
-          content_type: inferImageContentType(file),
+          content_type: inferImageContentType(uploadFile),
           car_id: activeCarId || undefined,
           training_record_id: mlTrainingRecordId || undefined,
         }),
