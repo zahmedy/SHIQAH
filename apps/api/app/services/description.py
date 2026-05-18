@@ -23,10 +23,19 @@ def _format_engine_volume(value: float | None) -> str:
     return f"{value:g}L"
 
 
+def _format_fuel_type(value: str | None) -> str:
+    fuel_type = _clean_text(value)
+    if fuel_type.lower() == "petrol":
+        return "Gasoline"
+    return fuel_type
+
+
 def _dedupe(values: list[str]) -> list[str]:
     seen: set[str] = set()
     unique: list[str] = []
     for value in values:
+        if not value:
+            continue
         key = value.lower()
         if key in seen:
             continue
@@ -56,7 +65,7 @@ def generate_listing_description(payload: DescriptionFillRequest) -> str:
             _clean_text(payload.condition),
             _format_mileage(payload.mileage),
             _clean_text(payload.drivetrain),
-            _clean_text(payload.fuel_type),
+            _format_fuel_type(payload.fuel_type),
         ]
     )
 

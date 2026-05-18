@@ -364,6 +364,7 @@ def predict_car_price(
     try:
         prediction = generate_price_prediction(payload)
     except RuntimeError as exc:
+        logger.warning("Price prediction failed: %s", exc)
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
