@@ -27,8 +27,7 @@ from app.schemas.car import (
     VinScanRequest,
     VinScanResponse,
 )
-from app.services.opensearch import delete_car, upsert_car
-from app.services.review import build_search_doc, enqueue_auto_review
+from app.services.review import enqueue_auto_review
 from app.services.description import generate_listing_description
 from app.services.niche_scoring import score_listing_for_all_niches
 from app.services.pricing import generate_price_prediction
@@ -517,8 +516,6 @@ def update_car(
     )
     session.commit()
     session.refresh(car)
-    if car.status == CarStatus.active:
-        upsert_car(str(car.id), build_search_doc(session, car))
     photos_map = _load_photos_map(session, [car.id])
     return to_car_out(car, photos=photos_map.get(car.id, []))
 
@@ -696,7 +693,6 @@ def mark_owner_car_sold(
     sync_listing_training_data(session, user=user, car=car)
     session.commit()
     session.refresh(car)
-    delete_car(str(car_id))
     photos_map = _load_photos_map(session, [car.id])
     return to_car_out(car, photos=photos_map.get(car.id, []))
 
@@ -778,6 +774,5 @@ def restore_archived_owner_car(
     session.add(car)
     session.commit()
     session.refresh(car)
-    upsert_car(str(car.id), build_search_doc(session, car))
     photos_map = _load_photos_map(session, [car.id])
     return to_car_out(car, photos=photos_map.get(car.id, []))

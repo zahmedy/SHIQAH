@@ -19,7 +19,6 @@ from app.models.auth import EmailVerificationCode
 from app.models.user import User, UserRole
 from app.core.security import ALGORITHM, create_access_token
 from app.services.email_delivery import send_email_code
-from app.services.review import reindex_owner_active_listings
 from app.services.user_identity import ensure_user_id
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -98,9 +97,6 @@ def _issue_token_for_email(session: Session, email: str, name: str | None = None
 
     if not user.user_id:
         ensure_user_id(session, user)
-
-    if user.name:
-        reindex_owner_active_listings(session, user.id)
 
     return TokenResponse(access_token=create_access_token(subject=str(user.id)))
 
@@ -807,9 +803,6 @@ def verify_otp(payload: OTPVerify, session: Session = Depends(get_session)):
 
     if not user.user_id:
         ensure_user_id(session, user)
-
-    if user.name:
-        reindex_owner_active_listings(session, user.id)
 
     token = create_access_token(subject=str(user.id))
     return TokenResponse(access_token=token)

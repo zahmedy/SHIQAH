@@ -9,7 +9,6 @@ docker compose -f infra/docker-compose.yaml up --build
 
 - Web UI: `http://localhost:3001`
 - API: `http://localhost:8000`
-- OpenSearch: `http://localhost:9200`
 - MinIO API: `http://localhost:9000`
 - MinIO Console: `http://localhost:9001`
 
@@ -78,11 +77,9 @@ nicherides/
           car.py
           media.py
         services/
-          opensearch.py
           s3.py
         tasks/
           worker.py
-          indexer.py
         main.py
       alembic.ini
       pyproject.toml

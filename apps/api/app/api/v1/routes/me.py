@@ -5,7 +5,6 @@ from sqlmodel import Session, select
 from app.core.deps import get_current_user
 from app.db.session import get_session
 from app.models.user import User
-from app.services.review import reindex_owner_active_listings
 from app.services.user_identity import USER_ID_ERROR, ensure_user_id, is_user_id_taken, validate_user_id
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -68,13 +67,11 @@ def update_me(
         raise HTTPException(status_code=400, detail="At least one field is required")
 
     changed = False
-    should_reindex = False
 
     if payload.name is not None:
         name = payload.name.strip()
         if not name:
             raise HTTPException(status_code=400, detail="Name is required")
-        should_reindex = True
         if name != user.name:
             user.name = name
             changed = True
@@ -85,7 +82,6 @@ def update_me(
         except ValueError:
             raise HTTPException(status_code=400, detail=USER_ID_ERROR)
 
-        should_reindex = True
         if is_user_id_taken(session, public_user_id, exclude_user_id=user.id):
             raise HTTPException(status_code=409, detail="User ID is already taken")
 
@@ -129,8 +125,5 @@ def update_me(
         session.add(user)
         session.commit()
         session.refresh(user)
-
-    if should_reindex and user.id is not None:
-        reindex_owner_active_listings(session, user.id)
 
     return serialize_me(user)

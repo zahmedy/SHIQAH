@@ -51,9 +51,6 @@ class Settings(BaseSettings):
     AWS_SES_SECRET_ACCESS_KEY: str | None = None
     AWS_SES_SESSION_TOKEN: str | None = None
 
-    OPENSEARCH_URL: str = "http://localhost:9200"
-    OPENSEARCH_INDEX: str = "autointel_cars"
-
     S3_ENDPOINT_URL: str = "http://localhost:9000"
     S3_ACCESS_KEY: str = "minioadmin"
     S3_SECRET_KEY: str = "minioadmin"

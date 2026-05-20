@@ -5,8 +5,6 @@ from app.db.session import get_session
 from app.models.user import User, UserRole
 from app.models.car import CarListing, CarStatus
 from app.core.config import settings
-from app.services.opensearch import upsert_car
-from app.services.review import build_search_doc
 
 router = APIRouter(prefix="/dev", tags=["dev"])
 
@@ -33,8 +31,4 @@ def reindex_search(session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Not found")
 
     cars = session.exec(select(CarListing).where(CarListing.status == CarStatus.active)).all()
-    for car in cars:
-        doc = build_search_doc(session, car)
-        upsert_car(str(car.id), doc)
-
-    return {"ok": True, "indexed": len(cars)}
+    return {"ok": True, "indexed": len(cars), "backend": "postgres"}

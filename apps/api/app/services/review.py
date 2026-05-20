@@ -7,9 +7,7 @@ from sqlmodel import Session, select, func
 from app.core.config import settings
 from app.db.session import engine
 from app.models.car import CarListing, CarMedia, CarStatus
-from app.models.user import User
 from app.services.notifications import create_notification
-from app.services.opensearch import delete_car, upsert_car
 
 AUTO_REVIEW_SOURCE = "auto"
 ADMIN_REVIEW_SOURCE = "admin"
@@ -23,49 +21,6 @@ DISALLOWED_TERMS = (
     "snapchat",
     "telegram",
 )
-
-
-def build_search_doc(session: Session, car: CarListing) -> dict:
-    photos = session.exec(
-        select(CarMedia)
-        .where(CarMedia.car_id == car.id)
-        .order_by(CarMedia.is_cover.desc(), CarMedia.sort_order.asc(), CarMedia.id.asc())
-    ).all()
-    seller = session.exec(select(User).where(User.id == car.owner_id)).first()
-
-    doc = {
-        "id": str(car.id),
-        "owner_id": car.owner_id,
-        "seller_name": seller.name if seller and seller.name else None,
-        "seller_user_id": seller.user_id if seller and seller.user_id else None,
-        "city": car.city,
-        "district": car.district,
-        "make": car.make,
-        "model": car.model,
-        "year": car.year,
-        "price": car.price,
-        "mileage": car.mileage,
-        "body_type": car.body_type,
-        "transmission": car.transmission,
-        "fuel_type": car.fuel_type,
-        "drivetrain": car.drivetrain,
-        "condition": car.condition,
-        "title": car.title,
-        "description": car.description,
-        "photos": [
-            {
-                "id": photo.id,
-                "public_url": photo.public_url,
-                "sort_order": photo.sort_order,
-                "is_cover": photo.is_cover,
-            }
-            for photo in photos
-        ],
-        "published_at": car.published_at.isoformat() if car.published_at else None,
-    }
-    if car.latitude is not None and car.longitude is not None:
-        doc["location"] = {"lat": car.latitude, "lon": car.longitude}
-    return doc
 
 
 def approve_listing(
@@ -94,7 +49,6 @@ def approve_listing(
     )
     session.commit()
     session.refresh(car)
-    upsert_car(str(car.id), build_search_doc(session, car))
     return car
 
 
@@ -123,7 +77,6 @@ def reject_listing(
     )
     session.commit()
     session.refresh(car)
-    delete_car(str(car.id))
     return car
 
 
@@ -183,11 +136,3 @@ def enqueue_auto_review(car_id: int) -> None:
     except Exception:
         review_listing_job(car_id)
 
-
-def reindex_owner_active_listings(session: Session, owner_id: int) -> None:
-    cars = session.exec(
-        select(CarListing)
-        .where(CarListing.owner_id == owner_id, CarListing.status == CarStatus.active)
-    ).all()
-    for car in cars:
-        upsert_car(str(car.id), build_search_doc(session, car))

@@ -7,7 +7,6 @@ from urllib.parse import parse_qs, urlparse
 from unittest.mock import ANY, patch
 
 from fastapi import HTTPException
-from opensearchpy.exceptions import ConnectionError as OpenSearchConnectionError
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from app.api.v1.routes.auth import (
@@ -804,7 +803,7 @@ class PreDeploymentListingLifecycleTests(unittest.TestCase):
         self.assertEqual(comments[0].message, "Can I see it today?")
         self.assertEqual(comments[0].sender_public_user_id, "public-commenter")
 
-    def test_keyword_search_falls_back_to_database_when_opensearch_is_down(self) -> None:
+    def test_keyword_search_uses_database(self) -> None:
         with Session(self.engine) as session:
             user = User(
                 role=UserRole.seller,
@@ -821,11 +820,7 @@ class PreDeploymentListingLifecycleTests(unittest.TestCase):
             session.add(make_listing(user.id, title="Mazda CX-90 2024 for sale", make="Mazda", model="CX-90"))
             session.commit()
 
-            with patch(
-                "app.api.v1.routes.search.ensure_index",
-                side_effect=OpenSearchConnectionError("opensearch", "down"),
-            ):
-                result = search_cars(q="Camry", lat=None, lon=None, radius_km=None, page=1, page_size=20, session=session)
+            result = search_cars(q="Camry", lat=None, lon=None, radius_km=None, page=1, page_size=20, session=session)
 
         self.assertEqual(result["total"], 1)
         self.assertEqual(result["items"][0]["title"], "Toyota Camry 2020 for sale")
@@ -839,8 +834,7 @@ class PreDeploymentListingLifecycleTests(unittest.TestCase):
             self.assertEqual(archived.status, CarStatus.expired.value)
             self.assertEqual(archived.status_before_archive, CarStatus.active.value)
 
-            with patch("app.api.v1.routes.cars.upsert_car"):
-                restored = restore_archived_owner_car(active_listing_id, session=session, user=active_user)
+            restored = restore_archived_owner_car(active_listing_id, session=session, user=active_user)
             self.assertEqual(restored.status, CarStatus.active.value)
             self.assertIsNone(restored.archived_at)
 
